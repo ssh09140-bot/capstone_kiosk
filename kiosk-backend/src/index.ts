@@ -125,13 +125,13 @@ app.get('/api/store/:storeId', async (req, res) => {
     } catch (error) { res.status(500).json({ message: '서버 오류' }); }
 });
 
-// ### --- [GET] /api/products (관리자용) 수정 --- ###
+// [GET] /api/products : '로그인된 가게'의 상품 목록 API (관리자용)
 app.get('/api/products', authenticateToken, async (req, res) => {
     try {
         const products = await prisma.product.findMany({
             where: { storeId: req.user.storeId },
             orderBy: { createdAt: 'desc' },
-            include: { category: true }, // 카테고리 정보를 함께 포함해서 보냅니다.
+            include: { category: true, optionGroups: true },
         });
         res.json(products);
     } catch (error) {
@@ -144,7 +144,8 @@ app.get('/api/products/detail/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const product = await prisma.product.findUnique({
-            where: { id: parseInt(id) }
+            where: { id: parseInt(id) },
+            include: { optionGroups: true }
         });
         if (!product) return res.status(404).json({ message: '상품을 찾을 수 없습니다.' });
         res.json(product);
@@ -153,14 +154,21 @@ app.get('/api/products/detail/:id', async (req, res) => {
     }
 });
 
-// ### --- [GET] /api/products/:storeId (키오스크 앱용) 수정 --- ###
+// [GET] /api/products/:storeId : '특정 가게' 상품 목록 API (키오스크 앱용)
 app.get('/api/products/:storeId', async (req, res) => {
     try {
         const { storeId } = req.params;
         const products = await prisma.product.findMany({
             where: { storeId: storeId },
             orderBy: { createdAt: 'desc' },
-            include: { category: true }, // 카테고리 정보를 함께 포함해서 보냅니다.
+            include: { 
+                category: true,
+                optionGroups: {
+                    include: {
+                        options: true
+                    }
+                }
+            },
         });
         res.json(products);
     } catch (error) {
@@ -171,7 +179,7 @@ app.get('/api/products/:storeId', async (req, res) => {
 // [POST] /api/products : 새 상품 등록 (로그인 필요)
 app.post('/api/products', authenticateToken, async (req, res) => {
     try {
-        const { name, description, price, stock, imageUrl, categoryId } = req.body;
+        const { name, description, price, stock, imageUrl, categoryId, optionGroupIds } = req.body;
         if (name === undefined || price === undefined || stock === undefined) return res.status(400).json({ message: '필수 정보를 입력해주세요.' });
 
         const newProduct = await prisma.product.create({
@@ -183,6 +191,7 @@ app.post('/api/products', authenticateToken, async (req, res) => {
                 imageUrl: imageUrl,
                 storeId: req.user.storeId,
                 categoryId: categoryId ? Number(categoryId) : null,
+                optionGroups: { connect: optionGroupIds?.map((id: number) => ({ id })) || [] }
             }
         });
         res.status(201).json(newProduct);
@@ -196,14 +205,18 @@ app.post('/api/products', authenticateToken, async (req, res) => {
 app.put('/api/products/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, price, stock, imageUrl, categoryId } = req.body;
+        const { name, description, price, stock, imageUrl, categoryId, optionGroupIds } = req.body;
         
         const product = await prisma.product.findUnique({ where: { id: parseInt(id) } });
         if (product?.storeId !== req.user.storeId) return res.status(403).json({ message: '권한이 없습니다.'});
 
         const updatedProduct = await prisma.product.update({
             where: { id: parseInt(id) },
-            data: { name, description, price: Number(price), stock: Number(stock), imageUrl, categoryId: categoryId ? Number(categoryId) : null, }
+            data: { 
+                name, description, price: Number(price), stock: Number(stock), imageUrl, 
+                categoryId: categoryId ? Number(categoryId) : null,
+                optionGroups: { set: optionGroupIds?.map((id: number) => ({ id })) || [] }
+            }
         });
         res.json(updatedProduct);
     } catch (error) {
@@ -238,7 +251,6 @@ app.get('/api/categories/:storeId', async (req, res) => {
     }
 });
 
-
 // [GET] /api/categories : 로그인된 가게의 모든 카테고리 목록 API (kiosk-admin용)
 app.get('/api/categories', authenticateToken, async (req, res) => {
     try {
@@ -267,6 +279,39 @@ app.post('/api/categories', authenticateToken, async (req, res) => {
     }
 });
 
+// [GET] /api/option-groups : 옵션 그룹 목록 (관리자용)
+app.get('/api/option-groups', authenticateToken, async (req, res) => {
+    try {
+        const optionGroups = await prisma.optionGroup.findMany({
+            where: { storeId: req.user.storeId },
+            include: { options: true },
+        });
+        res.json(optionGroups);
+    } catch (error) {
+        res.status(500).json({ message: "옵션 그룹 조회 중 오류 발생" });
+    }
+});
+
+// [POST] /api/option-groups : 새 옵션 그룹 생성 (관리자용)
+app.post('/api/option-groups', authenticateToken, async (req, res) => {
+    try {
+        const { name, options } = req.body;
+        const newGroup = await prisma.optionGroup.create({
+            data: {
+                name,
+                storeId: req.user.storeId,
+                options: {
+                    create: options,
+                },
+            },
+            include: { options: true },
+        });
+        res.status(201).json(newGroup);
+    } catch (error) {
+        res.status(500).json({ message: "옵션 그룹 생성 중 오류 발생" });
+    }
+});
+
 // [POST] /api/orders : 주문 생성 (kiosk-app용)
 app.post('/api/orders', async (req, res) => {
     const { storeId, items } = req.body;
@@ -276,20 +321,45 @@ app.post('/api/orders', async (req, res) => {
     try {
         const result = await prisma.$transaction(async (tx) => {
             let calculatedTotal = 0;
+            const productIds = items.map((item: any) => parseInt(item.productId, 10));
+            const products = await tx.product.findMany({ where: { id: { in: productIds } }, include: { optionGroups: { include: { options: true } } } });
+
             for (const item of items) {
-                const productId = parseInt(item.productId, 10);
-                if (isNaN(productId)) throw new Error('유효하지 않은 상품 ID가 포함되어 있습니다.');
-                const product = await tx.product.findUnique({ where: { id: productId } });
-                if (!product) throw new Error(`ID ${productId}에 해당하는 상품을 찾을 수 없습니다.`);
+                const product = products.find(p => p.id === parseInt(item.productId, 10));
+                if (!product) throw new Error(`상품을 찾을 수 없습니다.`);
                 if (product.stock < item.quantity) throw new Error(`재고 부족: ${product.name}`);
-                calculatedTotal += product.price * item.quantity;
+                
+                let itemPrice = product.price;
+                if (item.selectedOptions) {
+                    for (const groupId in item.selectedOptions) {
+                        const optionId = item.selectedOptions[groupId].optionId;
+                        const group = product.optionGroups.find(g => g.id.toString() === groupId);
+                        const option = group?.options.find(o => o.id === optionId);
+                        if (option) {
+                            itemPrice += option.price;
+                        }
+                    }
+                }
+                calculatedTotal += itemPrice * item.quantity;
             }
+            
             const order = await tx.order.create({
                 data: { storeId: String(storeId), totalAmount: calculatedTotal },
             });
+
             for (const item of items) {
+                const product = products.find(p => p.id === parseInt(item.productId, 10));
+                await tx.orderItem.create({
+                    data: {
+                        orderId: order.id,
+                        productId: product!.id,
+                        quantity: item.quantity,
+                        pricePerItem: product!.price,
+                        selectedOptions: item.selectedOptions || {},
+                    },
+                });
                 await tx.product.update({
-                    where: { id: parseInt(item.productId, 10) },
+                    where: { id: product!.id },
                     data: { stock: { decrement: item.quantity } },
                 });
             }
@@ -312,6 +382,20 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
         res.json(orders);
     } catch (error) {
         res.status(500).json({ message: '주문 내역 조회 중 오류 발생' });
+    }
+});
+
+// [GET] /api/orders/:id : 주문 상세 내역 조회 (kiosk-admin용)
+app.get('/api/orders/:id', authenticateToken, async (req, res) => {
+    try {
+        const order = await prisma.order.findUnique({
+            where: { id: parseInt(req.params.id), storeId: req.user.storeId },
+            include: { orderItems: { include: { product: true } } },
+        });
+        if (!order) return res.status(404).json({ message: "주문을 찾을 수 없습니다."});
+        res.json(order);
+    } catch (error) {
+        res.status(500).json({ message: "주문 상세 내역 조회 중 오류 발생" });
     }
 });
 

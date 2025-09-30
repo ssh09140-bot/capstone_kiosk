@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, InputNumber, Upload, Typography, message, Select } from 'antd';
+import { Form, Input, Button, InputNumber, Upload, Typography, message, Select, Spin } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
@@ -8,50 +8,64 @@ import type { UploadProps } from 'antd';
 const { Title } = Typography;
 const { Option } = Select;
 
-// 카테고리 데이터의 타입을 정의합니다.
 interface Category {
+    id: number;
+    name: string;
+}
+interface OptionGroup {
     id: number;
     name: string;
 }
 
 const ProductForm: React.FC = () => {
     const navigate = useNavigate();
-    const { id } = useParams<{ id: string }>(); // URL에서 상품 id를 가져옴
+    const { id } = useParams<{ id: string }>();
     const [form] = Form.useForm();
     const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [categories, setCategories] = useState<Category[]>([]); // 카테고리 목록 상태
-    const isEditMode = Boolean(id); // id가 있으면 수정 모드
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
+    const [loading, setLoading] = useState(false); // 페이지 로딩 상태
+    const isEditMode = Boolean(id);
 
-    // 1. 카테고리 목록을 불러오는 기능
+    // 카테고리와 옵션 그룹 목록을 서버에서 모두 불러오는 기능
     useEffect(() => {
-        const fetchCategories = async () => {
+        const fetchData = async () => {
+            setLoading(true);
             try {
-                const response = await api.get('/categories');
-                setCategories(response.data);
+                const [catRes, optRes] = await Promise.all([
+                    api.get('/categories'),
+                    api.get('/option-groups'),
+                ]);
+                setCategories(catRes.data);
+                setOptionGroups(optRes.data);
             } catch (error) {
-                message.error('카테고리 목록을 불러오는데 실패했습니다.');
+                message.error('페이지 데이터를 불러오는데 실패했습니다.');
             }
         };
-        fetchCategories();
-    }, []); // 페이지가 처음 열릴 때 한 번만 실행
+        fetchData();
+    }, []);
 
-    // 2. 수정 모드일 때, 기존 상품 정보를 불러오는 기능
+    // 수정 모드일 때, 기존 상품 정보를 불러오는 기능
     useEffect(() => {
         if (isEditMode) {
+            setLoading(true);
             const fetchProduct = async () => {
                 try {
-                    const response = await api.get(`/products/detail/${id}`);
-                    form.setFieldsValue(response.data);
-                    setImageUrl(response.data.imageUrl);
+                    const { data } = await api.get(`/products/detail/${id}`);
+                    const optionGroupIds = data.optionGroups?.map((g: any) => g.id) || [];
+                    form.setFieldsValue({ ...data, optionGroupIds });
+                    setImageUrl(data.imageUrl);
                 } catch (error) {
                     message.error("상품 정보를 불러오는데 실패했습니다.");
+                } finally {
+                    setLoading(false);
                 }
             };
             fetchProduct();
         }
     }, [id, isEditMode, form]);
 
-    // 3. 이미지 업로드 처리 기능
+    // 이미지 업로드 처리 기능
     const handleUpload: UploadProps['customRequest'] = async (options) => {
         const { file, onSuccess, onError } = options;
         const formData = new FormData();
@@ -69,7 +83,7 @@ const ProductForm: React.FC = () => {
         }
     };
 
-    // 4. '저장하기' 버튼 클릭 시 실행되는 최종 기능
+    // '저장하기' 버튼 클릭 시 실행되는 최종 기능
     const onFinish = async (values: any) => {
         try {
             const productData = { ...values, imageUrl };
@@ -86,6 +100,10 @@ const ProductForm: React.FC = () => {
             message.error(`저장 실패: ${errorMessage}`);
         }
     };
+
+    if (loading && isEditMode) {
+        return <Spin size="large" style={{ display: 'block', marginTop: '50px' }} />;
+    }
 
     return (
         <>
@@ -104,9 +122,14 @@ const ProductForm: React.FC = () => {
                     <InputNumber min={0} style={{ width: '100%' }} />
                 </Form.Item>
                 <Form.Item label="카테고리" name="categoryId">
-                    <Select placeholder="상품의 카테고리를 선택하세요 (선택 사항)" allowClear>
-                        {categories.map(cat => (
-                            <Option key={cat.id} value={cat.id}>{cat.name}</Option>
+                    <Select placeholder="카테고리를 선택하세요 (선택 사항)" allowClear>
+                        {categories.map(cat => <Option key={cat.id} value={cat.id}>{cat.name}</Option>)}
+                    </Select>
+                </Form.Item>
+                <Form.Item label="옵션 그룹 연결" name="optionGroupIds">
+                    <Select mode="multiple" placeholder="이 상품에 연결할 옵션 그룹들을 선택하세요" allowClear>
+                        {optionGroups.map(group => (
+                            <Option key={group.id} value={group.id}>{group.name}</Option>
                         ))}
                     </Select>
                 </Form.Item>

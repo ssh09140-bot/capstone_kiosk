@@ -31,6 +31,12 @@ const AppLayout: React.FC = () => {
       label: '주문 내역',
       onClick: () => navigate('/orders'),
     },
+    {
+      key: '/option-groups',
+      icon: <AppstoreOutlined />,
+      label: '옵션 관리',
+      onClick: () => navigate('/option-groups'),
+    },
     { key: '/my-info', icon: <UserOutlined />, label: '내 정보', onClick: () => navigate('/my-info') }
   ];
 

@@ -8,6 +8,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import MyInfo from './pages/MyInfo';
 import AppLayout from './components/AppLayout';
+import OptionGroupList from './pages/OptionGroupList'; // OptionGroupList import 추가
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="products/:id" element={<ProductForm />} />
         <Route path="categories" element={<CategoryList />} /> {/* 카테고리 경로 추가 */}
         <Route path="orders" element={<OrderList />} /> {/* 주문 내역 경로 추가 */}
+        <Route path="option-groups" element={<OptionGroupList />} /> {/* 옵션 관리 경로 추가 */}
         <Route path="my-info" element={<MyInfo />} />
       </Route>
     </Routes>

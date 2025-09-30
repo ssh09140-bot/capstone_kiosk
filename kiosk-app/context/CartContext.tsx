@@ -1,24 +1,28 @@
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 
+export interface Option { id: number; name: string; price: number; }
+export interface OptionGroup { id: number; name: string; options: Option[]; }
 export interface Product {
   id: string;
   name: string;
   price: number;
   imageUrl: string;
   description: string;
-  options?: string[];
+  categoryId: number | null;
+  optionGroups?: OptionGroup[];
 }
-
+export type SelectedOptions = Record<string, { optionId: number; optionName: string; price: number }>;
 export interface CartItem {
+  id: string;
   product: Product;
   quantity: number;
-  selectedOption: string | null;
+  selectedOptions: SelectedOptions;
+  itemTotalPrice: number;
 }
-
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product, selectedOption: string | null) => void;
-  updateQuantity: (productId: string, selectedOption: string | null, newQuantity: number) => void; // ### 수량 조절 함수 ###
+  addToCart: (product: Product, quantity: number, selectedOptions: SelectedOptions) => void;
+  updateQuantity: (cartItemId: string, newQuantity: number) => void;
   clearCart: () => void;
   totalPrice: number;
 }
@@ -28,53 +32,37 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  const addToCart = (product: Product, selectedOption: string | null) => {
+  const addToCart = (product: Product, quantity: number, selectedOptions: SelectedOptions) => {
+    const optionIds = Object.values(selectedOptions).map(opt => opt.optionId).sort().join('-');
+    const cartItemId = `${product.id}-${optionIds}`;
+    const optionsPrice = Object.values(selectedOptions).reduce((sum, opt) => sum + opt.price, 0);
+    const itemTotalPrice = product.price + optionsPrice;
     setCartItems((prevItems) => {
-      const existingItemIndex = prevItems.findIndex(
-        (item) =>
-          item.product.id === product.id &&
-          item.selectedOption === selectedOption
-      );
-
-      if (existingItemIndex > -1) {
-        const updatedItems = [...prevItems];
-        const existingItem = updatedItems[existingItemIndex];
-        const updatedItem = { ...existingItem, quantity: existingItem.quantity + 1 };
-        updatedItems[existingItemIndex] = updatedItem;
-        return updatedItems;
+      const existingItem = prevItems.find((item) => item.id === cartItemId);
+      if (existingItem) {
+        return prevItems.map(item => 
+          item.id === cartItemId ? { ...item, quantity: item.quantity + quantity } : item
+        );
       } else {
-        const newItem: CartItem = { product, quantity: 1, selectedOption };
+        const newItem: CartItem = { id: cartItemId, product, quantity, selectedOptions, itemTotalPrice };
         return [...prevItems, newItem];
       }
     });
   };
 
-  // ### --- 수량을 조절하고, 0이 되면 삭제하는 함수 (새로 추가/변경) --- ###
-  const updateQuantity = (productId: string, selectedOption: string | null, newQuantity: number) => {
+  const updateQuantity = (cartItemId: string, newQuantity: number) => {
     setCartItems((prevItems) => {
-      // 수량이 0 이하이면, 해당 아이템을 장바구니에서 완전히 제거합니다.
       if (newQuantity <= 0) {
-        return prevItems.filter(
-          (item) =>
-            item.product.id !== productId || item.selectedOption !== selectedOption
-        );
+        return prevItems.filter((item) => item.id !== cartItemId);
       }
-
-      // 수량이 1 이상이면, 해당 아이템의 quantity 값만 업데이트합니다.
-      return prevItems.map((item) => {
-        if (item.product.id === productId && item.selectedOption === selectedOption) {
-          return { ...item, quantity: newQuantity };
-        }
-        return item;
-      });
+      return prevItems.map((item) =>
+        item.id === cartItemId ? { ...item, quantity: newQuantity } : item
+      );
     });
   };
 
-  const clearCart = () => {
-    setCartItems([]);
-  };
-  
-  const totalPrice = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const clearCart = () => setCartItems([]);
+  const totalPrice = cartItems.reduce((sum, item) => sum + item.itemTotalPrice * item.quantity, 0);
 
   return (
     <CartContext.Provider value={{ cartItems, addToCart, updateQuantity, clearCart, totalPrice }}>
@@ -85,8 +73,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
 export const useCart = () => {
   const context = useContext(CartContext);
-  if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
+  if (!context) throw new Error('useCart must be used within a CartProvider');
   return context;
 };

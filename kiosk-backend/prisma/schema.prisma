@@ -1,53 +1,83 @@
 // prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  storeName String
-  storeId   String   @unique @default(uuid())
-  products  Product[]
-  orders    Order[]
-  categories Category[] // 이 가게의 카테고리들
+  id           Int          @id @default(autoincrement())
+  email        String       @unique
+  password     String
+  storeName    String
+  storeId      String       @unique @default(uuid())
+  products     Product[]
+  orders       Order[]
+  categories   Category[]
+  optionGroups OptionGroup[]
 }
 
-// ### --- Category 모델을 새로 추가합니다. --- ###
 model Category {
-  id      Int      @id @default(autoincrement())
-  name    String
-  store     User   @relation(fields: [storeId], references: [storeId])
-  storeId String
-  products  Product[]
+  id       Int       @id @default(autoincrement())
+  name     String
+  store    User      @relation(fields: [storeId], references: [storeId])
+  storeId  String
+  products Product[]
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  price       Int
-  imageUrl    String?
-  options     Json?
-  stock       Int
-  createdAt   DateTime @default(now())
-  owner       User     @relation(fields: [storeId], references: [storeId])
-  storeId     String
+  id           Int           @id @default(autoincrement())
+  name         String
+  description  String?
+  price        Int
+  imageUrl     String?
+  stock        Int
+  createdAt    DateTime      @default(now())
+  owner        User          @relation(fields: [storeId], references: [storeId])
+  storeId      String
+  category     Category?     @relation(fields: [categoryId], references: [id])
+  categoryId   Int?
+  optionGroups OptionGroup[]
+  orderItems   OrderItem[]
+}
 
-  // ### --- Product와 Category를 연결합니다. --- ###
-  category   Category? @relation(fields: [categoryId], references: [id])
-  categoryId Int?
+model OptionGroup {
+  id       Int       @id @default(autoincrement())
+  name     String
+  store    User      @relation(fields: [storeId], references: [storeId])
+  storeId  String
+  options  Option[]
+  products Product[]
+}
+
+model Option {
+  id            Int         @id @default(autoincrement())
+  name          String
+  price         Int
+  optionGroup   OptionGroup @relation(fields: [optionGroupId], references: [id])
+  optionGroupId Int
 }
 
 model Order {
-  id          Int      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   totalAmount Int
-  createdAt   DateTime @default(now())
-  store       User     @relation(fields: [storeId], references: [storeId])
+  createdAt   DateTime    @default(now())
+  store       User        @relation(fields: [storeId], references: [storeId])
   storeId     String
+  orderItems  OrderItem[]
+}
+
+model OrderItem {
+  id              Int      @id @default(autoincrement())
+  order           Order    @relation(fields: [orderId], references: [id])
+  orderId         Int
+  product         Product  @relation(fields: [productId], references: [id])
+  productId       Int
+  quantity        Int
+  pricePerItem    Int
+  selectedOptions Json?
 }
