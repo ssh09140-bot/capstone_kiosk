@@ -449,7 +449,7 @@ app.delete('/api/option-groups/:id', authenticateToken, async (req, res) => {
 });
 
 // --- 서버 실행 ---
-const PORT = 3000;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`🚀 백엔드 서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
 });
