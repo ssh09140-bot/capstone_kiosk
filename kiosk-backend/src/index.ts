@@ -20,7 +20,13 @@ const app = express();
 const prisma = new PrismaClient();
 
 // --- 미들웨어 설정 ---
-app.use(cors());
+app.use(cors({
+    origin: '*', // 모든 출처 허용
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // 모든 HTTP 메소드 허용
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+}));
+
 app.use(express.json());
 
 // --- 'uploads' 폴더 자동 생성 및 정적 폴더 설정 ---
