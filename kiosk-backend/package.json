@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "studio": "prisma studio --port 5556"
+    "studio": "prisma studio --port 5556",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
