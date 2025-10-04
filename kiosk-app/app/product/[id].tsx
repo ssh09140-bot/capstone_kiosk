@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { OptionGroup, SelectedOptions, useCart } from '../../context/CartContext';
 
-const BACKEND_URL = 'https://riverlike-kamilah-quaveringly.ngrok-free.dev';
+const BACKEND_URL = 'https://capstone-kiosk.onrender.com';
 
 export default function ProductDetailScreen() {
   const router = useRouter();

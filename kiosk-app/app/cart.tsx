@@ -7,7 +7,7 @@ import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react
 import { useCart } from '../context/CartContext';
 
 // 안드로이드 에뮬레이터가 PC의 백엔드 서버와 통신하기 위한 전용 주소
-const BACKEND_URL = 'https://riverlike-kamilah-quaveringly.ngrok-free.dev';
+const BACKEND_URL = 'https://capstone-kiosk.onrender.com';
 
 export default function CartScreen() {
   const { cartItems, totalPrice, clearCart, updateQuantity } = useCart();

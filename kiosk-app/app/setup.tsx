@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 
 // 이 주소는 사장님의 PC IP 주소여야 합니다!
-const BACKEND_URL = 'https://riverlike-kamilah-quaveringly.ngrok-free.dev'; // 예시: 'http://192.168.0.5:3000'
+const BACKEND_URL = 'https://capstone-kiosk.onrender.com'; // 예시: 'http://192.168.0.5:3000'
 
 export default function SetupScreen() {
   const [storeId, setStoreId] = useState('');

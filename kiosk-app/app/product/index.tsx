@@ -16,7 +16,7 @@ import {
 import { Product } from '../../context/CartContext';
 
 // 안드로이드 에뮬레이터가 PC의 백엔드 서버와 통신하기 위한 전용 주소
-const BACKEND_URL = 'https://riverlike-kamilah-quaveringly.ngrok-free.dev';
+const BACKEND_URL = 'https://capstone-kiosk.onrender.com';
 
 // 카테고리 데이터의 타입을 정의합니다.
 interface Category {
