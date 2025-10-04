@@ -1,35 +1,33 @@
-// src/pages/Register.tsx
-
 import React from 'react';
-import { Form, Input, Button, Card, Typography } from 'antd';
+import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { MailOutlined, LockOutlined, ShopOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // axios import
+import api from '../api';
 
 const { Title } = Typography;
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
 
-  // ### onFinish 함수를 아래와 같이 완전히 교체합니다. ###
   const onFinish = async (values: any) => {
     try {
-      // 백엔드 API 서버의 회원가입 주소로 POST 요청을 보냅니다.
-      const response = await axios.post('http://localhost:3000/api/auth/register', {
+      console.log("회원가입 시도:", values); // 1. 함수가 시작되었는지 확인
+
+      const response = await api.post('/auth/register', {
         email: values.email,
         password: values.password,
         storeName: values.storeName,
       });
 
-      console.log('서버 응답:', response.data);
-      alert('회원가입 성공! 로그인 페이지로 이동합니다.');
+      console.log('서버 응답:', response.data); // 2. 서버 응답이 왔는지 확인
+      message.success('회원가입 성공! 로그인 페이지로 이동합니다.');
       navigate('/login');
 
     } catch (error: any) {
-      console.error('회원가입 실패:', error);
-      // 서버에서 보낸 에러 메시지를 사용자에게 보여줍니다.
-      const errorMessage = error.response?.data?.message || '회원가입 중 오류가 발생했습니다.';
-      alert(errorMessage);
+      console.error("회원가입 실패:", error); // 3. 오류가 발생했는지, 어떤 오류인지 확인
+
+      const errorMessage = error.response?.data?.message || '회원가입 중 알 수 없는 오류가 발생했습니다.';
+      message.error(errorMessage);
     }
   };
 

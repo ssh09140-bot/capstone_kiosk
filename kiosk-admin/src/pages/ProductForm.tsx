@@ -24,10 +24,9 @@ const ProductForm: React.FC = () => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
-    const [loading, setLoading] = useState(false); // 페이지 로딩 상태
+    const [loading, setLoading] = useState(false);
     const isEditMode = Boolean(id);
 
-    // 카테고리와 옵션 그룹 목록을 서버에서 모두 불러오는 기능
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -40,12 +39,13 @@ const ProductForm: React.FC = () => {
                 setOptionGroups(optRes.data);
             } catch (error) {
                 message.error('페이지 데이터를 불러오는데 실패했습니다.');
+            } finally {
+                setLoading(false);
             }
         };
         fetchData();
     }, []);
 
-    // 수정 모드일 때, 기존 상품 정보를 불러오는 기능
     useEffect(() => {
         if (isEditMode) {
             setLoading(true);
@@ -65,7 +65,6 @@ const ProductForm: React.FC = () => {
         }
     }, [id, isEditMode, form]);
 
-    // 이미지 업로드 처리 기능
     const handleUpload: UploadProps['customRequest'] = async (options) => {
         const { file, onSuccess, onError } = options;
         const formData = new FormData();
@@ -83,7 +82,6 @@ const ProductForm: React.FC = () => {
         }
     };
 
-    // '저장하기' 버튼 클릭 시 실행되는 최종 기능
     const onFinish = async (values: any) => {
         try {
             const productData = { ...values, imageUrl };
@@ -101,7 +99,7 @@ const ProductForm: React.FC = () => {
         }
     };
 
-    if (loading && isEditMode) {
+    if (loading) {
         return <Spin size="large" style={{ display: 'block', marginTop: '50px' }} />;
     }
 
@@ -137,7 +135,7 @@ const ProductForm: React.FC = () => {
                     <Upload customRequest={handleUpload} maxCount={1} showUploadList={true}>
                         <Button icon={<UploadOutlined />}>이미지 업로드</Button>
                     </Upload>
-                    {imageUrl && <img src={`http://localhost:3000${imageUrl}`} alt="상품 이미지" style={{ width: '100px', marginTop: '10px', borderRadius: '4px' }} />}
+                    {imageUrl && <img src={`https://capstone-kiosk.onrender.com${imageUrl}`} alt="상품 이미지" style={{ width: '100px', marginTop: '10px', borderRadius: '4px' }} />}
                 </Form.Item>
                 <Form.Item>
                     <Button type="primary" htmlType="submit">저장하기</Button>

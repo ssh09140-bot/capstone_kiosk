@@ -1,8 +1,8 @@
 import React from 'react';
-import { Form, Input, Button, Card, Typography, message } from 'antd'; // message를 import 합니다.
+import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import api from '../api'; // axios 대신 api를 사용합니다.
+import api from '../api';
 
 const { Title } = Typography;
 
@@ -12,18 +12,14 @@ const Login: React.FC = () => {
   const onFinish = async (values: any) => {
     try {
         const response = await api.post('/auth/login', {
-            email: values.username, // 폼 필드 이름이 username이므로
+            email: values.username,
             password: values.password
         });
-        // 서버로부터 받은 토큰을 브라우저의 localStorage에 저장
         localStorage.setItem('authToken', response.data.token);
         message.success('로그인 성공!');
-        navigate('/'); // 대시보드로 이동
+        navigate('/');
     } catch (error: any) {
-        // ### --- 바로 이 부분이 비밀번호 오류 등을 알려주는 핵심 로직입니다! --- ###
-        // 서버가 보내준 구체적인 오류 메시지를 가져옵니다.
-        const errorMessage = error.response?.data?.message || '로그인에 실패했습니다. 서버 상태를 확인해주세요.';
-        // 화면에 오류 메시지를 띄웁니다.
+        const errorMessage = error.response?.data?.message || '로그인에 실패했습니다.';
         message.error(errorMessage);
     }
   };

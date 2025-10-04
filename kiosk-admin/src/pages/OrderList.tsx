@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// ### --- 이 부분에서 사용하지 않는 'Tag'를 삭제했습니다. --- ###
 import { Table, Typography, message, Button, Modal, Descriptions } from 'antd';
 import api from '../api';
 

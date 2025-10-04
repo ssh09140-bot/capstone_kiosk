@@ -1,4 +1,3 @@
-// src/pages/CategoryList.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Typography, message, Modal, Form, Input } from 'antd';
 import api from '../api';
@@ -40,7 +39,7 @@ const CategoryList: React.FC = () => {
             message.success('새 카테고리가 추가되었습니다.');
             setIsModalVisible(false);
             form.resetFields();
-            fetchCategories(); // 목록 새로고침
+            fetchCategories();
         } catch (error) {
             message.error('카테고리 추가에 실패했습니다.');
         }
@@ -49,7 +48,6 @@ const CategoryList: React.FC = () => {
     const columns = [
         { title: '카테고리 ID', dataIndex: 'id', key: 'id' },
         { title: '카테고리 이름', dataIndex: 'name', key: 'name' },
-        // TODO: 수정 및 삭제 기능 추가
     ];
 
     return (
@@ -59,7 +57,7 @@ const CategoryList: React.FC = () => {
                 새 카테고리 추가
             </Button>
             <Table columns={columns} dataSource={categories} loading={loading} />
-            <Modal title="새 카테고리 추가" visible={isModalVisible} onOk={handleOk} onCancel={() => setIsModalVisible(false)}>
+            <Modal title="새 카테고리 추가" open={isModalVisible} onOk={handleOk} onCancel={() => setIsModalVisible(false)}>
                 <Form form={form} layout="vertical">
                     <Form.Item name="name" label="카테고리 이름" rules={[{ required: true, message: '카테고리 이름을 입력해주세요.' }]}>
                         <Input />

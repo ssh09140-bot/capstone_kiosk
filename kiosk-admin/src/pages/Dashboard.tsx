@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Typography, message } from 'antd';
 import { ArrowUpOutlined } from '@ant-design/icons';
-import api from '../api'; // axios 대신 api를 import
+import api from '../api';
 
 const { Title } = Typography;
 
@@ -11,7 +11,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchSalesSummary = async () => {
       try {
-        const response = await api.get('http://localhost:3000/api/sales/summary');
+        const response = await api.get('/sales/summary');
         setTotalSales(response.data.totalSales);
       } catch (error) {
         console.error("매출 정보를 불러오지 못했습니다.", error);

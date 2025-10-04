@@ -410,6 +410,37 @@ app.get('/api/sales/summary', authenticateToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: '서버 오류' }); }
 });
 
+// [PUT] /api/option-groups/:id : 옵션 그룹 수정
+app.put('/api/option-groups/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, options } = req.body;
+        
+        // TODO: 더 복잡한 옵션 수정 로직이 필요할 수 있음 (옵션 개별 삭제 등)
+        // 지금은 그룹 이름만 수정하는 간단한 로직으로 구현합니다.
+        const updatedGroup = await prisma.optionGroup.update({
+            where: { id: parseInt(id), storeId: req.user.storeId },
+            data: { name },
+        });
+        res.json(updatedGroup);
+    } catch (error) {
+        res.status(500).json({ message: '옵션 그룹 수정 중 오류 발생' });
+    }
+});
+
+// [DELETE] /api/option-groups/:id : 옵션 그룹 삭제
+app.delete('/api/option-groups/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.optionGroup.delete({
+            where: { id: parseInt(id), storeId: req.user.storeId },
+        });
+        res.status(204).send();
+    } catch (error) {
+        // Prisma에서 연결된 상품이 있으면 삭제가 거부될 수 있습니다.
+        res.status(400).json({ message: '해당 옵션 그룹을 사용하는 상품이 있어 삭제할 수 없습니다.' });
+    }
+});
 
 // --- 서버 실행 ---
 const PORT = 3000;
