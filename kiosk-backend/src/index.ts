@@ -7,6 +7,9 @@ import path from 'path';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 
+// --- 1. 자가 진단 시작 ---
+console.log("--- [1/6] 서버 파일 실행 시작 ---");
+
 // TypeScript가 Express의 Request 타입에 user 속성을 추가하는 것을 이해하도록 설정
 declare global {
     namespace Express {
@@ -17,47 +20,46 @@ declare global {
 }
 
 const app = express();
-const prisma = new PrismaClient();
+let prisma: PrismaClient;
 
-// --- 미들웨어 설정 ---
-app.use(cors({
-    origin: '*', // 모든 출처 허용
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // 모든 HTTP 메소드 허용
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-}));
+// --- 2. 데이터베이스 연결 준비 ---
+try {
+    prisma = new PrismaClient();
+    console.log("--- [2/6] Prisma Client (데이터베이스 연결 준비) 성공 ---");
+} catch (e) {
+    console.error("--- [치명적 오류] Prisma Client 생성 실패! ---", e);
+    process.exit(1);
+}
 
+// --- 3. 기본 설정 (CORS, JSON 파서 등) ---
+app.use(cors());
 app.use(express.json());
+console.log("--- [3/6] 기본 미들웨어 설정 완료 ---");
 
-// --- 'uploads' 폴더 자동 생성 및 정적 폴더 설정 ---
+
+// --- 4. 'uploads' 폴더 자동 생성 및 정적 폴더 설정 ---
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
 app.use('/uploads', express.static(uploadsDir));
+console.log("--- [4/6] 'uploads' 폴더 및 정적 경로 설정 완료 ---");
 
-// --- Multer 파일 업로드 설정 ---
+
+// (Multer, authenticateToken 등 나머지 설정 및 함수는 그대로)
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
+  destination: (req, file, cb) => { cb(null, 'uploads/'); },
+  filename: (req, file, cb) => { cb(null, Date.now() + path.extname(file.originalname)); }
 });
 const upload = multer({ storage: storage });
-
-// --- 인증 미들웨어 (토큰 검사 '경비원') ---
 const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-
-    if (token == null) return res.sendStatus(401); // 토큰 없음
-
+    if (token == null) return res.sendStatus(401);
     jwt.verify(token, 'YOUR_SECRET_KEY', (err: any, user: any) => {
-        if (err) return res.sendStatus(403); // 유효하지 않은 토큰
-        req.user = user; // 요청에 사용자 정보 추가
-        next(); // 통과
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
     });
 };
 
@@ -91,365 +93,192 @@ app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return res.status(404).json({ message: '존재하지 않는 이메일입니다.' });
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) return res.status(401).json({ message: '비밀번호가 일치하지 않습니다.' });
-        
-        const token = jwt.sign(
-            { userId: user.id, storeId: user.storeId },
-            'YOUR_SECRET_KEY',
-            { expiresIn: '8h' }
-        );
+        if (!user || !await bcrypt.compare(password, user.password)) {
+            return res.status(401).json({ message: '이메일 또는 비밀번호가 잘못되었습니다.' });
+        }
+        const token = jwt.sign({ userId: user.id, storeId: user.storeId }, 'YOUR_SECRET_KEY', { expiresIn: '8h' });
         res.json({ token });
-    } catch (error) {
-        res.status(500).json({ message: '로그인 중 서버 오류 발생' });
-    }
+    } catch (error) { res.status(500).json({ message: '로그인 중 서버 오류' }); }
 });
 
 // [GET] /api/me : 내 정보 보기 (로그인 필요)
 app.get('/api/me', authenticateToken, async (req, res) => {
-    try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.userId },
-            select: { email: true, storeName: true, storeId: true },
-        });
-        if (!user) return res.status(404).json({ message: '유저 정보 없음' });
-        res.json(user);
-    } catch (error) { res.status(500).json({ message: '서버 오류' }); }
+    const user = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: { email: true, storeName: true, storeId: true },
+    });
+    res.json(user);
 });
 
 // [GET] /api/store/:storeId : 가게 정보 보기 (키오스크 설정용)
 app.get('/api/store/:storeId', async (req, res) => {
-    try {
-      const { storeId } = req.params;
-      const user = await prisma.user.findUnique({
-        where: { storeId },
-        select: { id: true, email: true, storeName: true, storeId: true },
-      });
-      if (!user) return res.status(404).json({ message: '가게를 찾을 수 없습니다.' });
-      res.json(user);
-    } catch (error) { res.status(500).json({ message: '서버 오류' }); }
+    const user = await prisma.user.findUnique({ where: { storeId: req.params.storeId } });
+    if (!user) return res.status(404).json({ message: '가게를 찾을 수 없습니다.' });
+    res.json({ storeName: user.storeName });
 });
 
-// [GET] /api/products : '로그인된 가게'의 상품 목록 API (관리자용)
+// [GET] /api/products : '로그인된 가게'의 상품 목록 (관리자용)
 app.get('/api/products', authenticateToken, async (req, res) => {
-    try {
-        const products = await prisma.product.findMany({
-            where: { storeId: req.user.storeId },
-            orderBy: { createdAt: 'desc' },
-            include: { category: true, optionGroups: true },
-        });
-        res.json(products);
-    } catch (error) {
-        res.status(500).json({ message: "상품 목록 로딩 오류" });
-    }
+    const products = await prisma.product.findMany({
+        where: { storeId: req.user.storeId },
+        orderBy: { createdAt: 'desc' },
+        include: { category: true, optionGroups: true },
+    });
+    res.json(products);
 });
 
-// [GET] /api/products/detail/:id : 상품 1개 정보 보기 (수정 페이지용)
-app.get('/api/products/detail/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const product = await prisma.product.findUnique({
-            where: { id: parseInt(id) },
-            include: { optionGroups: true }
-        });
-        if (!product) return res.status(404).json({ message: '상품을 찾을 수 없습니다.' });
-        res.json(product);
-    } catch (error) {
-        res.status(500).json({ message: '상품 정보를 불러오는 중 오류 발생' });
-    }
-});
-
-// [GET] /api/products/:storeId : '특정 가게' 상품 목록 API (키오스크 앱용)
-app.get('/api/products/:storeId', async (req, res) => {
-    try {
-        const { storeId } = req.params;
-        const products = await prisma.product.findMany({
-            where: { storeId: storeId },
-            orderBy: { createdAt: 'desc' },
-            include: { 
-                category: true,
-                optionGroups: {
-                    include: {
-                        options: true
-                    }
-                }
-            },
-        });
-        res.json(products);
-    } catch (error) {
-        res.status(500).json({ message: "상품 목록 로딩 오류" });
-    }
+// [GET] /api/products/detail/:id : 상품 1개 정보 (수정 페이지용)
+app.get('/api/products/detail/:id', authenticateToken, async (req, res) => {
+    const product = await prisma.product.findUnique({
+        where: { id: parseInt(req.params.id) },
+        include: { optionGroups: { include: { options: true } } }
+    });
+    if (product?.storeId !== req.user.storeId) return res.status(403).json({ message: '권한 없음' });
+    res.json(product);
 });
 
 // [POST] /api/products : 새 상품 등록 (로그인 필요)
 app.post('/api/products', authenticateToken, async (req, res) => {
-    try {
-        const { name, description, price, stock, imageUrl, categoryId, optionGroupIds } = req.body;
-        if (name === undefined || price === undefined || stock === undefined) return res.status(400).json({ message: '필수 정보를 입력해주세요.' });
-
-        const newProduct = await prisma.product.create({
-            data: {
-                name,
-                description: description || '',
-                price: Number(price),
-                stock: Number(stock),
-                imageUrl: imageUrl,
-                storeId: req.user.storeId,
-                categoryId: categoryId ? Number(categoryId) : null,
-                optionGroups: { connect: optionGroupIds?.map((id: number) => ({ id })) || [] }
-            }
-        });
-        res.status(201).json(newProduct);
-    } catch (error) {
-        console.error("상품 등록 오류:", error);
-        res.status(500).json({ message: "상품 등록 중 서버 오류 발생" });
-    }
+    const { name, description, price, stock, imageUrl, categoryId, optionGroupIds } = req.body;
+    const newProduct = await prisma.product.create({
+        data: { name, description, price: Number(price), stock: Number(stock), imageUrl, categoryId: categoryId ? Number(categoryId) : null, storeId: req.user.storeId, optionGroups: { connect: optionGroupIds?.map((id: number) => ({ id })) || [] } }
+    });
+    res.status(201).json(newProduct);
 });
 
 // [PUT] /api/products/:id : 상품 정보 수정 (로그인 필요)
 app.put('/api/products/:id', authenticateToken, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, description, price, stock, imageUrl, categoryId, optionGroupIds } = req.body;
-        
-        const product = await prisma.product.findUnique({ where: { id: parseInt(id) } });
-        if (product?.storeId !== req.user.storeId) return res.status(403).json({ message: '권한이 없습니다.'});
-
-        const updatedProduct = await prisma.product.update({
-            where: { id: parseInt(id) },
-            data: { 
-                name, description, price: Number(price), stock: Number(stock), imageUrl, 
-                categoryId: categoryId ? Number(categoryId) : null,
-                optionGroups: { set: optionGroupIds?.map((id: number) => ({ id })) || [] }
-            }
-        });
-        res.json(updatedProduct);
-    } catch (error) {
-        res.status(500).json({ message: '상품 수정 중 오류 발생' });
-    }
+    const { name, description, price, stock, imageUrl, categoryId, optionGroupIds } = req.body;
+    const product = await prisma.product.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (product?.storeId !== req.user.storeId) return res.status(403).json({ message: '권한 없음'});
+    const updatedProduct = await prisma.product.update({
+        where: { id: parseInt(req.params.id) },
+        data: { name, description, price: Number(price), stock: Number(stock), imageUrl, categoryId: categoryId ? Number(categoryId) : null, optionGroups: { set: optionGroupIds?.map((id: number) => ({ id })) || [] } }
+    });
+    res.json(updatedProduct);
 });
 
 // [DELETE] /api/products/:id : 상품 삭제 (로그인 필요)
 app.delete('/api/products/:id', authenticateToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-        const product = await prisma.product.findUnique({ where: { id: parseInt(id) } });
-        if (product?.storeId !== req.user.storeId) return res.status(403).json({ message: '권한이 없습니다.'});
-
-        await prisma.product.delete({ where: { id: parseInt(id) } });
-        res.status(204).send();
-    } catch (error) {
-        res.status(500).json({ message: "상품 삭제 중 오류 발생" });
-    }
+    const product = await prisma.product.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (product?.storeId !== req.user.storeId) return res.status(403).json({ message: '권한 없음'});
+    await prisma.product.delete({ where: { id: parseInt(req.params.id) } });
+    res.status(204).send();
 });
 
-// [GET] /api/categories/:storeId : '특정 가게'의 카테고리 목록 API (kiosk-app용)
-app.get('/api/categories/:storeId', async (req, res) => {
-    try {
-        const { storeId } = req.params;
-        const categories = await prisma.category.findMany({
-            where: { storeId: storeId },
-        });
-        res.json(categories);
-    } catch (error) {
-        res.status(500).json({ message: "카테고리 조회 중 오류 발생" });
-    }
-});
-
-// [GET] /api/categories : 로그인된 가게의 모든 카테고리 목록 API (kiosk-admin용)
+// [GET] /api/categories (관리자용)
 app.get('/api/categories', authenticateToken, async (req, res) => {
-    try {
-        const categories = await prisma.category.findMany({
-            where: { storeId: req.user.storeId },
-        });
-        res.json(categories);
-    } catch (error) {
-        res.status(500).json({ message: '카테고리 조회 중 오류 발생' });
-    }
+    const categories = await prisma.category.findMany({ where: { storeId: req.user.storeId } });
+    res.json(categories);
 });
 
-// [POST] /api/categories : 새 카테고리 생성 API (kiosk-admin용)
+// [POST] /api/categories (관리자용)
 app.post('/api/categories', authenticateToken, async (req, res) => {
-    try {
-        const { name } = req.body;
-        const newCategory = await prisma.category.create({
-            data: {
-                name,
-                storeId: req.user.storeId,
-            }
-        });
-        res.status(201).json(newCategory);
-    } catch (error) {
-        res.status(500).json({ message: '카테고리 생성 중 오류 발생' });
-    }
+    const { name } = req.body;
+    const newCategory = await prisma.category.create({ data: { name, storeId: req.user.storeId } });
+    res.status(201).json(newCategory);
 });
 
-// [GET] /api/option-groups : 옵션 그룹 목록 (관리자용)
+// [GET] /api/option-groups (관리자용)
 app.get('/api/option-groups', authenticateToken, async (req, res) => {
-    try {
-        const optionGroups = await prisma.optionGroup.findMany({
-            where: { storeId: req.user.storeId },
-            include: { options: true },
-        });
-        res.json(optionGroups);
-    } catch (error) {
-        res.status(500).json({ message: "옵션 그룹 조회 중 오류 발생" });
-    }
+    const optionGroups = await prisma.optionGroup.findMany({ where: { storeId: req.user.storeId }, include: { options: true } });
+    res.json(optionGroups);
 });
 
-// [POST] /api/option-groups : 새 옵션 그룹 생성 (관리자용)
+// [POST] /api/option-groups (관리자용)
 app.post('/api/option-groups', authenticateToken, async (req, res) => {
-    try {
-        const { name, options } = req.body;
-        const newGroup = await prisma.optionGroup.create({
-            data: {
-                name,
-                storeId: req.user.storeId,
-                options: {
-                    create: options,
-                },
-            },
-            include: { options: true },
-        });
-        res.status(201).json(newGroup);
-    } catch (error) {
-        res.status(500).json({ message: "옵션 그룹 생성 중 오류 발생" });
-    }
+    const { name, options } = req.body;
+    const newGroup = await prisma.optionGroup.create({ data: { name, storeId: req.user.storeId, options: { create: options } }, include: { options: true } });
+    res.status(201).json(newGroup);
 });
 
-// [POST] /api/orders : 주문 생성 (kiosk-app용)
+// [PUT] /api/option-groups/:id (관리자용)
+app.put('/api/option-groups/:id', authenticateToken, async (req, res) => {
+    const { name } = req.body;
+    const updatedGroup = await prisma.optionGroup.update({ where: { id: parseInt(req.params.id), storeId: req.user.storeId }, data: { name } });
+    res.json(updatedGroup);
+});
+
+// [DELETE] /api/option-groups/:id (관리자용)
+app.delete('/api/option-groups/:id', authenticateToken, async (req, res) => {
+    try {
+        await prisma.optionGroup.delete({ where: { id: parseInt(req.params.id), storeId: req.user.storeId } });
+        res.status(204).send();
+    } catch (error) { res.status(400).json({ message: '상품에 연결된 옵션 그룹은 삭제할 수 없습니다.' }); }
+});
+
+// [GET] /api/orders (관리자용)
+app.get('/api/orders', authenticateToken, async (req, res) => {
+    const orders = await prisma.order.findMany({ where: { storeId: req.user.storeId }, orderBy: { createdAt: 'desc' } });
+    res.json(orders);
+});
+
+// [GET] /api/orders/:id (관리자용)
+app.get('/api/orders/:id', authenticateToken, async (req, res) => {
+    const order = await prisma.order.findUnique({ where: { id: parseInt(req.params.id), storeId: req.user.storeId }, include: { orderItems: { include: { product: true } } } });
+    if (!order) return res.status(404).json({ message: "주문을 찾을 수 없습니다."});
+    res.json(order);
+});
+
+// [GET] /api/sales/summary (관리자용)
+app.get('/api/sales/summary', authenticateToken, async (req, res) => {
+    const result = await prisma.order.aggregate({ _sum: { totalAmount: true }, where: { storeId: req.user.storeId } });
+    res.json({ totalSales: result._sum.totalAmount || 0 });
+});
+
+// --- 키오스크 앱 전용 API (로그인 불필요) ---
+app.get('/api/products/:storeId', async (req, res) => {
+    const products = await prisma.product.findMany({ where: { storeId: req.params.storeId }, orderBy: { createdAt: 'desc' }, include: { category: true, optionGroups: { include: { options: true } } } });
+    res.json(products);
+});
+app.get('/api/categories/:storeId', async (req, res) => {
+    const categories = await prisma.category.findMany({ where: { storeId: req.params.storeId } });
+    res.json(categories);
+});
 app.post('/api/orders', async (req, res) => {
     const { storeId, items } = req.body;
-    if (!storeId || !items || !Array.isArray(items)) {
-        return res.status(400).json({ message: '잘못된 주문 정보입니다.' });
-    }
     try {
         const result = await prisma.$transaction(async (tx) => {
             let calculatedTotal = 0;
             const productIds = items.map((item: any) => parseInt(item.productId, 10));
             const products = await tx.product.findMany({ where: { id: { in: productIds } }, include: { optionGroups: { include: { options: true } } } });
-
             for (const item of items) {
                 const product = products.find(p => p.id === parseInt(item.productId, 10));
-                if (!product) throw new Error(`상품을 찾을 수 없습니다.`);
-                if (product.stock < item.quantity) throw new Error(`재고 부족: ${product.name}`);
-                
+                if (!product || product.stock < item.quantity) throw new Error(`재고 부족: ${product?.name}`);
                 let itemPrice = product.price;
                 if (item.selectedOptions) {
                     for (const groupId in item.selectedOptions) {
                         const optionId = item.selectedOptions[groupId].optionId;
                         const group = product.optionGroups.find(g => g.id.toString() === groupId);
                         const option = group?.options.find(o => o.id === optionId);
-                        if (option) {
-                            itemPrice += option.price;
-                        }
+                        if (option) itemPrice += option.price;
                     }
                 }
                 calculatedTotal += itemPrice * item.quantity;
             }
-            
-            const order = await tx.order.create({
-                data: { storeId: String(storeId), totalAmount: calculatedTotal },
-            });
-
+            const order = await tx.order.create({ data: { storeId: String(storeId), totalAmount: calculatedTotal } });
             for (const item of items) {
                 const product = products.find(p => p.id === parseInt(item.productId, 10));
-                await tx.orderItem.create({
-                    data: {
-                        orderId: order.id,
-                        productId: product!.id,
-                        quantity: item.quantity,
-                        pricePerItem: product!.price,
-                        selectedOptions: item.selectedOptions || {},
-                    },
-                });
-                await tx.product.update({
-                    where: { id: product!.id },
-                    data: { stock: { decrement: item.quantity } },
-                });
+                await tx.orderItem.create({ data: { orderId: order.id, productId: product!.id, quantity: item.quantity, pricePerItem: product!.price, selectedOptions: item.selectedOptions || {} } });
+                await tx.product.update({ where: { id: product!.id }, data: { stock: { decrement: item.quantity } } });
             }
             return order;
         });
         res.status(201).json(result);
-    } catch (error: any) {
-        console.error("주문 처리 중 오류 발생:", error.message);
-        res.status(400).json({ message: error.message || '주문 처리 중 서버 오류가 발생했습니다.' });
-    }
+    } catch (error: any) { res.status(400).json({ message: error.message }); }
 });
 
-// [GET] /api/orders : 주문 내역 조회 (kiosk-admin용)
-app.get('/api/orders', authenticateToken, async (req, res) => {
-    try {
-        const orders = await prisma.order.findMany({
-            where: { storeId: req.user.storeId },
-            orderBy: { createdAt: 'desc' },
-        });
-        res.json(orders);
-    } catch (error) {
-        res.status(500).json({ message: '주문 내역 조회 중 오류 발생' });
-    }
-});
-
-// [GET] /api/orders/:id : 주문 상세 내역 조회 (kiosk-admin용)
-app.get('/api/orders/:id', authenticateToken, async (req, res) => {
-    try {
-        const order = await prisma.order.findUnique({
-            where: { id: parseInt(req.params.id), storeId: req.user.storeId },
-            include: { orderItems: { include: { product: true } } },
-        });
-        if (!order) return res.status(404).json({ message: "주문을 찾을 수 없습니다."});
-        res.json(order);
-    } catch (error) {
-        res.status(500).json({ message: "주문 상세 내역 조회 중 오류 발생" });
-    }
-});
-
-// [GET] /api/sales/summary : 매출 요약 (로그인 필요)
-app.get('/api/sales/summary', authenticateToken, async (req, res) => {
-    try {
-        const result = await prisma.order.aggregate({
-            _sum: { totalAmount: true },
-            where: { storeId: req.user.storeId },
-        });
-        res.json({ totalSales: result._sum.totalAmount || 0 });
-    } catch (error) { res.status(500).json({ message: '서버 오류' }); }
-});
-
-// [PUT] /api/option-groups/:id : 옵션 그룹 수정
-app.put('/api/option-groups/:id', authenticateToken, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, options } = req.body;
-        
-        // TODO: 더 복잡한 옵션 수정 로직이 필요할 수 있음 (옵션 개별 삭제 등)
-        // 지금은 그룹 이름만 수정하는 간단한 로직으로 구현합니다.
-        const updatedGroup = await prisma.optionGroup.update({
-            where: { id: parseInt(id), storeId: req.user.storeId },
-            data: { name },
-        });
-        res.json(updatedGroup);
-    } catch (error) {
-        res.status(500).json({ message: '옵션 그룹 수정 중 오류 발생' });
-    }
-});
-
-// [DELETE] /api/option-groups/:id : 옵션 그룹 삭제
-app.delete('/api/option-groups/:id', authenticateToken, async (req, res) => {
-    try {
-        const { id } = req.params;
-        await prisma.optionGroup.delete({
-            where: { id: parseInt(id), storeId: req.user.storeId },
-        });
-        res.status(204).send();
-    } catch (error) {
-        // Prisma에서 연결된 상품이 있으면 삭제가 거부될 수 있습니다.
-        res.status(400).json({ message: '해당 옵션 그룹을 사용하는 상품이 있어 삭제할 수 없습니다.' });
-    }
-});
+console.log("--- [5/6] 모든 API 경로 등록 완료 ---");
 
 // --- 서버 실행 ---
-const PORT = process.env.PORT;
-app.listen(PORT, () => {
-  console.log(`🚀 백엔드 서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => {
+  try {
+    await prisma.$connect();
+    console.log("--- [6/6] 데이터베이스 연결 성공 ---");
+    console.log(`🚀 데이터베이스 연결 성공, 서버가 ${PORT}번 포트에서 실행 중입니다.`);
+  } catch (e) {
+    console.error("--- [치명적 오류] 데이터베이스 연결 실패! ---", e);
+    process.exit(1);
+  }
 });
