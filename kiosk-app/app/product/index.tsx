@@ -10,7 +10,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-  Button // 'Button'을 import 합니다.
+  TextInput, // 검색창을 위해 TextInput을 import 합니다.
+  Button
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -25,9 +26,10 @@ interface Category {
     name: string;
 }
 
-// Product 인터페이스를 확장하여 categoryId를 포함시킵니다.
+// Product 인터페이스를 확장하여 categoryId와 stock을 포함시킵니다.
 interface ProductWithCategory extends Product {
     categoryId: number | null;
+    stock: number;
 }
 
 export default function ProductScreen() {
@@ -36,6 +38,7 @@ export default function ProductScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(''); // 검색어 상태
 
   // 서버로부터 상품과 카테고리 데이터를 모두 불러오는 함수
   const fetchData = useCallback(async () => {
@@ -52,7 +55,8 @@ export default function ProductScreen() {
           axios.get(`${BACKEND_URL}/api/categories/${storeId}`)
       ]);
       
-      setProducts(productRes.data.map((p: any) => ({ ...p, id: p.id.toString() })));
+      const formattedProducts = productRes.data.map((p: any) => ({ ...p, id: p.id.toString() }));
+      setProducts(formattedProducts);
       setCategories([{ id: null, name: '전체' }, ...categoryRes.data]);
 
     } catch (error) {
@@ -67,29 +71,50 @@ export default function ProductScreen() {
     fetchData();
   }, [fetchData]);
 
-  // 선택된 카테고리에 따라 보여줄 상품 목록을 필터링
+  // 카테고리와 검색어에 따라 보여줄 상품 목록을 필터링합니다.
   const filteredProducts = useMemo(() => {
-    if (selectedCategory === null) return products;
-    return products.filter((p: ProductWithCategory) => p.categoryId === selectedCategory);
-  }, [selectedCategory, products]);
+    let filtered = products;
+
+    if (selectedCategory !== null) {
+        filtered = filtered.filter((p: ProductWithCategory) => p.categoryId === selectedCategory);
+    }
+
+    if (searchTerm.trim() !== '') {
+        filtered = filtered.filter((p: ProductWithCategory) =>
+            p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+    
+    return filtered;
+  }, [selectedCategory, products, searchTerm]);
 
   // 각 상품 항목을 화면에 그리는 함수
-  const renderProductItem = ({ item }: { item: ProductWithCategory }) => (
-    <TouchableOpacity
-      style={styles.productCard}
-      onPress={() => router.push({
-        pathname: '/product/[id]',
-        params: { id: item.id, product: JSON.stringify(item) }
-      })}
-    >
-      <Image 
-        source={{ uri: item.imageUrl ? `${BACKEND_URL}${item.imageUrl}` : 'https://placehold.co/600x400/png?text=No+Image' }} 
-        style={styles.productImage} 
-      />
-      <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-      <Text style={styles.productPrice}>{item.price.toLocaleString()}원</Text>
-    </TouchableOpacity>
-  );
+  const renderProductItem = ({ item }: { item: ProductWithCategory }) => {
+    const isSoldOut = item.stock <= 0;
+
+    return (
+      <TouchableOpacity
+        style={[styles.productCard, isSoldOut && styles.soldOutCard]}
+        onPress={() => !isSoldOut && router.push({
+          pathname: '/product/[id]',
+          params: { id: item.id, product: JSON.stringify(item) }
+        })}
+        disabled={isSoldOut}
+      >
+        <Image 
+          source={{ uri: item.imageUrl ? `${BACKEND_URL}${item.imageUrl}` : 'https://placehold.co/600x400/png?text=No+Image' }} 
+          style={[styles.productImage, isSoldOut && styles.soldOutImage]} 
+        />
+        {isSoldOut && (
+            <View style={styles.soldOutOverlay}>
+                <Text style={styles.soldOutText}>품절</Text>
+            </View>
+        )}
+        <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.productPrice}>{item.price.toLocaleString()}원</Text>
+      </TouchableOpacity>
+    );
+  };
 
   // '가게 설정 초기화' 버튼을 눌렀을 때 실행되는 함수
   const handleStoreReset = () => {
@@ -99,9 +124,7 @@ export default function ProductScreen() {
       [
         { text: "취소", style: "cancel" },
         { text: "확인", onPress: async () => {
-            // 기기에 저장된 storeId를 삭제
             await AsyncStorage.removeItem('storeId');
-            // setup 화면으로 이동 (뒤로가기 방지)
             router.replace('/setup');
         }}
       ]
@@ -135,13 +158,23 @@ export default function ProductScreen() {
           </ScrollView>
       </View>
 
+      {/* --- 검색창 UI --- */}
+      <View style={styles.searchContainer}>
+        <TextInput
+            style={styles.searchInput}
+            placeholder="상품 이름을 검색하세요"
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+        />
+      </View>
+
       <FlatList
         data={filteredProducts}
         renderItem={renderProductItem}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        ListEmptyComponent={<Text style={styles.emptyText}>해당 카테고리에 상품이 없습니다.</Text>}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }} // 버튼에 가려지지 않도록 하단 여백 추가
+        ListEmptyComponent={<Text style={styles.emptyText}>상품이 없습니다.</Text>}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
       />
 
       {/* --- '가게 초기화' 버튼 UI --- */}
@@ -168,6 +201,18 @@ const styles = StyleSheet.create({
     categoryButtonSelected: { backgroundColor: '#000', borderColor: '#000' },
     categoryText: { color: '#333', fontWeight: 'bold' },
     categoryTextSelected: { color: '#fff', fontWeight: 'bold' },
+    searchContainer: {
+        paddingHorizontal: 10,
+        marginVertical: 10,
+    },
+    searchInput: {
+        backgroundColor: '#fff',
+        paddingHorizontal: 15,
+        height: 40,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#ddd',
+    },
     productCard: { 
         flex: 1, 
         backgroundColor: '#fff', 
@@ -181,6 +226,31 @@ const styles = StyleSheet.create({
     productName: { fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 },
     productPrice: { fontSize: 14, color: '#888' },
     emptyText: { textAlign: 'center', marginTop: 50, fontSize: 16, color: '#888' },
+    soldOutCard: {
+        backgroundColor: '#f9f9f9',
+    },
+    soldOutImage: {
+        opacity: 0.3,
+    },
+    soldOutOverlay: {
+        position: 'absolute',
+        top: 10,
+        left: 5,
+        right: 5,
+        height: 140,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    soldOutText: {
+        color: 'white',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 5,
+        fontWeight: 'bold',
+        fontSize: 16,
+        overflow: 'hidden' // borderRadius를 적용하기 위해 추가
+    },
     resetButtonContainer: {
         position: 'absolute',
         bottom: 20,

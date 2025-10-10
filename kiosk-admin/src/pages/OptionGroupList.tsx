@@ -3,7 +3,6 @@ import { Table, Button, Typography, message, Modal, Form, Input, InputNumber, Sp
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import api from '../api';
 
-// ### --- 바로 이 부분에 빠져있던 'Text'를 추가했습니다! --- ###
 const { Title, Text } = Typography;
 
 interface Option {
@@ -51,11 +50,9 @@ const OptionGroupList: React.FC = () => {
         try {
             const values = await form.validateFields();
             if (editingGroup) {
-                // 수정 모드
                 await api.put(`/option-groups/${editingGroup.id}`, values);
                 message.success('옵션 그룹이 수정되었습니다.');
             } else {
-                // 생성 모드
                 if (!values.options || values.options.length === 0) {
                     message.error('하나 이상의 옵션을 추가해야 합니다.');
                     return;
@@ -64,14 +61,14 @@ const OptionGroupList: React.FC = () => {
                 message.success('새 옵션 그룹이 추가되었습니다.');
             }
             handleCancel();
-            fetchGroups(); // 목록 새로고침
+            fetchGroups();
         } catch (error) {
             message.error('작업에 실패했습니다.');
         }
     };
 
     const handleDelete = async (id: number) => {
-        if (window.confirm(`정말로 이 옵션 그룹을 삭제하시겠습니까? 상품에 연결된 경우 삭제되지 않을 수 있습니다.`)) {
+        if (window.confirm(`정말로 이 옵션 그룹을 삭제하시겠습니까?`)) {
             try {
                 await api.delete(`/option-groups/${id}`);
                 message.success('옵션 그룹이 삭제되었습니다.');
@@ -117,7 +114,7 @@ const OptionGroupList: React.FC = () => {
     return (
         <>
             <Title level={3}>옵션 그룹 관리</Title>
-            <Button onClick={() => setIsModalVisible(true)} type="primary" style={{ marginBottom: 16 }}>
+            <Button onClick={() => { setEditingGroup(null); form.resetFields(); setIsModalVisible(true); }} type="primary" style={{ marginBottom: 16 }}>
                 새 옵션 그룹 추가
             </Button>
             <Table columns={columns} dataSource={groups} loading={loading} />
