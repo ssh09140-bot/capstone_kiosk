@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Typography, Flex, message } from 'antd';
+import { Table, Button, Space, Typography, Flex, message, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons';
@@ -12,6 +12,9 @@ interface Product {
     name: string;
     price: number;
     stock: number;
+    autoOrderEnabled: boolean;
+    minStockThreshold?: number;
+    orderQuantity?: number;
 }
 
 const ProductList: React.FC = () => {
@@ -54,6 +57,26 @@ const ProductList: React.FC = () => {
         { title: '가격', dataIndex: 'price', key: 'price', render: (price: number) => `${price.toLocaleString()}원` },
         { title: '재고', dataIndex: 'stock', key: 'stock', render: (stock: number) => `${stock}개` },
         {
+            title: '자동 발주',
+            dataIndex: 'autoOrderEnabled',
+            key: 'autoOrderEnabled',
+            render: (enabled: boolean) => (
+                <Tag color={enabled ? 'blue' : 'default'}>{enabled ? 'ON' : 'OFF'}</Tag>
+            ),
+        },
+        {
+            title: '발주 기준 재고',
+            dataIndex: 'minStockThreshold',
+            key: 'minStockThreshold',
+            render: (stock?: number) => (stock ? `${stock}개 이하` : '-'),
+        },
+        {
+            title: '자동 발주 수량',
+            dataIndex: 'orderQuantity',
+            key: 'orderQuantity',
+            render: (quantity?: number) => (quantity ? `${quantity}개` : '-'),
+        },
+        {
             title: '관리',
             key: 'action',
             render: (_: any, record: Product) => (
@@ -67,9 +90,9 @@ const ProductList: React.FC = () => {
 
     return (
         <>
-            <Flex justify="space-between" align="center" style={{ marginBottom: '24px' }}>
+            <Flex justify="space-between" align="center" wrap="wrap" style={{ marginBottom: '24px' }}>
                 <Title level={3} style={{ margin: 0 }}>상품 목록</Title>
-                <Space>
+                <Space style={{ marginTop: '8px' }}>
                     <Button icon={<RedoOutlined />} onClick={fetchProducts} loading={loading}>
                         새로고침
                     </Button>
@@ -78,7 +101,7 @@ const ProductList: React.FC = () => {
                     </Button>
                 </Space>
             </Flex>
-            <Table columns={columns} dataSource={products} loading={loading} />
+            <Table columns={columns} dataSource={products} loading={loading} scroll={{ x: 'max-content' }} />
         </>
     );
 };

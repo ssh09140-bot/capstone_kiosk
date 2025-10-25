@@ -1,61 +1,110 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Layout, Menu, Button } from 'antd';
+import { Layout, Menu, Button, Popover, Badge } from 'antd';
 import { 
     DashboardOutlined, 
     UnorderedListOutlined, 
-    PlusCircleOutlined,
     UserOutlined,
     LogoutOutlined,
-    AppstoreOutlined
+    AppstoreOutlined,
+    ShoppingCartOutlined,
+    BellOutlined
 } from '@ant-design/icons';
+import api from '../api';
+import NotificationPanel from './NotificationPanel';
+import type { Notification } from '../models/Notification';
 
 const { Header, Content, Sider } = Layout;
 
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [popoverVisible, setPopoverVisible] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/notifications');
+      setNotifications(response.data);
+      setUnreadCount(response.data.filter((n: Notification) => !n.read).length);
+    } catch (error) {
+      console.error("알림 목록 로딩 실패:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000); // 1분마다 새로고침
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      await api.post(`/notifications/${notification.id}/read`);
+      // Optimistic update
+      setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
+      setUnreadCount(prev => prev - 1);
+      
+      if (notification.type === 'DELIVERY_PROMPT' || notification.type === 'LOW_STOCK_WARNING') {
+        navigate('/purchase-orders');
+      }
+    } catch (error) {
+      console.error('알림 읽음 처리 실패', error);
+    } finally {
+      setPopoverVisible(false);
+    }
+  };
 
   const menuItems = [
     { key: '/', icon: <DashboardOutlined />, label: '대시보드', onClick: () => navigate('/') },
-    { key: '/products', icon: <UnorderedListOutlined />, label: '상품 목록', onClick: () => navigate('/products') },
-    { key: '/products/new', icon: <PlusCircleOutlined />, label: '새 상품 등록', onClick: () => navigate('/products/new') },
-    {
-      key: '/categories',
-      icon: <AppstoreOutlined />,
-      label: '카테고리 관리',
-      onClick: () => navigate('/categories'),
-    },
-    {
-      key: '/orders',
-      icon: <UnorderedListOutlined />, // 상품 목록과 같은 아이콘 사용
-      label: '주문 내역',
-      onClick: () => navigate('/orders'),
-    },
-    {
-      key: '/option-groups',
-      icon: <AppstoreOutlined />,
-      label: '옵션 관리',
-      onClick: () => navigate('/option-groups'),
-    },
+    { key: '/products', icon: <UnorderedListOutlined />, label: '상품 관리', onClick: () => navigate('/products') },
+    { key: '/categories', icon: <AppstoreOutlined />, label: '카테고리 관리', onClick: () => navigate('/categories') },
+    { key: '/option-groups', icon: <AppstoreOutlined />, label: '옵션 관리', onClick: () => navigate('/option-groups') },
+    { key: '/orders', icon: <UnorderedListOutlined />, label: '주문 내역', onClick: () => navigate('/orders') },
+    { key: '/purchase-orders', icon: <ShoppingCartOutlined />, label: '발주 관리', onClick: () => navigate('/purchase-orders') },
     { key: '/my-info', icon: <UserOutlined />, label: '내 정보', onClick: () => navigate('/my-info') }
   ];
 
+  const notificationContent = (
+    <NotificationPanel 
+      notifications={notifications}
+      onNotificationClick={handleNotificationClick}
+      loading={loading}
+    />
+  );
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider width={200}>
+      <Sider width={200} breakpoint="lg" collapsedWidth="0">
         <div style={{ height: '32px', margin: '16px', color: 'white', textAlign: 'center', lineHeight: '32px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.2)' }}>
           KIOSK ADMIN
         </div>
-        <Menu theme="dark" mode="inline" items={menuItems} />
+        <Menu theme="dark" mode="inline" items={menuItems} defaultSelectedKeys={[window.location.pathname]} />
       </Sider>
       <Layout>
         <Header style={{ padding: '0 16px', background: '#fff', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-          <Button type="primary" icon={<LogoutOutlined />} onClick={() => navigate('/login')}>
+          <Popover
+            content={notificationContent}
+            title="알림"
+            trigger="click"
+            open={popoverVisible}
+            onOpenChange={setPopoverVisible}
+            placement="bottomRight"
+          >
+            <Badge count={unreadCount} size="small">
+              <Button shape="circle" icon={<BellOutlined />} />
+            </Badge>
+          </Popover>
+          <Button type="primary" icon={<LogoutOutlined />} onClick={() => navigate('/login')} style={{ marginLeft: 16 }}>
             로그아웃
           </Button>
         </Header>
         <Content style={{ margin: '24px 16px 0' }}>
-          <div style={{ padding: 24, minHeight: 360, background: '#fff', borderRadius: '8px' }}>
+          <div style={{ padding: 24, minHeight: 360, background: '#fff', borderRadius: 8 }}>
             <Outlet />
           </div>
         </Content>

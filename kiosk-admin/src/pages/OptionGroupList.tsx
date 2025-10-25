@@ -117,8 +117,8 @@ const OptionGroupList: React.FC = () => {
             <Button onClick={() => { setEditingGroup(null); form.resetFields(); setIsModalVisible(true); }} type="primary" style={{ marginBottom: 16 }}>
                 새 옵션 그룹 추가
             </Button>
-            <Table columns={columns} dataSource={groups} loading={loading} />
-            <Modal title={editingGroup ? "옵션 그룹 수정" : "새 옵션 그룹"} open={isModalVisible} onOk={handleOk} onCancel={handleCancel} width={600} okText="저장" cancelText="취소">
+            <Table columns={columns} dataSource={groups} loading={loading} scroll={{ x: 'max-content' }} />
+            <Modal title={editingGroup ? "옵션 그룹 수정" : "새 옵션 그룹"} open={isModalVisible} onOk={handleOk} onCancel={handleCancel} okText="저장" cancelText="취소">
                 <Form form={form} layout="vertical" initialValues={editingGroup ? undefined : { options: [{ name: '', price: 0 }]}}>
                     <Form.Item name="name" label="옵션 그룹 이름 (예: 사이즈)" rules={[{ required: true, message: '그룹 이름을 입력해주세요.' }]}>
                         <Input />

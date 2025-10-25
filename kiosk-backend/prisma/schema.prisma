@@ -1,7 +1,7 @@
 // prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -11,15 +11,17 @@ datasource db {
 }
 
 model User {
-  id           Int          @id @default(autoincrement())
-  email        String       @unique
-  password     String
-  storeName    String
-  storeId      String       @unique @default(uuid())
-  products     Product[]
-  orders       Order[]
-  categories   Category[]
-  optionGroups OptionGroup[]
+  id             Int             @id @default(autoincrement())
+  email          String          @unique
+  password       String
+  storeName      String
+  storeId        String          @unique @default(uuid())
+  products       Product[]
+  orders         Order[]
+  categories     Category[]
+  optionGroups   OptionGroup[]
+  purchaseOrders PurchaseOrder[]
+  notifications  Notification[]
 }
 
 model Category {
@@ -31,19 +33,28 @@ model Category {
 }
 
 model Product {
-  id           Int           @id @default(autoincrement())
-  name         String
-  description  String?
-  price        Int
-  imageUrl     String?
-  stock        Int
-  createdAt    DateTime      @default(now())
-  owner        User          @relation(fields: [storeId], references: [storeId])
-  storeId      String
-  category     Category?     @relation(fields: [categoryId], references: [id])
-  categoryId   Int?
-  optionGroups OptionGroup[]
-  orderItems   OrderItem[]
+  id                    Int                 @id @default(autoincrement())
+  name                  String
+  description           String?
+  price                 Int
+  imageUrl              String?
+  stock                 Int
+  createdAt             DateTime            @default(now())
+  owner                 User                @relation(fields: [storeId], references: [storeId])
+  storeId               String
+  category              Category?           @relation(fields: [categoryId], references: [id])
+  categoryId            Int?
+  optionGroups          OptionGroup[]
+  orderItems            OrderItem[]
+  purchaseOrderItems    PurchaseOrderItem[]
+  // Fields for automated ordering
+  autoOrderEnabled      Boolean             @default(false)
+  minStockThreshold     Int?
+  orderQuantity         Int?
+  estimatedDeliveryDays Int?
+  // Fields for events
+  isEventProduct        Boolean             @default(false)
+  eventPrice            Int?
 }
 
 model OptionGroup {
@@ -81,4 +92,50 @@ model OrderItem {
   quantity        Int
   pricePerItem    Int
   selectedOptions Json?
+}
+
+model PurchaseOrder {
+  id                   Int                 @id @default(autoincrement())
+  createdAt            DateTime            @default(now())
+  orderedAt            DateTime?
+  estimatedDeliveryAt  DateTime?
+  deliveredAt          DateTime?
+  status               PurchaseOrderStatus @default(PENDING_CONFIRMATION)
+  store                User                @relation(fields: [storeId], references: [storeId])
+  storeId              String
+  purchaseOrderItems   PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id                Int           @id @default(autoincrement())
+  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId   Int
+  product           Product       @relation(fields: [productId], references: [id])
+  productId         Int
+  quantity          Int
+  defectiveQuantity Int?
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  type      NotificationType
+  store     User             @relation(fields: [storeId], references: [storeId])
+  storeId   String
+}
+
+enum PurchaseOrderStatus {
+  PENDING_CONFIRMATION
+  ORDERED
+  DELIVERED
+  CANCELLED
+}
+
+enum NotificationType {
+  LOW_STOCK_WARNING
+  ORDER_CONFIRMATION
+  DELIVERY_PROMPT
+  DELIVERY_REMINDER
 }

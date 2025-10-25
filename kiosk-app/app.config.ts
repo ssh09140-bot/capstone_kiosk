@@ -1,4 +1,6 @@
-{
+import 'dotenv/config'; // Import dotenv to load environment variables
+
+export default {
   "expo": {
     "name": "kiosk-app",
     "slug": "kiosk-app",
@@ -37,6 +39,13 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    // Add the extra field to expose environment variables
+    "extra": {
+      "EXPO_PUBLIC_API_URL": process.env.EXPO_PUBLIC_API_URL,
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID" // Placeholder, user might need to fill this
+      }
     }
   }
-}
+};

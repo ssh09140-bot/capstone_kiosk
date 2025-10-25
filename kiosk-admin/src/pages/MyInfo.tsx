@@ -34,7 +34,7 @@ const MyInfo: React.FC = () => {
   }
 
   return (
-    <Card>
+    <Card style={{ maxWidth: '600px', margin: 'auto' }}>
       <Title level={3}>내 정보</Title>
       <Descriptions bordered column={1}>
         <Descriptions.Item label="이메일 (ID)">{userInfo?.email}</Descriptions.Item>

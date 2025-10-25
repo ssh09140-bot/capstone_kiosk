@@ -82,7 +82,7 @@ const CategoryList: React.FC = () => {
             <Button onClick={() => setIsModalVisible(true)} type="primary" style={{ marginBottom: 16 }} icon={<PlusOutlined />}>
                 새 카테고리 추가
             </Button>
-            <Table columns={columns} dataSource={categories} loading={loading} />
+            <Table columns={columns} dataSource={categories} loading={loading} scroll={{ x: 'max-content' }} />
             <Modal title={editingCategory ? "카테고리 수정" : "새 카테고리 추가"} open={isModalVisible} onOk={handleOk} onCancel={handleCancel} okText="저장" cancelText="취소">
                 <Form form={form} layout="vertical">
                     <Form.Item name="name" label="카테고리 이름" rules={[{ required: true, message: '카테고리 이름을 입력해주세요.' }]}>

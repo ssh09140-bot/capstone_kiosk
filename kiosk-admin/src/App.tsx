@@ -8,7 +8,9 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import MyInfo from './pages/MyInfo';
 import AppLayout from './components/AppLayout';
-import OptionGroupList from './pages/OptionGroupList'; // OptionGroupList import 추가
+import OptionGroupList from './pages/OptionGroupList'; // 옵션 관리 경로 추가
+import AutoOrder from './pages/AutoOrder'; // 자동 발주 페이지 import 추가
+import PurchaseOrderList from './pages/PurchaseOrderList'; // 구매 주문 목록 import 추가
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
         <Route path="categories" element={<CategoryList />} /> {/* 카테고리 경로 추가 */}
         <Route path="orders" element={<OrderList />} /> {/* 주문 내역 경로 추가 */}
         <Route path="option-groups" element={<OptionGroupList />} /> {/* 옵션 관리 경로 추가 */}
+        <Route path="auto-order" element={<AutoOrder />} /> {/* 자동 발주 경로 추가 */}
+        <Route path="purchase-orders" element={<PurchaseOrderList />} /> {/* 구매 주문 목록 경로 추가 */}
         <Route path="my-info" element={<MyInfo />} />
       </Route>
     </Routes>

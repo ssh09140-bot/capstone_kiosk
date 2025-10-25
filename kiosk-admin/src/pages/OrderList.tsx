@@ -75,18 +75,17 @@ const OrderList: React.FC = () => {
     return (
         <>
             <Title level={3}>주문 내역</Title>
-            <Space style={{ marginBottom: 16 }}>
+            <Space style={{ marginBottom: 16 }} wrap>
                 <RangePicker onChange={(dates) => setDateRange(dates as any)} />
                 <Button onClick={() => setDateRange(null)}>날짜 필터 초기화</Button>
             </Space>
-            <Table columns={columns} dataSource={orders} loading={loading} />
+            <Table columns={columns} dataSource={orders} loading={loading} scroll={{ x: 'max-content' }} />
             <Modal
                 title={`주문 #${selectedOrder?.id} 상세 내역`}
                 open={isDetailModalVisible}
                 onOk={() => setIsDetailModalVisible(false)}
                 onCancel={() => setIsDetailModalVisible(false)}
                 footer={<Button key="ok" type="primary" onClick={() => setIsDetailModalVisible(false)}>닫기</Button>}
-                width={700}
             >
                 {selectedOrder && (
                     <Descriptions bordered column={1}>

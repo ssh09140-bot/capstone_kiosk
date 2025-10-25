@@ -33,7 +33,7 @@ const Register: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f0f2f5' }}>
-      <Card style={{ width: 400 }}>
+      <Card style={{ maxWidth: '600px', width: '90%' }}>
         <Title level={2} style={{ textAlign: 'center', marginBottom: '24px' }}>관리자 회원가입</Title>
         <Form name="register" onFinish={onFinish}>
           <Form.Item name="email" rules={[{ required: true, message: '이메일을 입력해주세요!', type: 'email' }]}>
