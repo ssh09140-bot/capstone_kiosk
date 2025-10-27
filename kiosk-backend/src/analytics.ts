@@ -1,27 +1,41 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from './db';
 import { authenticateToken } from './middleware/auth';
+import { generateSalesAnalysis } from './services/openaiService';
+import { Prisma } from '@prisma/client';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // [GET] /api/sales/summary
 router.get('/sales/summary', authenticateToken, async (req, res) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
   try {
-    const totalSales = await prisma.order.aggregate({
-      _sum: {
-        totalAmount: true,
-      },
-      where: {
-        storeId: req.user.storeId,
-      },
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+    // Prisma를 사용하여 월별 매출 집계 (Raw Query 사용)
+    const monthlySalesResult: { month: string; sales: number }[] = await prisma.$queryRaw`
+      SELECT
+        TO_CHAR(DATE_TRUNC('month', "createdAt"), 'YYYY-MM') as month,
+        SUM("totalAmount")::integer as sales
+      FROM "Order"
+      WHERE "storeId" = ${req.user.storeId} AND "createdAt" >= ${twelveMonthsAgo}
+      GROUP BY month
+      ORDER BY month ASC;
+    `;
+
+    // 현재 달의 매출 찾기
+    const currentMonthStr = new Date().toISOString().slice(0, 7); // YYYY-MM 형식
+    const currentMonthData = monthlySalesResult.find(d => d.month === currentMonthStr);
+
+    res.json({
+      monthlySalesData: monthlySalesResult,
+      currentMonthSales: currentMonthData ? currentMonthData.sales : 0,
     });
 
-    res.json({ totalSales: totalSales._sum.totalAmount || 0 });
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching sales summary:', error);
     res.status(500).json({ message: '매출 요약 정보를 가져오는데 실패했습니다.' });
   }
 });
@@ -92,6 +106,63 @@ router.get('/analytics/low-stock', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: '재고 부족 상품 정보를 가져오는데 실패했습니다.' });
+  }
+});
+
+// [GET] /api/analytics/monthly-summary
+router.get('/analytics/monthly-summary', authenticateToken, async (req, res) => {
+  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const salesData = await prisma.orderItem.groupBy({
+      by: ['productId'],
+      where: {
+        order: {
+          storeId: req.user.storeId,
+          createdAt: {
+            gte: thirtyDaysAgo,
+          },
+        },
+      },
+      _sum: {
+        quantity: true,
+      },
+    });
+
+    if (salesData.length < 2) {
+      return res.status(404).json({ message: '분석을 위한 데이터가 충분하지 않습니다 (최소 2개 이상의 상품 판매 내역 필요).'});
+    }
+
+    salesData.sort((a, b) => (b._sum.quantity || 0) - (a._sum.quantity || 0));
+
+    const bestSellerInfo = salesData[0];
+    const worstSellerInfo = salesData[salesData.length - 1];
+
+    const productIds = [bestSellerInfo.productId, worstSellerInfo.productId];
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+    });
+
+    const bestSeller = {
+      ...products.find(p => p.id === bestSellerInfo.productId),
+      totalQuantity: bestSellerInfo._sum.quantity,
+    };
+
+    const worstSeller = {
+      ...products.find(p => p.id === worstSellerInfo.productId),
+      totalQuantity: worstSellerInfo._sum.quantity,
+    };
+
+    const suggestion = await generateSalesAnalysis(bestSeller, worstSeller);
+
+    res.json({ bestSeller, worstSeller, suggestion });
+
+  } catch (error) {
+    console.error('Error generating monthly summary:', error);
+    res.status(500).json({ message: '월간 판매 분석 생성에 실패했습니다.' });
   }
 });
 

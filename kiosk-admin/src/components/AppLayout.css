@@ -1,0 +1,25 @@
+.sider-desktop-only {
+  display: block;
+}
+
+.header-desktop-only-logout {
+  display: flex;
+}
+
+.mobile-only-logout-button {
+  display: none; /* Hidden by default on desktop */
+}
+
+@media (max-width: 767px) {
+  .sider-desktop-only {
+    display: none;
+  }
+
+  .header-desktop-only-logout {
+    display: none !important; /* Hide desktop logout button on mobile */
+  }
+
+  .mobile-only-logout-button {
+    display: block; /* Visible on mobile */
+  }
+}

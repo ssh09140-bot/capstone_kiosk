@@ -15,11 +15,11 @@ import {
   SafeAreaView
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import api from '../../src/api'; // Import the configured axios instance
 import { Product } from '../../context/CartContext';
 
 // Render 서버의 고정 주소 또는 ngrok 주소를 사용해야 합니다.
-const BACKEND_URL = 'https://capstone-kiosk.onrender.com';
+// const BACKEND_URL = 'https://capstone-kiosk.onrender.com'; // Removed hardcoded URL
 
 interface Category {
     id: number | null;
@@ -49,9 +49,9 @@ export default function ProductScreen() {
         return;
       }
       const [productRes, categoryRes, storeRes] = await Promise.all([
-          axios.get(`${BACKEND_URL}/api/products/${storeId}`),
-          axios.get(`${BACKEND_URL}/api/categories/${storeId}`),
-          axios.get(`${BACKEND_URL}/api/store/${storeId}`),
+          api.get(`/products`),
+          api.get(`/categories`),
+          api.get(`/store/${storeId}`),
       ]);
       setProducts(productRes.data.map((p: any) => ({ ...p, id: p.id.toString() })));
       setCategories([{ id: null, name: '전체' }, ...categoryRes.data]);
@@ -108,7 +108,29 @@ export default function ProductScreen() {
     );
   };
   
-  const handleStoreReset = () => { /* 이전과 동일 */ };
+  const handleStoreReset = async () => {
+    Alert.alert(
+      '가게 설정 초기화',
+      '정말로 가게 설정을 초기화하시겠습니까? 모든 로컬 데이터가 삭제됩니다.',
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '초기화',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem('storeId');
+            // Optionally, remove other relevant items if they exist, e.g., 'authToken'
+            // await AsyncStorage.removeItem('authToken');
+            Alert.alert('초기화 완료', '가게 설정이 초기화되었습니다. 설정 화면으로 이동합니다.');
+            router.replace('/setup');
+          },
+        },
+      ]
+    );
+  };
   
   if (isLoading) {
     return (

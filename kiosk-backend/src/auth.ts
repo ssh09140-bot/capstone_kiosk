@@ -1,14 +1,13 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
-import { authenticateToken } from './middleware/auth';
+import prisma from './db';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
-
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET is not set in the environment variables.');
+}
 
 // [POST] /api/auth/register
 router.post('/register', async (req, res) => {
@@ -60,8 +59,8 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, storeId: user.storeId },
-      'YOUR_SECRET_KEY', 
+      { id: user.id, storeId: user.storeId, role: 'ADMIN' }, // Corrected payload
+      process.env.JWT_SECRET!, 
       { expiresIn: '1d' }
     );
 

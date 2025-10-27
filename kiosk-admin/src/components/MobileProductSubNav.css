@@ -1,0 +1,21 @@
+.mobile-product-sub-nav-container {
+  display: none; /* Hidden by default */
+  background-color: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 0 16px;
+}
+
+.mobile-product-sub-nav-container .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+.mobile-product-sub-nav-container .ant-tabs-tab {
+  padding: 12px 0;
+}
+
+/* Show on screens smaller than 768px */
+@media (max-width: 767px) {
+  .mobile-product-sub-nav-container {
+    display: block;
+  }
+}

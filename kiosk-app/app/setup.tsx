@@ -1,13 +1,13 @@
 // app/setup.tsx
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import api from '../src/api'; // Import the configured axios instance
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 
 // 이 주소는 사장님의 PC IP 주소여야 합니다!
-const BACKEND_URL = 'https://capstone-kiosk.onrender.com'; // 예시: 'http://192.168.0.5:3000'
+// const BACKEND_URL = 'https://capstone-kiosk.onrender.com'; // 예시: 'http://192.168.0.5:3000' // Removed hardcoded URL
 
 export default function SetupScreen() {
   const [storeId, setStoreId] = useState('');
@@ -19,7 +19,7 @@ export default function SetupScreen() {
       return;
     }
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/store/${storeId}`);
+      const response = await api.get(`/store/${storeId}`); // Use the imported api instance
       
       await AsyncStorage.setItem('storeId', storeId);
 

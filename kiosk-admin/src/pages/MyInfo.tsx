@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Spin, Typography, message } from 'antd';
+import { Card, Descriptions, Spin, Typography, message, Button } from 'antd';
+import { LogoutOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
 const { Title } = Typography;
@@ -13,6 +15,7 @@ interface UserInfo {
 const MyInfo: React.FC = () => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -29,6 +32,11 @@ const MyInfo: React.FC = () => {
     fetchUserInfo();
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    navigate('/login');
+  };
+
   if (loading) {
     return <Spin size="large" style={{ display: 'block', marginTop: '50px' }} />;
   }
@@ -41,6 +49,16 @@ const MyInfo: React.FC = () => {
         <Descriptions.Item label="가게 이름">{userInfo?.storeName}</Descriptions.Item>
         <Descriptions.Item label="고유 가게 ID (키오스크 연동용)">{userInfo?.storeId}</Descriptions.Item>
       </Descriptions>
+      <Button
+        type="primary"
+        danger
+        icon={<LogoutOutlined />}
+        onClick={handleLogout}
+        style={{ marginTop: '24px', width: '100%' }}
+        className="mobile-only-logout-button"
+      >
+        로그아웃
+      </Button>
     </Card>
   );
 };

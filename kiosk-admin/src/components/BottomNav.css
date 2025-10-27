@@ -1,0 +1,51 @@
+.bottom-nav-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #fff;
+  border-top: 1px solid #f0f0f0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: none; /* Hidden by default */
+  overflow-x: auto; /* Allow horizontal scrolling if items overflow */
+}
+
+.bottom-nav-container .ant-menu-horizontal {
+  border-bottom: none;
+  flex-wrap: nowrap; /* Prevent wrapping */
+  width: 100%; /* Make it fill the container width */
+  /* min-width: 320px; Removed */
+}
+
+.bottom-nav-container .ant-menu-item {
+  padding: 0 5px;
+  margin: 0;
+  height: 50px;
+  line-height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1; /* Added to make items take equal space */
+  flex-shrink: 0; /* Prevent items from shrinking */
+}
+
+.bottom-nav-container .ant-menu-item .anticon {
+  font-size: 18px;
+  margin-bottom: 2px; /* Adjusted to create space */
+}
+
+.bottom-nav-container .ant-menu-item .ant-menu-title-content {
+  font-size: 12px;
+  line-height: 1;
+  text-align: center; /* Added to center the text */
+  width: 100%; /* Ensure text container takes full width */
+}
+
+/* Show on screens smaller than 768px */
+@media (max-width: 767px) {
+  .bottom-nav-container {
+    display: flex;
+  }
+}

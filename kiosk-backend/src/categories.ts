@@ -1,13 +1,12 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticateToken } from './middleware/auth';
+import prisma from './db';
+import { authenticateBoth } from './middleware/authenticateBoth'; // Import authenticateBoth middleware
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /api/categories
-router.get('/', authenticateToken, async (req, res) => {
-  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+router.get('/', authenticateBoth, async (req, res) => {
+  if (!req.user) return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
   const categories = await prisma.category.findMany({
     where: { storeId: req.user.storeId },
   });
@@ -15,8 +14,8 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // POST /api/categories
-router.post('/', authenticateToken, async (req, res) => {
-  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+router.post('/', authenticateBoth, async (req, res) => {
+  if (!req.user) return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
   const { name } = req.body;
   const category = await prisma.category.create({
     data: {
@@ -28,8 +27,8 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/categories/:id
-router.put('/:id', authenticateToken, async (req, res) => {
-  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+router.put('/:id', authenticateBoth, async (req, res) => {
+  if (!req.user) return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
   const { name } = req.body;
   const category = await prisma.category.update({
     where: { id: parseInt(req.params.id), storeId: req.user.storeId },
@@ -39,8 +38,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/categories/:id
-router.delete('/:id', authenticateToken, async (req, res) => {
-  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+router.delete('/:id', authenticateBoth, async (req, res) => {
+  if (!req.user) return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
   try {
     await prisma.category.delete({
       where: { id: parseInt(req.params.id), storeId: req.user.storeId },

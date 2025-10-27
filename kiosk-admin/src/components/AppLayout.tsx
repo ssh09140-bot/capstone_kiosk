@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Popover, Badge } from 'antd';
 import { 
     DashboardOutlined, 
@@ -13,11 +13,15 @@ import {
 import api from '../api';
 import NotificationPanel from './NotificationPanel';
 import type { Notification } from '../models/Notification';
+import BottomNav from './BottomNav'; // Import BottomNav
+import MobileProductSubNav from './MobileProductSubNav'; // Import MobileProductSubNav
+import './AppLayout.css'; // Import AppLayout CSS
 
 const { Header, Content, Sider } = Layout;
 
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // Use useLocation hook
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -59,6 +63,13 @@ const AppLayout: React.FC = () => {
     }
   };
 
+  // Function to determine if MobileProductSubNav should be shown
+  const shouldShowMobileProductSubNav = () => {
+    const isMobile = window.innerWidth <= 767; 
+    const productRelatedPaths = ['/products', '/categories', '/option-groups'];
+    return isMobile && productRelatedPaths.some(path => location.pathname.startsWith(path));
+  };
+
   const menuItems = [
     { key: '/', icon: <DashboardOutlined />, label: '대시보드', onClick: () => navigate('/') },
     { key: '/products', icon: <UnorderedListOutlined />, label: '상품 관리', onClick: () => navigate('/products') },
@@ -79,7 +90,7 @@ const AppLayout: React.FC = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider width={200} breakpoint="lg" collapsedWidth="0">
+      <Sider width={200} breakpoint="lg" collapsedWidth="0" className="sider-desktop-only"> {/* Apply class */}
         <div style={{ height: '32px', margin: '16px', color: 'white', textAlign: 'center', lineHeight: '32px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.2)' }}>
           KIOSK ADMIN
         </div>
@@ -99,16 +110,18 @@ const AppLayout: React.FC = () => {
               <Button shape="circle" icon={<BellOutlined />} />
             </Badge>
           </Popover>
-          <Button type="primary" icon={<LogoutOutlined />} onClick={() => navigate('/login')} style={{ marginLeft: 16 }}>
+          <Button type="primary" icon={<LogoutOutlined />} onClick={() => navigate('/login')} style={{ marginLeft: 16 }} className="header-desktop-only-logout"> {/* Apply class */}
             로그아웃
           </Button>
         </Header>
         <Content style={{ margin: '24px 16px 0' }}>
+          {shouldShowMobileProductSubNav() && <MobileProductSubNav />} {/* Conditional Mobile Product Sub-Nav */}
           <div style={{ padding: 24, minHeight: 360, background: '#fff', borderRadius: 8 }}>
             <Outlet />
           </div>
         </Content>
       </Layout>
+      <BottomNav /> {/* Render BottomNav as a direct child of the outermost Layout */}
     </Layout>
   );
 };
