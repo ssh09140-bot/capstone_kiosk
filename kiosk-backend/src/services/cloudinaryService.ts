@@ -18,10 +18,12 @@ cloudinary.config({
  */
 export async function uploadImage(file: string | Buffer): Promise<string> {
   try {
-    let uploadSource: string | Buffer = file;
+    let uploadSource: string;
     if (Buffer.isBuffer(file)) {
-      // Convert buffer to data URI (assuming JPEG for simplicity, can be dynamic)
+      // Convert buffer to data URI
       uploadSource = `data:image/jpeg;base64,${file.toString('base64')}`;
+    } else {
+      uploadSource = file;
     }
     const result = await cloudinary.uploader.upload(uploadSource, {
       folder: 'kiosk-products', // Optional: organize uploads in a specific folder
