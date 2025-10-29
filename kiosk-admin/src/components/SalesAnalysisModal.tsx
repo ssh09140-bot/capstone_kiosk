@@ -27,8 +27,7 @@ const SalesAnalysisModal: React.FC<SalesAnalysisModalProps> = ({ isOpen, onClose
         try {
           const response = await api.get('/analytics/monthly-summary');
           setAnalysis(response.data);
-        } catch (err) {
-          if (err.response && err.response.status === 404) {
+                   } catch (err: any) {          if (err.response && err.response.status === 404) {
             setError(err.response.data.message || '분석을 위한 데이터가 충분하지 않습니다.');
           } else {
             setError('판매 분석을 가져오는 데 실패했습니다.');
