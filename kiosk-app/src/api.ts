@@ -11,7 +11,12 @@ const api = axios.create({
 // Add a request interceptor to include storeId in headers
 api.interceptors.request.use(
   async (config) => {
+    const token = await AsyncStorage.getItem('userToken'); // Assuming you store the JWT as 'userToken'
     const storeId = await AsyncStorage.getItem('storeId');
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     if (storeId) {
       config.headers['X-Store-Id'] = storeId; // Custom header for storeId
     }
