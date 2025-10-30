@@ -3,7 +3,7 @@ import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, 
 import { UploadOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
-import type { UploadProps } from 'antd';
+import type { UploadFile } from 'antd/lib/upload/interface';
 
 const { Option } = Select;
 const FormItem = Form.Item;
@@ -21,7 +21,8 @@ const ProductForm: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const [form] = Form.useForm();
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [fileList, setFileList] = useState<UploadFile[]>([]); // New state for file list
+    const [productImageUrl, setProductImageUrl] = useState<string | null>(null); // Renamed imageUrl to productImageUrl
     const [categories, setCategories] = useState<Category[]>([]);
     const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
     const [loading, setLoading] = useState(false);
@@ -56,7 +57,7 @@ const ProductForm: React.FC = () => {
                     const { data } = await api.get(`/products/${id}`);
                     const optionGroupIds = data.optionGroups?.map((g: any) => g.id) || [];
                     form.setFieldsValue({ ...data, optionGroupIds });
-                    setImageUrl(data.imageUrl);
+                    setProductImageUrl(data.imageUrl); // Use productImageUrl
                 } catch (error) {
                     message.error("상품 정보를 불러오는데 실패했습니다.");
                 } finally {
@@ -67,31 +68,39 @@ const ProductForm: React.FC = () => {
         }
     }, [id, isEditMode, form]);
 
-    const handleUpload: UploadProps['customRequest'] = async (options) => {
-        const { file, onSuccess, onError } = options;
-        const formData = new FormData();
-        formData.append('image', file as Blob);
-        try {
-            const response = await api.post('/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
-            setImageUrl(response.data.imageUrl);
-            message.success(`파일 업로드 성공.`);
-            if (onSuccess) onSuccess(response.data);
-        } catch (error) {
-            message.error(`파일 업로드 실패.`);
-            if (onError) onError(error as Error);
-        }
-    };
+    // handleUpload function removed
 
     const onFinish = async (values: any) => {
         try {
-            const productData = { ...values, imageUrl };
+            const formData = new FormData();
+            for (const key in values) {
+                if (values[key] !== undefined && values[key] !== null) {
+                    if (Array.isArray(values[key])) {
+                        values[key].forEach((item: any) => formData.append(`${key}[]`, item));
+                    } else {
+                        formData.append(key, values[key]);
+                    }
+                }
+            }
+
+            if (fileList.length > 0 && fileList[0].originFileObj) {
+                formData.append('image', fileList[0].originFileObj);
+            } else if (productImageUrl && isEditMode) {
+                // If no new file is uploaded but there's an existing image in edit mode,
+                // we send its URL to ensure it's not removed if the backend expects it.
+                formData.append('imageUrl', productImageUrl);
+            }
+
+
             if (isEditMode) {
-                await api.put(`/products/${id}`, productData);
+                await api.put(`/products/${id}`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
                 message.success('상품이 성공적으로 수정되었습니다.');
             } else {
-                await api.post('/products', productData);
+                await api.post('/products', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
                 message.success('상품이 성공적으로 저장되었습니다.');
             }
             navigate('/products');
@@ -133,10 +142,19 @@ const ProductForm: React.FC = () => {
                     </Select>
                 </FormItem>
                 <FormItem label="상품 사진">
-                    <Upload customRequest={handleUpload} maxCount={1} showUploadList={true}>
+                    <Upload
+                        maxCount={1}
+                        showUploadList={true}
+                        beforeUpload={() => false} // Prevent default upload behavior
+                        onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+                        fileList={fileList}
+                        listType="picture"
+                    >
                         <Button icon={<UploadOutlined />}>이미지 업로드</Button>
                     </Upload>
-                    {imageUrl && <img src={`https://capstone-kiosk.onrender.com${imageUrl}`} alt="상품 이미지" style={{ width: '100px', marginTop: '10px', borderRadius: '4px' }} />}
+                    {productImageUrl && fileList.length === 0 && ( // Display existing image if no new file selected
+                        <img src={`https://capstone-kiosk.onrender.com${productImageUrl}`} alt="상품 이미지" style={{ width: '100px', marginTop: '10px', borderRadius: '4px' }} />
+                    )}
                 </FormItem>
 
                 <Divider>자동 발주 설정</Divider>
