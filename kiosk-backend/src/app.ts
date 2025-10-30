@@ -19,6 +19,7 @@ import categoryRoutes from './categories';
 import optionGroupRoutes from './option-groups';
 import orderRoutes from './orders';
 import userRoutes from './users';
+import paymentsRoutes from './payments';
 
 
 
@@ -44,6 +45,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/option-groups', optionGroupRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api', userRoutes);
+app.use('/api', paymentsRoutes);
 
 // --- API Routes ---
 

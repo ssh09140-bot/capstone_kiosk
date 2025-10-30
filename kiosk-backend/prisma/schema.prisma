@@ -22,6 +22,8 @@ model User {
   optionGroups   OptionGroup[]
   purchaseOrders PurchaseOrder[]
   notifications  Notification[]
+  billingKey     String?
+  customerKey    String?
 }
 
 model Category {
