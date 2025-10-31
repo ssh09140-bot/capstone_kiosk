@@ -7,7 +7,7 @@ import api from '../api';
 const { Title, Text } = Typography;
 
 // Toss Payments Client Key - This should be in your .env file or similar
-const TOSS_CLIENT_KEY = 'test_ck_ZLKGPx4M3M1MZzdk5RQ23BaWypv1'; // 실제 클라이언트 키로 교체하세요.
+const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY; // 실제 클라이언트 키로 교체하세요.
 
 
 interface UserInfo {
