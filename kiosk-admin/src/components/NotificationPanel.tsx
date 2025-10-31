@@ -1,6 +1,6 @@
 import React from 'react';
 import { List, Typography } from 'antd';
-import type { Notification } from '../models/Notification'; // Assuming a model definition file
+import type { Notification } from '../models/prisma'; // Assuming a model definition file
 
 const { Text } = Typography;
 

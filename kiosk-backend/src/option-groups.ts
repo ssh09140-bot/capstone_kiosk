@@ -1,9 +1,8 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from './db';
 import { authenticateToken } from './middleware/auth';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /api/option-groups
 router.get('/', authenticateToken, async (req, res) => {

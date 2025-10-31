@@ -16,24 +16,13 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../src/api'; // Import the configured axios instance
-import { Product } from '../../context/CartContext';
+import { Product, Category } from '../../models/prisma';
 
-// Render 서버의 고정 주소 또는 ngrok 주소를 사용해야 합니다.
-// const BACKEND_URL = 'https://capstone-kiosk.onrender.com'; // Removed hardcoded URL
-
-interface Category {
-    id: number | null;
-    name: string;
-}
-
-interface ProductWithCategory extends Product {
-    categoryId: number | null;
-    stock: number;
-}
+const BACKEND_URL = 'https://capstone-kiosk.onrender.com';
 
 export default function ProductScreen() {
   const router = useRouter();
-  const [products, setProducts] = useState<ProductWithCategory[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,13 +68,12 @@ export default function ProductScreen() {
     return filtered;
   }, [selectedCategory, products, searchTerm]);
 
-  const renderProductItem = ({ item }: { item: ProductWithCategory }) => {
+  const renderProductItem = ({ item }: { item: Product }) => {
     const isSoldOut = item.stock <= 0;
     return (
       <TouchableOpacity
         style={[styles.productCard, isSoldOut && styles.soldOutCard]}
         onPress={() => !isSoldOut && router.push({
-          // ### --- 1. 타입 오류가 발생하지 않는 안전한 객체 형태로 수정했습니다. --- ###
           pathname: '/product/[id]',
           params: { id: item.id, product: JSON.stringify(item) }
         })}
@@ -122,8 +110,6 @@ export default function ProductScreen() {
           style: 'destructive',
           onPress: async () => {
             await AsyncStorage.removeItem('storeId');
-            // Optionally, remove other relevant items if they exist, e.g., 'authToken'
-            // await AsyncStorage.removeItem('authToken');
             Alert.alert('초기화 완료', '가게 설정이 초기화되었습니다. 설정 화면으로 이동합니다.');
             router.replace('/setup');
           },
@@ -254,20 +240,18 @@ const styles = StyleSheet.create({
         color: '#555' 
     },
     emptyText: { textAlign: 'center', marginTop: 50, fontFamily: 'Pretendard-Regular', fontSize: 16, color: '#888' },
-    // ### --- 2. 빠져있던 스타일들을 모두 추가했습니다. --- ###
     soldOutCard: {
-        // 특별한 스타일 없이 오버레이로 처리
     },
     soldOutImage: {
-        opacity: 0.5, // 이미지를 약간 어둡게
+        opacity: 0.5,
     },
     soldOutOverlay: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        height: 150, // 이미지 높이와 동일하게
-        backgroundColor: 'rgba(255, 255, 255, 0.5)', // 반투명 흰색 오버레이
+        height: 150, 
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         borderTopLeftRadius: 12, 
@@ -277,7 +261,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Pretendard-Bold',
         fontSize: 24,
         color: '#333',
-        transform: [{ rotate: '-15deg' }] // 약간 기울여서 표시
+        transform: [{ rotate: '-15deg' }]
     },
     resetButtonContainer: {
         position: 'absolute',

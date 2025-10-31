@@ -13,14 +13,27 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { email: true, storeName: true, storeId: true },
+      select: { 
+        email: true, 
+        storeName: true, 
+        storeId: true, 
+        cardCompany: true, 
+        cardNumber: true 
+      },
     });
 
     if (!user) {
       return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
     }
 
-    res.json(user);
+    // Restructure the response to match frontend expectations
+    const { cardCompany, cardNumber, ...rest } = user;
+    const response = {
+      ...rest,
+      card: cardCompany && cardNumber ? { company: cardCompany, number: cardNumber } : null,
+    };
+
+    res.json(response);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: '서버 오류가 발생했습니다.' });

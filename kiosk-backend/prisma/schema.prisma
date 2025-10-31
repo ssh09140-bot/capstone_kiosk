@@ -24,6 +24,8 @@ model User {
   notifications  Notification[]
   billingKey     String?
   customerKey    String?
+  cardCompany    String?
+  cardNumber     String?
 }
 
 model Category {

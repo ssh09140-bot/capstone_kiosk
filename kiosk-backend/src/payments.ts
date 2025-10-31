@@ -43,12 +43,14 @@ router.post('/billing/issue-billing-key', authenticateToken, async (req, res) =>
 
     const { billingKey, card } = tossResponse;
 
-    // Save the billingKey and customerKey to the user
+    // Save the billingKey, customerKey, and card info to the user
     await prisma.user.update({
       where: { id: userId },
       data: {
         billingKey,
         customerKey,
+        cardCompany: card.company,
+        cardNumber: card.number, // This contains masked number e.g., 433012******1234
       },
     });
 

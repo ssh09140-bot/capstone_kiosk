@@ -1,24 +1,6 @@
 import React, { createContext, ReactNode, useContext, useState } from 'react';
+import { CartItem, Product, SelectedOptions } from '../models/prisma';
 
-export interface Option { id: number; name: string; price: number; }
-export interface OptionGroup { id: number; name: string; options: Option[]; }
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  imageUrl: string;
-  description: string;
-  categoryId: number | null;
-  optionGroups?: OptionGroup[];
-}
-export type SelectedOptions = Record<string, { optionId: number; optionName: string; price: number }>;
-export interface CartItem {
-  id: string;
-  product: Product;
-  quantity: number;
-  selectedOptions: SelectedOptions;
-  itemTotalPrice: number;
-}
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (product: Product, quantity: number, selectedOptions: SelectedOptions) => void;
