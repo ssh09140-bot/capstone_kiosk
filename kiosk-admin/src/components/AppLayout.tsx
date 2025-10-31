@@ -12,7 +12,7 @@ import {
 } from '@ant-design/icons';
 import api from '../api';
 import NotificationPanel from './NotificationPanel';
-import type { Notification } from '../models/Notification';
+import type { Notification } from '@kiosk/shared-types';
 import BottomNav from './BottomNav'; // Import BottomNav
 import MobileProductSubNav from './MobileProductSubNav'; // Import MobileProductSubNav
 import './AppLayout.css'; // Import AppLayout CSS
