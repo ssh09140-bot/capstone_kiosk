@@ -9,6 +9,5 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "npm run build:types --workspace=kiosk-backend"
   }
 }
