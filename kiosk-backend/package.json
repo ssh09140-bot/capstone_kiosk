@@ -8,7 +8,7 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "test": "jest",
-    "build:types": "npx prisma generate && npx copyfiles -u 1 \"node_modules/@prisma/client/**/*\" \"../packages/shared-types\""
+    "build:types": "prisma generate && copyfiles -u 1 \"node_modules/@prisma/client/**/*\" \"../packages/shared-types\""
   },
   "keywords": [],
   "author": "",
