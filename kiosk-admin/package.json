@@ -18,7 +18,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^6.23.1",
-    "@kiosk/shared-types": "file:../packages/shared-types"
+    "@kiosk/shared-types": "1.0.0"
   },
   "devDependencies": {
     "@capacitor/android": "^7.4.4",
