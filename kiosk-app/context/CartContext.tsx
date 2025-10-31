@@ -1,5 +1,5 @@
 import React, { createContext, ReactNode, useContext, useState } from 'react';
-import { CartItem, Product, SelectedOptions } from '../models/prisma';
+import { CartItem, Product, SelectedOptions } from '@kiosk/shared-types';
 
 interface CartContextType {
   cartItems: CartItem[];

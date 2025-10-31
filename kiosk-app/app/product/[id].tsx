@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { OptionGroup, SelectedOptions, useCart } from '../../context/CartContext';
+import { useCart } from '../../context/CartContext';
+import type { OptionGroup, SelectedOptions } from '@kiosk/shared-types';
 
 const BACKEND_URL = 'https://capstone-kiosk.onrender.com';
 

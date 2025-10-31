@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../src/api'; // Import the configured axios instance
-import { Product, Category } from '../../models/prisma';
+import { Product, Category } from '@kiosk/shared-types';
 
 const BACKEND_URL = 'https://capstone-kiosk.onrender.com';
 

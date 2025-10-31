@@ -1,0 +1,14 @@
+{
+  "name": "kiosk-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "kiosk-app",
+    "kiosk-admin",
+    "kiosk-backend",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm run build:types --workspace=kiosk-backend"
+  }
+}

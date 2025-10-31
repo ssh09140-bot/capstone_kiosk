@@ -55,7 +55,12 @@ router.post('/', authenticateBoth, upload.single('image'), async (req, res) => {
       estimatedDeliveryDays: estimatedDeliveryDays ? parseInt(estimatedDeliveryDays) : null,
       optionGroups: optionGroupIds ? {
         connect: optionGroupIds.map((id: string) => ({ id: parseInt(id) }))
-      } : undefined
+      } : undefined,
+      owner: {
+        connect: {
+          storeId: req.user.storeId,
+        },
+      },
     },
   });
 

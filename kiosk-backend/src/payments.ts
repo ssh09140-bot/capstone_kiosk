@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { prisma } from './db';
+import prisma from './db';
 import { authenticateToken } from './middleware/auth';
 import fetch from 'node-fetch';
 
@@ -7,6 +7,14 @@ const router = Router();
 
 // Toss Payments Secret Key - This should be in your .env file
 const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY;
+
+interface TossBillingAuthResponse {
+  billingKey: string;
+  card: {
+    company: string;
+    number: string;
+  };
+}
 
 // Endpoint to register a card (issue a billing key)
 router.post('/billing/issue-billing-key', authenticateToken, async (req, res) => {
@@ -35,7 +43,7 @@ router.post('/billing/issue-billing-key', authenticateToken, async (req, res) =>
       }),
     });
 
-    const tossResponse = await response.json();
+    const tossResponse = await response.json() as TossBillingAuthResponse;
 
     if (!response.ok) {
       return res.status(response.status).json(tossResponse);
