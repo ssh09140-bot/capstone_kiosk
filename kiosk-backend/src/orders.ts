@@ -61,18 +61,25 @@ router.post('/', authenticateBoth, async (req, res) => {
     if (!req.user) { 
         return res.status(401).json({ message: 'User not authenticated' });
     }
-    const { items, totalAmount } = req.body; // items: { productId: number, quantity: number, pricePerItem: number }[]
+    const { items } = req.body; // items: { productId: number, quantity: number, pricePerItem: number }[]
 
     if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: 'Order must contain an array of items.' });
     }
+
+    // Securely calculate total amount on the server-side
+    const calculatedTotalAmount = items.reduce((sum: number, item: { pricePerItem: number, quantity: number }) => {
+        const price = Number(item.pricePerItem) || 0;
+        const quantity = Number(item.quantity) || 0;
+        return sum + (price * quantity);
+    }, 0);
 
     try {
         const newOrder = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             const order = await tx.order.create({
                 data: {
                     storeId: req.user!.storeId,
-                    totalAmount,
+                    totalAmount: calculatedTotalAmount, // Use the server-calculated amount
                     orderItems: {
                         create: items.map((item: { productId: number, quantity: number, pricePerItem: number }) => ({ 
                             productId: item.productId,
