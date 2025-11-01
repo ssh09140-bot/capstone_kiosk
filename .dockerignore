@@ -1,0 +1,17 @@
+# Ignore node_modules folders
+node_modules
+*/node_modules
+*/**/node_modules
+
+# Ignore git folder
+.git
+
+# Ignore Docker related files
+Dockerfile
+.dockerignore
+nginx.conf
+
+# Ignore other local files
+.env
+.env.local
+*.log
