@@ -20,6 +20,9 @@ COPY . .
 # Generate Prisma client (which now outputs to packages/shared-types)
 RUN npm run generate --workspace=kiosk-backend
 
+# --- DEBUG: Print environment variables to check if VITE_API_URL is present ---
+RUN echo "--- Printing VITE_ environment variables ---" && printenv | grep VITE_ || echo "--- No VITE_ variables found ---"
+
 # Build the kiosk-admin frontend
 RUN npm run build --workspace=kiosk-admin
 
