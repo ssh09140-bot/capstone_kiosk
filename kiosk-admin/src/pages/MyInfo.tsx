@@ -40,7 +40,7 @@ const MyInfo: React.FC = () => {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const billingAuthKey = urlParams.get('billingAuthKey');
+    const billingAuthKey = urlParams.get('authKey');
     const customerKey = urlParams.get('customerKey');
 
     const registerCardAndFetch = async () => {
