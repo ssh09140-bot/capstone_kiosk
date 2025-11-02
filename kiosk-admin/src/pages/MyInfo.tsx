@@ -46,17 +46,22 @@ const MyInfo: React.FC = () => {
     const registerCardAndFetch = async () => {
       setLoading(true);
       try {
-        await api.post('/billing/issue-billing-key', { 
+        const response = await api.post<UserInfo>('/billing/issue-billing-key', { 
           authKey: billingAuthKey, 
           customerKey 
         });
         message.success('카드가 성공적으로 등록되었습니다.');
-        // Clean the URL first, then fetch user info on the next render
+        setUserInfo(response.data);
         navigate('/my-info', { replace: true });
+        setTimeout(() => {
+          fetchUserInfo();
+        }, 1000);
       } catch (error) {
         console.error('빌링키 발급 실패', error);
         message.error('카드 등록에 실패했습니다. 다시 시도해주세요.');
         navigate('/my-info', { replace: true });
+      } finally {
+        setLoading(false);
       }
     };
 

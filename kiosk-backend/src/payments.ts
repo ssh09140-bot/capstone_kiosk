@@ -3,6 +3,8 @@ import prisma from './db';
 import { authenticateToken } from './middleware/auth';
 import fetch from 'node-fetch';
 
+console.log('payments.ts file loaded');
+
 const router = Router();
 
 // Toss Payments Secret Key - This should be in your .env file
@@ -11,13 +13,17 @@ const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY;
 interface TossBillingAuthResponse {
   billingKey: string;
   card: {
-    company: string;
+    issuerCode: string;
+    acquirerCode: string;
     number: string;
+    cardType: string;
+    ownerType: string;
   };
 }
 
 // Endpoint to register a card (issue a billing key)
 router.post('/billing/issue-billing-key', authenticateToken, async (req, res) => {
+  console.log('Reached /billing/issue-billing-key route');
   const { customerKey, authKey } = req.body;
   const userId = req.user?.id; // from authenticateToken middleware
 
@@ -52,17 +58,17 @@ router.post('/billing/issue-billing-key', authenticateToken, async (req, res) =>
     const { billingKey, card } = tossResponse;
 
     // Save the billingKey, customerKey, and card info to the user
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         billingKey,
         customerKey,
-        cardCompany: card.company,
+        cardCompany: card.cardType, // Use card.cardType instead of card.company
         cardNumber: card.number, // This contains masked number e.g., 433012******1234
       },
     });
 
-    res.status(200).json({ message: 'Card registered successfully', card });
+    res.status(200).json(updatedUser);
   } catch (error) {
     console.error('Error issuing billing key:', error);
     res.status(500).json({ error: 'Internal server error' });

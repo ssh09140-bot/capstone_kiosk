@@ -1,3 +1,5 @@
+console.log('app.ts file is being loaded');
+
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
@@ -51,8 +53,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/option-groups', optionGroupRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api', userRoutes);
 app.use('/api', paymentsRoutes);
+app.use('/api', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 
