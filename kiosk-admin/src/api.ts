@@ -17,3 +17,54 @@ api.interceptors.request.use(config => {
 });
 
 export default api;
+
+// --- Inventory API ---
+
+export interface Inventory {
+  id: number;
+  name: string;
+  quantity: number;
+  unit: string;
+  threshold: number | null;
+  createdAt: string;
+  updatedAt: string;
+  storeId: string;
+}
+
+export interface CreateInventoryItemDto {
+  name: string;
+  quantity: number;
+  unit: string;
+  threshold?: number;
+}
+
+export interface UpdateInventoryItemDto {
+  name?: string;
+  quantity?: number;
+  unit?: string;
+  threshold?: number;
+}
+
+export const getInventory = async (): Promise<Inventory[]> => {
+  const response = await api.get<Inventory[]>('/inventory');
+  return response.data;
+};
+
+export const getInventoryItem = async (id: number): Promise<Inventory> => {
+  const response = await api.get<Inventory>(`/inventory/${id}`);
+  return response.data;
+};
+
+export const createInventoryItem = async (data: CreateInventoryItemDto): Promise<Inventory> => {
+  const response = await api.post<Inventory>('/inventory', data);
+  return response.data;
+};
+
+export const updateInventoryItem = async (id: number, data: UpdateInventoryItemDto): Promise<Inventory> => {
+  const response = await api.put<Inventory>(`/inventory/${id}`, data);
+  return response.data;
+};
+
+export const deleteInventoryItem = async (id: number): Promise<void> => {
+  await api.delete(`/inventory/${id}`);
+};

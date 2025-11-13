@@ -8,7 +8,8 @@ import {
     LogoutOutlined,
     AppstoreOutlined,
     ShoppingCartOutlined,
-    BellOutlined
+    BellOutlined,
+    ContainerOutlined // Import ContainerOutlined for Inventory
 } from '@ant-design/icons';
 import api from '../api';
 import NotificationPanel from './NotificationPanel';
@@ -77,6 +78,7 @@ const AppLayout: React.FC = () => {
     { key: '/option-groups', icon: <AppstoreOutlined />, label: '옵션 관리', onClick: () => navigate('/option-groups') },
     { key: '/orders', icon: <UnorderedListOutlined />, label: '주문 내역', onClick: () => navigate('/orders') },
     { key: '/purchase-orders', icon: <ShoppingCartOutlined />, label: '발주 관리', onClick: () => navigate('/purchase-orders') },
+    { key: '/inventory', icon: <ContainerOutlined />, label: '재고 관리', onClick: () => navigate('/inventory') }, // New Inventory Management link
     { key: '/my-info', icon: <UserOutlined />, label: '내 정보', onClick: () => navigate('/my-info') }
   ];
 

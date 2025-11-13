@@ -11,7 +11,14 @@ router.get('/', authenticateToken, async (req, res) => {
     const purchaseOrders = await prisma.purchaseOrder.findMany({
         where: { storeId: req.user.storeId },
         orderBy: { createdAt: 'desc' },
-        include: { purchaseOrderItems: { include: { product: true } } },
+        include: {
+            purchaseOrderItems: {
+                include: {
+                    product: true,
+                    inventory: true, // Include inventory
+                }
+            }
+        },
     });
     res.json(purchaseOrders);
 });
@@ -26,9 +33,13 @@ router.post('/:id/confirm', authenticateToken, async (req, res) => {
     }
 
     const { estimatedDeliveryDays } = req.body;
-    const firstItem = await prisma.purchaseOrderItem.findFirst({ where: { purchaseOrderId: orderId } });
-    const product = firstItem ? await prisma.product.findUnique({ where: { id: firstItem.productId } }) : null;
-    const deliveryDays = estimatedDeliveryDays || product?.estimatedDeliveryDays || 2;
+    const firstItem = await prisma.purchaseOrderItem.findFirst({
+        where: { purchaseOrderId: orderId },
+        include: { product: true, inventory: true },
+    });
+
+    const itemEntity = firstItem?.product || firstItem?.inventory;
+    const deliveryDays = estimatedDeliveryDays || itemEntity?.estimatedDeliveryDays || 2;
     const estimatedDeliveryAt = new Date();
     estimatedDeliveryAt.setDate(estimatedDeliveryAt.getDate() + deliveryDays);
 
@@ -63,30 +74,40 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
         return res.status(404).json({ message: '배송 중인 발주를 찾을 수 없습니다.' });
     }
 
-    const updatedOrder = await prisma.$transaction(async (tx) => {
-        for (const item of items) {
-            const orderItem = await tx.purchaseOrderItem.update({
-                where: { id: item.purchaseOrderItemId },
-                data: { defectiveQuantity: item.defectiveQuantity },
-                include: { product: true },
-            });
-
-            const stockToAdd = orderItem.quantity - (item.defectiveQuantity || 0);
-            if (stockToAdd > 0) {
-                await tx.product.update({
-                    where: { id: orderItem.productId },
-                    data: { stock: { increment: stockToAdd } },
+    try {
+        const updatedOrder = await prisma.$transaction(async (tx) => {
+            for (const item of items) {
+                const orderItem = await tx.purchaseOrderItem.update({
+                    where: { id: item.purchaseOrderItemId },
+                    data: { defectiveQuantity: item.defectiveQuantity },
                 });
+
+                const stockToAdd = orderItem.quantity - (item.defectiveQuantity || 0);
+                if (stockToAdd > 0) {
+                    if (orderItem.productId) {
+                        await tx.product.update({
+                            where: { id: orderItem.productId },
+                            data: { stock: { increment: stockToAdd } },
+                        });
+                    } else if (orderItem.inventoryId) {
+                        await tx.inventory.update({
+                            where: { id: orderItem.inventoryId },
+                            data: { quantity: { increment: stockToAdd } },
+                        });
+                    }
+                }
             }
-        }
 
-        return tx.purchaseOrder.update({
-            where: { id: orderId },
-            data: { status: PurchaseOrderStatus.DELIVERED, deliveredAt: new Date() },
+            return tx.purchaseOrder.update({
+                where: { id: orderId },
+                data: { status: PurchaseOrderStatus.DELIVERED, deliveredAt: new Date() },
+            });
         });
-    });
-
-    res.json(updatedOrder);
+        res.json(updatedOrder);
+    } catch (error) {
+        console.error('Error receiving purchase order:', error);
+        res.status(500).json({ message: '발주 입고 처리에 실패했습니다.' });
+    }
 });
 
 // [POST] /api/purchase-orders/:id/delay

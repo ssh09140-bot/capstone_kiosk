@@ -22,6 +22,7 @@ model User {
   optionGroups               OptionGroup[]
   purchaseOrders             PurchaseOrder[]
   notifications              Notification[]
+  inventories                Inventory[]
   billingKey                 String?
   customerKey                String?
   cardCompany                String?
@@ -116,8 +117,13 @@ model PurchaseOrderItem {
   id                Int           @id @default(autoincrement())
   purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
   purchaseOrderId   Int
-  product           Product       @relation(fields: [productId], references: [id])
-  productId         Int
+  
+  product           Product?      @relation(fields: [productId], references: [id])
+  productId         Int?
+  
+  inventory         Inventory?    @relation(fields: [inventoryId], references: [id])
+  inventoryId       Int?
+
   quantity          Int
   defectiveQuantity Int?
 }
@@ -130,6 +136,26 @@ model Notification {
   type      NotificationType
   store     User             @relation(fields: [storeId], references: [storeId])
   storeId   String
+}
+
+model Inventory {
+  id                    Int      @id @default(autoincrement())
+  name                  String
+  quantity              Float
+  unit                  String // e.g., "kg", "L", "pieces"
+  threshold             Float?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  store                 User     @relation(fields: [storeId], references: [storeId])
+  storeId               String
+  purchaseOrderItems    PurchaseOrderItem[]
+  // Fields for automated ordering
+  autoOrderEnabled      Boolean  @default(false)
+  minStockThreshold     Float?
+  orderQuantity         Float?
+  estimatedDeliveryDays Int?
+
+  @@unique([name, storeId])
 }
 
 enum PurchaseOrderStatus {

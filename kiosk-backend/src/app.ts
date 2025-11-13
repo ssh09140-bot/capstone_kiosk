@@ -24,7 +24,7 @@ import userRoutes from './users';
 import paymentsRoutes from './payments';
 import notificationRoutes from './notifications';
 import purchaseOrderRoutes from './purchase-orders';
-
+import inventoryRoutes from './inventory'; // Import the new inventory router
 
 
 const app = express();
@@ -57,6 +57,7 @@ app.use('/api', paymentsRoutes);
 app.use('/api', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api/inventory', inventoryRoutes); // Use the new inventory router
 
 
 // --- Scheduled Tasks ---
