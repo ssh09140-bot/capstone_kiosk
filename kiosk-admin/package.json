@@ -13,12 +13,13 @@
     "@ant-design/charts": "^2.6.5",
     "@ant-design/icons": "^6.0.1",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@kiosk/shared-types": "1.0.0",
     "antd": "^5.27.2",
     "axios": "^1.11.0",
+    "dayjs": "^1.11.19",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router-dom": "^6.23.1",
-    "@kiosk/shared-types": "1.0.0"
+    "react-router-dom": "^6.23.1"
   },
   "devDependencies": {
     "@capacitor/android": "^7.4.4",

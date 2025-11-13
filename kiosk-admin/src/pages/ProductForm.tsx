@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, Divider, Switch } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, Divider, Switch, List, Avatar } from 'antd';
+import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import api from '../api';
+import api, { Inventory, getInventory } from '../api';
 import type { UploadFile } from 'antd/lib/upload/interface';
 
 const { Option } = Select;
@@ -16,17 +16,28 @@ interface OptionGroup {
     id: number;
     name: string;
 }
+interface Usage {
+    inventoryId: number;
+    inventoryName: string;
+    usageAmount: number;
+}
 
 const ProductForm: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const [form] = Form.useForm();
-    const [fileList, setFileList] = useState<UploadFile[]>([]); // New state for file list
-    const [productImageUrl, setProductImageUrl] = useState<string | null>(null); // Renamed imageUrl to productImageUrl
+    const [fileList, setFileList] = useState<UploadFile[]>([]);
+    const [productImageUrl, setProductImageUrl] = useState<string | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
+    const [inventories, setInventories] = useState<Inventory[]>([]);
+    const [usages, setUsages] = useState<Usage[]>([]);
     const [loading, setLoading] = useState(false);
     const isEditMode = Boolean(id);
+
+    // State for recipe input
+    const [selectedInventory, setSelectedInventory] = useState<number | undefined>(undefined);
+    const [usageAmount, setUsageAmount] = useState<number>(0);
 
     const autoOrderEnabled = Form.useWatch('autoOrderEnabled', form);
 
@@ -34,12 +45,14 @@ const ProductForm: React.FC = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [catRes, optRes] = await Promise.all([
+                const [catRes, optRes, invRes] = await Promise.all([
                     api.get('/categories'),
                     api.get('/option-groups'),
+                    getInventory(),
                 ]);
                 setCategories(catRes.data);
                 setOptionGroups(optRes.data);
+                setInventories(invRes);
             } catch (error) {
                 message.error('페이지 데이터를 불러오는데 실패했습니다.');
             } finally {
@@ -57,7 +70,15 @@ const ProductForm: React.FC = () => {
                     const { data } = await api.get(`/products/${id}`);
                     const optionGroupIds = data.optionGroups?.map((g: any) => g.id) || [];
                     form.setFieldsValue({ ...data, optionGroupIds });
-                    setProductImageUrl(data.imageUrl); // Use productImageUrl
+                    setProductImageUrl(data.imageUrl);
+                    if (data.inventoryUsages) {
+                        const mappedUsages = data.inventoryUsages.map((u: any) => ({
+                            inventoryId: u.inventory.id,
+                            inventoryName: u.inventory.name,
+                            usageAmount: u.usageAmount,
+                        }));
+                        setUsages(mappedUsages);
+                    }
                 } catch (error) {
                     message.error("상품 정보를 불러오는데 실패했습니다.");
                 } finally {
@@ -68,11 +89,31 @@ const ProductForm: React.FC = () => {
         }
     }, [id, isEditMode, form]);
 
-    // handleUpload function removed
+    const handleAddUsage = () => {
+        if (!selectedInventory || !usageAmount) {
+            message.warning('재고 품목과 소모량을 입력해주세요.');
+            return;
+        }
+        if (usages.some(u => u.inventoryId === selectedInventory)) {
+            message.warning('이미 추가된 재고 품목입니다.');
+            return;
+        }
+        const inventory = inventories.find(i => i.id === selectedInventory);
+        if (inventory) {
+            setUsages([...usages, { inventoryId: selectedInventory, inventoryName: inventory.name, usageAmount }]);
+            setSelectedInventory(undefined);
+            setUsageAmount(0);
+        }
+    };
+
+    const handleRemoveUsage = (inventoryId: number) => {
+        setUsages(usages.filter(u => u.inventoryId !== inventoryId));
+    };
 
     const onFinish = async (values: any) => {
         try {
             const formData = new FormData();
+            // Append all simple key-values
             for (const key in values) {
                 if (values[key] !== undefined && values[key] !== null) {
                     if (Array.isArray(values[key])) {
@@ -83,14 +124,16 @@ const ProductForm: React.FC = () => {
                 }
             }
 
+            // Append recipe usages
+            const usagesToSubmit = usages.map(({ inventoryId, usageAmount }) => ({ inventoryId, usageAmount }));
+            formData.append('inventoryUsages', JSON.stringify(usagesToSubmit));
+
+            // Handle image
             if (fileList.length > 0 && fileList[0].originFileObj) {
                 formData.append('image', fileList[0].originFileObj);
             } else if (productImageUrl && isEditMode) {
-                // If no new file is uploaded but there's an existing image in edit mode,
-                // we send its URL to ensure it's not removed if the backend expects it.
                 formData.append('imageUrl', productImageUrl);
             }
-
 
             if (isEditMode) {
                 await api.put(`/products/${id}`, formData, {
@@ -145,17 +188,56 @@ const ProductForm: React.FC = () => {
                     <Upload
                         maxCount={1}
                         showUploadList={true}
-                        beforeUpload={() => false} // Prevent default upload behavior
+                        beforeUpload={() => false}
                         onChange={({ fileList: newFileList }) => setFileList(newFileList)}
                         fileList={fileList}
                         listType="picture"
                     >
                         <Button icon={<UploadOutlined />}>이미지 업로드</Button>
                     </Upload>
-                    {productImageUrl && fileList.length === 0 && ( // Display existing image if no new file selected
+                    {productImageUrl && fileList.length === 0 && (
                         <img src={`https://capstone-kiosk.onrender.com${productImageUrl}`} alt="상품 이미지" style={{ width: '100px', marginTop: '10px', borderRadius: '4px' }} />
                     )}
                 </FormItem>
+
+                <Divider>레시피 설정</Divider>
+                <List
+                    header={<div>이 상품에 사용되는 재료</div>}
+                    bordered
+                    dataSource={usages}
+                    renderItem={(item) => (
+                        <List.Item
+                            actions={[<Button type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemoveUsage(item.inventoryId)} />]}
+                        >
+                            <List.Item.Meta
+                                title={item.inventoryName}
+                                description={`소모량: ${item.usageAmount}`}
+                            />
+                        </List.Item>
+                    )}
+                    locale={{ emptyText: '등록된 재료 없음' }}
+                />
+                <div style={{ display: 'flex', marginTop: '16px', gap: '8px' }}>
+                    <Select
+                        showSearch
+                        placeholder="재고 품목 선택"
+                        style={{ flex: 2 }}
+                        value={selectedInventory}
+                        onChange={setSelectedInventory}
+                        optionFilterProp="children"
+                    >
+                        {inventories.map(i => <Option key={i.id} value={i.id}>{i.name}</Option>)}
+                    </Select>
+                    <InputNumber
+                        min={0}
+                        placeholder="소모량"
+                        style={{ flex: 1 }}
+                        value={usageAmount}
+                        onChange={(value) => setUsageAmount(value || 0)}
+                    />
+                    <Button type="primary" onClick={handleAddUsage}>추가</Button>
+                </div>
+
 
                 <Divider>자동 발주 설정</Divider>
 

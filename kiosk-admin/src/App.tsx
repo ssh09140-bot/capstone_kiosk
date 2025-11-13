@@ -13,6 +13,9 @@ import AutoOrder from './pages/AutoOrder'; // 자동 발주 페이지 import 추
 import PurchaseOrderList from './pages/PurchaseOrderList'; // 구매 주문 목록 import 추가
 import InventoryPage from './pages/Inventory'; // InventoryPage import 추가
 import InventoryForm from './pages/InventoryForm'; // InventoryForm import 추가
+import SupplierList from './pages/SupplierList'; // SupplierList import 추가
+import SupplierForm from './pages/SupplierForm'; // SupplierForm import 추가
+import InventoryLogList from './pages/InventoryLogList'; // InventoryLogList import 추가
 
 function App() {
   return (
@@ -33,6 +36,10 @@ function App() {
         <Route path="inventory" element={<InventoryPage />} /> {/* 재고 관리 경로 추가 */}
         <Route path="inventory/new" element={<InventoryForm />} />
         <Route path="inventory/:id" element={<InventoryForm />} />
+        <Route path="inventory-logs" element={<InventoryLogList />} />
+        <Route path="suppliers" element={<SupplierList />} />
+        <Route path="suppliers/new" element={<SupplierForm />} />
+        <Route path="suppliers/:id" element={<SupplierForm />} />
         <Route path="my-info" element={<MyInfo />} />
       </Route>
     </Routes>

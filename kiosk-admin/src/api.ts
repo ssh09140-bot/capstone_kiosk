@@ -68,3 +68,56 @@ export const updateInventoryItem = async (id: number, data: UpdateInventoryItemD
 export const deleteInventoryItem = async (id: number): Promise<void> => {
   await api.delete(`/inventory/${id}`);
 };
+
+// --- Supplier API ---
+
+export interface Supplier {
+  id: number;
+  name: string;
+  contact: string | null;
+  email: string | null;
+  address: string | null;
+}
+
+export type SupplierDto = Omit<Supplier, 'id'>;
+
+export const getSuppliers = async (): Promise<Supplier[]> => {
+  const response = await api.get<Supplier[]>('/suppliers');
+  return response.data;
+};
+
+export const getSupplier = async (id: number): Promise<Supplier> => {
+  const response = await api.get<Supplier>(`/suppliers/${id}`);
+  return response.data;
+};
+
+export const createSupplier = async (data: SupplierDto): Promise<Supplier> => {
+  const response = await api.post<Supplier>('/suppliers', data);
+  return response.data;
+};
+
+export const updateSupplier = async (id: number, data: SupplierDto): Promise<Supplier> => {
+  const response = await api.put<Supplier>(`/suppliers/${id}`, data);
+  return response.data;
+};
+
+export const deleteSupplier = async (id: number): Promise<void> => {
+  await api.delete(`/suppliers/${id}`);
+};
+
+// --- Inventory Log API ---
+
+export interface InventoryLog {
+  id: number;
+  inventory: Inventory; // Nested inventory item
+  inventoryId: number;
+  change: number;
+  reason: string;
+  orderId: number | null;
+  createdAt: string;
+}
+
+export const getInventoryLogs = async (): Promise<InventoryLog[]> => {
+  const response = await api.get<InventoryLog[]>('/inventory-logs');
+  return response.data;
+};

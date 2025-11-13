@@ -7,8 +7,6 @@ import { generateLowStockNotification } from './services/openaiService';
 
 const router = express.Router();
 
-const LOW_STOCK_THRESHOLD = 10;
-
 // GET /api/orders
 router.get('/', authenticateToken, async (req, res) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
@@ -67,7 +65,6 @@ router.post('/', authenticateBoth, async (req, res) => {
         return res.status(400).json({ message: 'Order must contain an array of items.' });
     }
 
-    // Securely calculate total amount on the server-side
     const calculatedTotalAmount = items.reduce((sum: number, item: { pricePerItem: number, quantity: number }) => {
         const price = Number(item.pricePerItem) || 0;
         const quantity = Number(item.quantity) || 0;
@@ -75,11 +72,13 @@ router.post('/', authenticateBoth, async (req, res) => {
     }, 0);
 
     try {
+        const inventoryUpdates: { id: number; newQuantity: number; }[] = [];
+
         const newOrder = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             const order = await tx.order.create({
                 data: {
                     storeId: req.user!.storeId,
-                    totalAmount: calculatedTotalAmount, // Use the server-calculated amount
+                    totalAmount: calculatedTotalAmount,
                     orderItems: {
                         create: items.map((item: { productId: number, quantity: number, pricePerItem: number }) => ({ 
                             productId: item.productId,
@@ -91,35 +90,75 @@ router.post('/', authenticateBoth, async (req, res) => {
                 include: {
                     orderItems: {
                         include: {
-                            product: true,
+                            product: {
+                                include: {
+                                    inventoryUsages: {
+                                        include: {
+                                            inventory: true,
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             });
 
             for (const item of order.orderItems) {
+                // 1. Decrement product stock
                 await tx.product.update({
                     where: { id: item.productId },
                     data: { stock: { decrement: item.quantity } },
                 });
+
+                // 2. Decrement inventory based on recipe and create logs
+                if (item.product.inventoryUsages) {
+                    for (const usage of item.product.inventoryUsages) {
+                        const amountToDecrement = usage.usageAmount * item.quantity;
+                        const updatedInventory = await tx.inventory.update({
+                            where: { id: usage.inventoryId },
+                            data: { quantity: { decrement: amountToDecrement } },
+                        });
+                        inventoryUpdates.push({ id: updatedInventory.id, newQuantity: updatedInventory.quantity });
+
+                        // Create inventory log
+                        await tx.inventoryLog.create({
+                            data: {
+                                inventoryId: usage.inventoryId,
+                                change: -amountToDecrement,
+                                reason: `Order #${order.id} Sale`,
+                                orderId: order.id,
+                            }
+                        });
+                    }
+                }
             }
             
             return order;
         });
 
+        // After transaction, check for low stock notifications
+        // For products
         for (const item of newOrder.orderItems) {
             const updatedProduct = await prisma.product.findUnique({ where: { id: item.productId } });
-            
-            if (updatedProduct && updatedProduct.stock < LOW_STOCK_THRESHOLD) {
+            if (updatedProduct && updatedProduct.minStockThreshold && updatedProduct.stock < updatedProduct.minStockThreshold) {
                 const message = await generateLowStockNotification(updatedProduct.name, updatedProduct.stock);
-                
                 if (message) {
                     await prisma.notification.create({
-                        data: {
-                            storeId: req.user!.storeId,
-                            message: message,
-                            type: NotificationType.LOW_STOCK_WARNING,
-                        },
+                        data: { storeId: req.user!.storeId, message, type: NotificationType.LOW_STOCK_WARNING },
+                    });
+                }
+            }
+        }
+
+        // For inventory
+        for (const invUpdate of inventoryUpdates) {
+            const inventoryItem = await prisma.inventory.findUnique({ where: { id: invUpdate.id } });
+            if (inventoryItem && inventoryItem.threshold && invUpdate.newQuantity < inventoryItem.threshold) {
+                const message = await generateLowStockNotification(inventoryItem.name, invUpdate.newQuantity);
+                 if (message) {
+                    await prisma.notification.create({
+                        data: { storeId: req.user!.storeId, message, type: NotificationType.LOW_STOCK_WARNING },
                     });
                 }
             }

@@ -94,6 +94,14 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
                             where: { id: orderItem.inventoryId },
                             data: { quantity: { increment: stockToAdd } },
                         });
+                        // Create inventory log for received stock
+                        await tx.inventoryLog.create({
+                            data: {
+                                inventoryId: orderItem.inventoryId,
+                                change: stockToAdd,
+                                reason: `Purchase Order #${orderId} Received`,
+                            }
+                        });
                     }
                 }
             }

@@ -24,7 +24,9 @@ import userRoutes from './users';
 import paymentsRoutes from './payments';
 import notificationRoutes from './notifications';
 import purchaseOrderRoutes from './purchase-orders';
-import inventoryRoutes from './inventory'; // Import the new inventory router
+import inventoryRoutes from './inventory';
+import supplierRoutes from './suppliers';
+import inventoryLogRoutes from './inventory-logs'; // Import the new inventory log router
 
 
 const app = express();
@@ -57,7 +59,9 @@ app.use('/api', paymentsRoutes);
 app.use('/api', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
-app.use('/api/inventory', inventoryRoutes); // Use the new inventory router
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/inventory-logs', inventoryLogRoutes); // Use the new inventory log router
 
 
 // --- Scheduled Tasks ---
