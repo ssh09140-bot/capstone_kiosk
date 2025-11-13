@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from './db';
 import { authenticateToken } from './middleware/auth';
 import fetch from 'node-fetch';
+import { JwtPayload } from './custom.d'; // JwtPayload 인터페이스 임포트
 
 console.log('payments.ts file loaded');
 
@@ -25,15 +26,16 @@ interface TossBillingAuthResponse {
 router.post('/billing/issue-billing-key', authenticateToken, async (req, res) => {
   console.log('Reached /billing/issue-billing-key route');
   const { customerKey, authKey } = req.body;
-  const userId = req.user?.id; // from authenticateToken middleware
+  const userId = (req.user as JwtPayload).id; // from authenticateToken middleware
 
   if (!customerKey || !authKey) {
     return res.status(400).json({ error: 'customerKey and authKey are required' });
   }
 
-  if (!userId) {
-    return res.status(403).json({ error: 'User not authenticated' });
-  }
+  // authenticateToken 미들웨어에서 이미 인증을 처리하므로, userId가 없을 경우는 발생하지 않습니다.
+  // if (!userId) {
+  //   return res.status(403).json({ error: 'User not authenticated' });
+  // }
 
   try {
     // Call Toss Payments API to issue the billing key

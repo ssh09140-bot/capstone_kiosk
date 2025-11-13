@@ -4,26 +4,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+const db_1 = __importDefault(require("./db"));
 const authenticateBoth_1 = require("./middleware/authenticateBoth"); // Import authenticateBoth middleware
 const multer_1 = __importDefault(require("multer"));
-const path_1 = __importDefault(require("path"));
+const cloudinaryService_1 = require("./services/cloudinaryService"); // Import Cloudinary upload service
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
-const storage = multer_1.default.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path_1.default.extname(file.originalname));
-    },
-});
-const upload = (0, multer_1.default)({ storage: storage });
+// Configure Multer to store files in memory
+const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
 // GET /api/products
 router.get('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
-    const products = await prisma.product.findMany({
+    const products = await db_1.default.product.findMany({
         where: { storeId: req.user.storeId },
         include: { category: true, optionGroups: { include: { options: true } } },
     });
@@ -33,7 +25,7 @@ router.get('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
 router.get('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
-    const product = await prisma.product.findUnique({
+    const product = await db_1.default.product.findUnique({
         where: { id: parseInt(req.params.id), storeId: req.user.storeId },
         include: { category: true, optionGroups: { include: { options: true } } },
     });
@@ -46,22 +38,30 @@ router.get('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
 router.post('/', authenticateBoth_1.authenticateBoth, upload.single('image'), async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
-    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, optionGroupIds } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
-    const createdProduct = await prisma.product.create({
+    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, description, optionGroupIds } = req.body;
+    let imageUrl = undefined;
+    if (req.file) {
+        imageUrl = await (0, cloudinaryService_1.uploadImage)(req.file.buffer); // Upload to Cloudinary
+    }
+    const createdProduct = await db_1.default.product.create({
         data: {
             name,
+            description,
             price: parseInt(price),
             stock: parseInt(stock),
             imageUrl,
-            storeId: req.user.storeId,
-            categoryId: parseInt(categoryId),
             autoOrderEnabled: autoOrderEnabled === 'true',
             minStockThreshold: minStockThreshold ? parseInt(minStockThreshold) : null,
             orderQuantity: orderQuantity ? parseInt(orderQuantity) : null,
+            estimatedDeliveryDays: estimatedDeliveryDays ? parseInt(estimatedDeliveryDays) : null,
             optionGroups: optionGroupIds ? {
                 connect: optionGroupIds.map((id) => ({ id: parseInt(id) }))
-            } : undefined
+            } : undefined,
+            owner: {
+                connect: {
+                    storeId: req.user.storeId,
+                },
+            },
         },
     });
     res.status(201).json(createdProduct);
@@ -70,19 +70,24 @@ router.post('/', authenticateBoth_1.authenticateBoth, upload.single('image'), as
 router.put('/:id', authenticateBoth_1.authenticateBoth, upload.single('image'), async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
-    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, optionGroupIds } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : req.body.imageUrl;
-    const updatedProduct = await prisma.product.update({
+    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, description, optionGroupIds } = req.body;
+    let imageUrl = req.body.imageUrl; // Keep existing image URL by default
+    if (req.file) {
+        imageUrl = await (0, cloudinaryService_1.uploadImage)(req.file.buffer); // Upload new image to Cloudinary
+    }
+    const updatedProduct = await db_1.default.product.update({
         where: { id: parseInt(req.params.id) },
         data: {
             name,
+            description,
             price: parseInt(price),
             stock: parseInt(stock),
             imageUrl,
-            categoryId: parseInt(categoryId),
+            categoryId: categoryId ? parseInt(categoryId) : null,
             autoOrderEnabled: autoOrderEnabled === 'true',
             minStockThreshold: minStockThreshold ? parseInt(minStockThreshold) : null,
             orderQuantity: orderQuantity ? parseInt(orderQuantity) : null,
+            estimatedDeliveryDays: estimatedDeliveryDays ? parseInt(estimatedDeliveryDays) : null,
             optionGroups: optionGroupIds ? {
                 set: optionGroupIds.map((id) => ({ id: parseInt(id) }))
             } : { set: [] } // Disconnect all if optionGroupIds is not provided
@@ -94,7 +99,7 @@ router.put('/:id', authenticateBoth_1.authenticateBoth, upload.single('image'), 
 router.delete('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
-    await prisma.product.delete({
+    await db_1.default.product.delete({
         where: { id: parseInt(req.params.id), storeId: req.user.storeId },
     });
     res.status(204).send();

@@ -1,16 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 
-// Extend the Request type to include a user property
-declare global {
-  namespace Express {
-    interface Request {
-      users?: {
-        storeId: string;
-      };
-    }
-  }
-}
-
 export const authenticateStore = (req: Request, res: Response, next: NextFunction) => {
   const storeId = req.headers['x-store-id'] as string;
 
@@ -19,6 +8,6 @@ export const authenticateStore = (req: Request, res: Response, next: NextFunctio
   }
 
   // For now, we just set the storeId. In a real app, you might validate this storeId against your database.
-  req.users = { storeId: storeId };
+  req.user = { storeId: storeId };
   next();
 };

@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Descriptions, Spin, Typography, message, Button, Divider } from 'antd';
-import { LogoutOutlined, CreditCardOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
+import { Card, Descriptions, Spin, Typography, message, Button, Divider, Input, Image } from 'antd';
+import { LogoutOutlined, CreditCardOutlined, UploadOutlined, SaveOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
 const { Title, Text } = Typography;
 
 // Toss Payments Client Key - This should be in your .env file or similar
-const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY; // 실제 클라이언트 키로 교체하세요.
-
+const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY;
 
 interface UserInfo {
   email: string;
@@ -18,6 +17,8 @@ interface UserInfo {
     company: string;
     number: string;
   } | null;
+  businessRegistrationNumber?: string;
+  businessLicenseImageUrl?: string;
 }
 
 const MyInfo: React.FC = () => {
@@ -25,11 +26,18 @@ const MyInfo: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Business Info State
+  const [businessNumber, setBusinessNumber] = useState('');
+  const [licenseImageFile, setLicenseImageFile] = useState<File | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
   const fetchUserInfo = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get('/me');
+      const response = await api.get<UserInfo>('/me');
       setUserInfo(response.data);
+      setBusinessNumber(response.data.businessRegistrationNumber || '');
+      setPreviewImageUrl(response.data.businessLicenseImageUrl || null);
     } catch (error) {
       console.error("사용자 정보를 불러오지 못했습니다.", error);
       message.error("사용자 정보를 불러오는 데 실패했습니다. 다시 로그인해주세요.");
@@ -87,6 +95,50 @@ const MyInfo: React.FC = () => {
     });
   };
 
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLicenseImageFile(file);
+      setPreviewImageUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleBusinessInfoSave = async () => {
+    if (!businessNumber) {
+      message.error('사업자 등록번호를 입력해주세요.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('businessRegistrationNumber', businessNumber);
+      if (licenseImageFile) {
+        formData.append('businessLicenseImage', licenseImageFile);
+      } else if (previewImageUrl) {
+        // If there's a preview but no new file, it means we keep the existing image.
+        // The backend should handle the case where the image URL is passed but no file is uploaded.
+        formData.append('businessLicenseImageUrl', previewImageUrl);
+      }
+
+      const response = await api.put('/me/business-info', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      setUserInfo(prev => prev ? { ...prev, ...response.data } : response.data);
+      message.success('사업자 정보가 성공적으로 저장되었습니다.');
+      fetchUserInfo(); // Re-fetch to get the latest state
+    } catch (error: any) {
+      console.error('사업자 정보 저장 실패', error);
+      const errorMessage = error.response?.data?.message || '사업자 정보 저장에 실패했습니다.';
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return <Spin size="large" style={{ display: 'block', marginTop: '50px' }} />;
   }
@@ -99,6 +151,31 @@ const MyInfo: React.FC = () => {
         <Descriptions.Item label="가게 이름">{userInfo?.storeName}</Descriptions.Item>
         <Descriptions.Item label="고유 가게 ID (키오스크 연동용)">{userInfo?.storeId}</Descriptions.Item>
       </Descriptions>
+
+      <Divider />
+
+      <Title level={4}>사업자 정보</Title>
+      <Descriptions bordered column={1}>
+        <Descriptions.Item label="사업자 등록번호">
+          <Input 
+            value={businessNumber}
+            onChange={(e) => setBusinessNumber(e.target.value)}
+            placeholder="'-' 없이 숫자만 입력"
+          />
+        </Descriptions.Item>
+        <Descriptions.Item label="사업자 등록증 이미지">
+          {previewImageUrl && <Image width={200} src={previewImageUrl} style={{ marginBottom: 16 }} />}
+          <Input type="file" accept="image/*" onChange={handleImageChange} />
+        </Descriptions.Item>
+      </Descriptions>
+      <Button
+        icon={<SaveOutlined />}
+        onClick={handleBusinessInfoSave}
+        style={{ marginTop: '16px', width: '100%' }}
+        type="primary"
+      >
+        사업자 정보 저장
+      </Button>
 
       <Divider />
 

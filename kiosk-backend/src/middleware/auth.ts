@@ -2,18 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 // This is now the single source of truth for the user payload
-interface JwtPayload {
+export interface JwtPayload { // export 추가
   id: number;
   storeId: string;
   role: string;
-}
-
-declare global {
-    namespace Express {
-        interface Request {
-            user?: JwtPayload;
-        }
-    }
 }
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
@@ -27,3 +19,4 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         next();
     });
 };
+

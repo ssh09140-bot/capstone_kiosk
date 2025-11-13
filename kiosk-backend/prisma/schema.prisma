@@ -2,7 +2,6 @@
 
 generator client {
   provider      = "prisma-client-js"
-  output        = "../../../packages/shared-types"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -12,21 +11,23 @@ datasource db {
 }
 
 model User {
-  id             Int             @id @default(autoincrement())
-  email          String          @unique
-  password       String
-  storeName      String
-  storeId        String          @unique @default(uuid())
-  products       Product[]
-  orders         Order[]
-  categories     Category[]
-  optionGroups   OptionGroup[]
-  purchaseOrders PurchaseOrder[]
-  notifications  Notification[]
-  billingKey     String?
-  customerKey    String?
-  cardCompany    String?
-  cardNumber     String?
+  id                         Int             @id @default(autoincrement())
+  email                      String          @unique
+  password                   String
+  storeName                  String
+  storeId                    String          @unique @default(uuid())
+  products                   Product[]
+  orders                     Order[]
+  categories                 Category[]
+  optionGroups               OptionGroup[]
+  purchaseOrders             PurchaseOrder[]
+  notifications              Notification[]
+  billingKey                 String?
+  customerKey                String?
+  cardCompany                String?
+  cardNumber                 String?
+  businessRegistrationNumber String?         @unique
+  businessLicenseImageUrl    String?
 }
 
 model Category {

@@ -6,9 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const client_1 = require("@prisma/client");
+const db_1 = __importDefault(require("./db"));
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not set in the environment variables.');
+}
 // [POST] /api/auth/register
 router.post('/register', async (req, res) => {
     const { email, password, storeName } = req.body;
@@ -16,12 +18,12 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ message: '모든 필드를 입력해주세요.' });
     }
     try {
-        const existingUser = await prisma.user.findUnique({ where: { email } });
+        const existingUser = await db_1.default.user.findUnique({ where: { email } });
         if (existingUser) {
             return res.status(400).json({ message: '이미 존재하는 이메일입니다.' });
         }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-        const user = await prisma.user.create({
+        const user = await db_1.default.user.create({
             data: {
                 email,
                 password: hashedPassword,
@@ -42,7 +44,7 @@ router.post('/login', async (req, res) => {
         return res.status(400).json({ message: '이메일과 비밀번호를 입력해주세요.' });
     }
     try {
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await db_1.default.user.findUnique({ where: { email } });
         if (!user) {
             return res.status(401).json({ message: '존재하지 않는 이메일입니다.' });
         }
@@ -50,7 +52,8 @@ router.post('/login', async (req, res) => {
         if (!isPasswordValid) {
             return res.status(401).json({ message: '비밀번호가 일치하지 않습니다.' });
         }
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, storeId: user.storeId }, 'YOUR_SECRET_KEY', { expiresIn: '1d' });
+        const token = jsonwebtoken_1.default.sign({ id: user.id, storeId: user.storeId, role: 'ADMIN' }, // Corrected payload
+        process.env.JWT_SECRET, { expiresIn: '1d' });
         res.json({ token, storeName: user.storeName });
     }
     catch (error) {

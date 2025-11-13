@@ -4,24 +4,36 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+const db_1 = __importDefault(require("./db"));
 const auth_1 = require("./middleware/auth");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
 // [GET] /api/me
 router.get('/me', auth_1.authenticateToken, async (req, res) => {
-    if (!req.user) {
-        return res.status(401).json({ message: '인증 정보가 없습니다.' });
-    }
+    // authenticateToken 미들웨어에서 이미 인증을 처리하므로, req.user가 없을 경우는 발생하지 않습니다.
+    // if (!req.user) {
+    //   return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    // }
     try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.userId },
-            select: { email: true, storeName: true, storeId: true },
+        const user = await db_1.default.user.findUnique({
+            where: { id: req.user.id },
+            select: {
+                email: true,
+                storeName: true,
+                storeId: true,
+                cardCompany: true,
+                cardNumber: true
+            },
         });
         if (!user) {
             return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
         }
-        res.json(user);
+        // Restructure the response to match frontend expectations
+        const { cardCompany, cardNumber, ...rest } = user;
+        const response = {
+            ...rest,
+            card: cardCompany && cardNumber ? { company: cardCompany, number: cardNumber } : null,
+        };
+        res.json(response);
     }
     catch (error) {
         console.error(error);
@@ -32,7 +44,7 @@ router.get('/me', auth_1.authenticateToken, async (req, res) => {
 router.get('/store/:storeId', async (req, res) => {
     try {
         const { storeId } = req.params;
-        const store = await prisma.user.findUnique({
+        const store = await db_1.default.user.findUnique({
             where: { storeId: storeId },
             select: { storeName: true, storeId: true }, // Only return necessary info
         });

@@ -4,15 +4,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+const db_1 = __importDefault(require("./db"));
 const authenticateBoth_1 = require("./middleware/authenticateBoth"); // Import authenticateBoth middleware
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
 // GET /api/categories
 router.get('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
-    const categories = await prisma.category.findMany({
+    const categories = await db_1.default.category.findMany({
         where: { storeId: req.user.storeId },
     });
     res.json(categories);
@@ -22,7 +21,7 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
     const { name } = req.body;
-    const category = await prisma.category.create({
+    const category = await db_1.default.category.create({
         data: {
             name,
             storeId: req.user.storeId,
@@ -35,7 +34,7 @@ router.put('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
     const { name } = req.body;
-    const category = await prisma.category.update({
+    const category = await db_1.default.category.update({
         where: { id: parseInt(req.params.id), storeId: req.user.storeId },
         data: { name },
     });
@@ -46,7 +45,7 @@ router.delete('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
     try {
-        await prisma.category.delete({
+        await db_1.default.category.delete({
             where: { id: parseInt(req.params.id), storeId: req.user.storeId },
         });
         res.status(204).send();
