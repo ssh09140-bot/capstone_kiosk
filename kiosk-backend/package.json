@@ -19,6 +19,7 @@
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
@@ -26,8 +27,8 @@
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "openai": "^4.52.7",
-    "ts-node": "^10.9.2",
-    "prisma": "5.11.0"
+    "prisma": "5.11.0",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

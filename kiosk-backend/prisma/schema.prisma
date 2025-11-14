@@ -151,8 +151,6 @@ model Inventory {
   updatedAt                DateTime              @updatedAt
   store                    User                  @relation(fields: [storeId], references: [storeId])
   storeId                  String
-  supplier                 Supplier?             @relation(fields: [supplierId], references: [id])
-  supplierId               Int?
   purchaseOrderItems       PurchaseOrderItem[]
   inventoryUsages          ProductInventoryUsage[] // 제품 연결
   logs                     InventoryLog[] // 재고 로그
@@ -162,21 +160,35 @@ model Inventory {
   orderQuantity            Float?
   estimatedDeliveryDays    Int?
   lastLowStockNotifiedAt   DateTime? // 알림 반복 방지
+  suppliedBy               SupplierInventory[]
+
   @@unique([name, storeId])
 }
 
 model Supplier {
-  id             Int             @id @default(autoincrement())
+  id             Int                 @id @default(autoincrement())
   name           String
   contact        String?
   email          String?
   address        String?
-  store          User            @relation(fields: [storeId], references: [storeId])
+  store          User                @relation(fields: [storeId], references: [storeId])
   storeId        String
-  inventories    Inventory[]
   purchaseOrders PurchaseOrder[]
+  supplies       SupplierInventory[]
 
   @@unique([name, storeId])
+}
+
+model SupplierInventory {
+  id          Int       @id @default(autoincrement())
+  supplier    Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierId  Int
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId Int
+  price       Float? // 품목별 단가
+  leadTimeDays Int? // 품목별 리드타임
+
+  @@unique([supplierId, inventoryId])
 }
 
 model ProductInventoryUsage {

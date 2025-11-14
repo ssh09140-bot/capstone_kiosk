@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Typography, Flex, message } from 'antd';
+import { Table, Button, Space, Typography, Flex, message, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { getSuppliers, deleteSupplier, Supplier } from '../api';
+import { getSuppliers, deleteSupplier, Supplier, SupplierInventory } from '../api';
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
@@ -34,7 +34,7 @@ const SupplierList: React.FC = () => {
     }, [fetchSuppliers]);
 
     const handleDelete = async (id: number) => {
-        if (window.confirm(`정말로 이 공급업체를 삭제하시겠습니까?`)) {
+        if (window.confirm(`정말로 이 공급업체를 삭제하시겠습니까? 이 공급처와 연결된 모든 품목 정보도 함께 삭제됩니다.`)) {
             try {
                 await deleteSupplier(id);
                 message.success('공급업체가 삭제되었습니다.');
@@ -46,13 +46,32 @@ const SupplierList: React.FC = () => {
     };
 
     const columns = [
-        { title: '공급업체명', dataIndex: 'name', key: 'name' },
-        { title: '연락처', dataIndex: 'contact', key: 'contact' },
-        { title: '이메일', dataIndex: 'email', key: 'email' },
-        { title: '주소', dataIndex: 'address', key: 'address' },
+        { title: '공급업체명', dataIndex: 'name', key: 'name', fixed: 'left' as const, width: 150 },
+        { title: '연락처', dataIndex: 'contact', key: 'contact', width: 150 },
+        { title: '이메일', dataIndex: 'email', key: 'email', width: 200 },
+        { title: '주소', dataIndex: 'address', key: 'address', width: 250 },
+        {
+            title: '공급 품목',
+            dataIndex: 'supplies',
+            key: 'supplies',
+            render: (supplies: SupplierInventory[] | undefined) => {
+                if (!supplies || supplies.length === 0) {
+                    return '-';
+                }
+                return (
+                    <Flex gap="4px 0" wrap="wrap">
+                        {supplies.map(s => (
+                            <Tag key={s.id}>{s.inventory.name}</Tag>
+                        ))}
+                    </Flex>
+                );
+            },
+        },
         {
             title: '관리',
             key: 'action',
+            fixed: 'right' as const,
+            width: 180,
             render: (_: any, record: SupplierItem) => (
                 <Space size="middle">
                     <Button onClick={() => navigate(`/suppliers/${record.id}`)}>수정</Button>

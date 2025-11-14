@@ -71,15 +71,30 @@ export const deleteInventoryItem = async (id: number): Promise<void> => {
 
 // --- Supplier API ---
 
+export interface SupplierInventory {
+  id: number;
+  inventoryId: number;
+  price: number | null;
+  leadTimeDays: number | null;
+  inventory: Inventory;
+}
+
 export interface Supplier {
   id: number;
   name: string;
   contact: string | null;
   email: string | null;
   address: string | null;
+  supplies: SupplierInventory[];
 }
 
-export type SupplierDto = Omit<Supplier, 'id'>;
+export type SupplierDto = Omit<Supplier, 'id' | 'supplies'> & {
+  supplies?: Array<{
+    inventoryId: number;
+    price: number | null;
+    leadTimeDays: number | null;
+  }>;
+};
 
 export const getSuppliers = async (): Promise<Supplier[]> => {
   const response = await api.get<Supplier[]>('/suppliers');
@@ -119,5 +134,29 @@ export interface InventoryLog {
 
 export const getInventoryLogs = async (): Promise<InventoryLog[]> => {
   const response = await api.get<InventoryLog[]>('/inventory-logs');
+  return response.data;
+};
+
+// --- Recommendation API ---
+
+export interface Recommendation {
+  inventoryId: number;
+  inventoryName: string;
+  reason: string;
+  currentStock: number;
+  unit: string;
+  predictedUsage: number;
+  supplierName: string;
+  leadTimeDays: number;
+  recommendedOrderAmount: number;
+}
+
+export interface RecommendationResponse {
+  message: string;
+  recommendations: Recommendation[];
+}
+
+export const getRecommendations = async (): Promise<RecommendationResponse> => {
+  const response = await api.get<RecommendationResponse>('/recommendations');
   return response.data;
 };

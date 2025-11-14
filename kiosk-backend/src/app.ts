@@ -27,6 +27,7 @@ import purchaseOrderRoutes from './purchase-orders';
 import inventoryRoutes from './inventory';
 import supplierRoutes from './suppliers';
 import inventoryLogRoutes from './inventory-logs'; // Import the new inventory log router
+import recommendationRouter from './recommendations';
 
 
 const app = express();
@@ -62,6 +63,7 @@ app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/inventory-logs', inventoryLogRoutes); // Use the new inventory log router
+app.use('/api/recommendations', recommendationRouter);
 
 
 // --- Scheduled Tasks ---

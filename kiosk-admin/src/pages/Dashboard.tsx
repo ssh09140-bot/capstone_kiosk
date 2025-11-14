@@ -4,6 +4,7 @@ import { ArrowUpOutlined, RobotOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/charts';
 import api from '../api';
 import SalesAnalysisModal from '../components/SalesAnalysisModal';
+import RecommendationCard from '../components/RecommendationCard';
 
 const { Title, Text } = Typography;
 
@@ -49,7 +50,14 @@ const Dashboard: React.FC = () => {
   return (
     <div>
       <Title level={3} style={{ marginBottom: '24px' }}>대시보드</Title>
-      <Row gutter={[16, 16]}>
+      
+      <Row>
+        <Col span={24}>
+          <RecommendationCard />
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         {/* 월별 매출 현황 카드 */}
         <Col xs={24} lg={12}>
           <Card title="월별 매출 현황">

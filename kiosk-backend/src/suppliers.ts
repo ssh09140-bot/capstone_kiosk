@@ -15,6 +15,13 @@ supplierRouter.get('/', authenticateToken, async (req, res) => {
     const suppliers = await prisma.supplier.findMany({
       where: { storeId },
       orderBy: { name: 'asc' },
+      include: {
+        supplies: {
+          include: {
+            inventory: true,
+          },
+        },
+      },
     });
     res.json(suppliers);
   } catch (error) {
@@ -34,6 +41,13 @@ supplierRouter.get('/:id', authenticateToken, async (req, res) => {
     try {
       const supplier = await prisma.supplier.findFirst({
         where: { id: parseInt(id), storeId },
+        include: {
+          supplies: {
+            include: {
+              inventory: true,
+            },
+          },
+        },
       });
   
       if (!supplier) {
@@ -52,7 +66,7 @@ supplierRouter.post('/', authenticateToken, async (req, res) => {
     return res.status(401).json({ message: 'Unauthorized: User not found.' });
   }
   const storeId = req.user.storeId;
-  const { name, contact, email, address } = req.body;
+  const { name, contact, email, address, supplies = [] } = req.body;
 
   if (!name) {
     return res.status(400).json({ message: 'Supplier name is required.' });
@@ -66,7 +80,17 @@ supplierRouter.post('/', authenticateToken, async (req, res) => {
         email,
         address,
         storeId,
+        supplies: {
+          create: supplies.map((s: { inventoryId: number; price: number; leadTimeDays: number; }) => ({
+            inventoryId: s.inventoryId,
+            price: s.price,
+            leadTimeDays: s.leadTimeDays,
+          })),
+        },
       },
+      include: {
+        supplies: { include: { inventory: true } },
+      }
     });
     res.status(201).json(newSupplier);
   } catch (error: any) {
@@ -85,7 +109,7 @@ supplierRouter.put('/:id', authenticateToken, async (req, res) => {
   }
   const storeId = req.user.storeId;
   const { id } = req.params;
-  const { name, contact, email, address } = req.body;
+  const { name, contact, email, address, supplies = [] } = req.body;
 
   try {
     const updatedSupplier = await prisma.supplier.update({
@@ -95,7 +119,18 @@ supplierRouter.put('/:id', authenticateToken, async (req, res) => {
         contact,
         email,
         address,
+        supplies: {
+          deleteMany: {}, // Delete all existing and then create new ones
+          create: supplies.map((s: { inventoryId: number; price: number; leadTimeDays: number; }) => ({
+            inventoryId: s.inventoryId,
+            price: s.price,
+            leadTimeDays: s.leadTimeDays,
+          })),
+        }
       },
+      include: {
+        supplies: { include: { inventory: true } },
+      }
     });
     res.json(updatedSupplier);
   } catch (error: any) {
@@ -119,6 +154,7 @@ supplierRouter.delete('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {
+    // The relation is set to cascade on delete, so this will also delete SupplierInventory entries.
     await prisma.supplier.delete({
       where: { id: parseInt(id), storeId },
     });
