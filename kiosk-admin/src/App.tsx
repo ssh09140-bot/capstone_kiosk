@@ -16,7 +16,7 @@ import SupplierList from './pages/SupplierList'; // SupplierList import 추가
 import SupplierForm from './pages/SupplierForm'; // SupplierForm import 추가
 import InventoryLogList from './pages/InventoryLogList'; // InventoryLogList import 추가
 import Reports from './pages/Reports'; // Reports import 추가
-import AutoOrder from './pages/AutoOrder'; // 자동 발주 페이지 import 추가
+//import AutoOrder from './pages/AutoOrder'; // 자동 발주 페이지 import 추가
 
 function App() {
   return (
