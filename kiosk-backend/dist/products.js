@@ -17,7 +17,11 @@ router.get('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
     const products = await db_1.default.product.findMany({
         where: { storeId: req.user.storeId },
-        include: { category: true, optionGroups: { include: { options: true } } },
+        include: {
+            category: true,
+            optionGroups: { include: { options: true } },
+            inventoryUsages: { include: { inventory: true } }, // Include recipe info
+        },
     });
     res.json(products);
 });
@@ -27,7 +31,11 @@ router.get('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
     const product = await db_1.default.product.findUnique({
         where: { id: parseInt(req.params.id), storeId: req.user.storeId },
-        include: { category: true, optionGroups: { include: { options: true } } },
+        include: {
+            category: true,
+            optionGroups: { include: { options: true } },
+            inventoryUsages: { include: { inventory: true } }, // Include recipe info
+        },
     });
     if (!product) {
         return res.status(404).json({ message: '상품을 찾을 수 없습니다.' });
@@ -37,12 +45,13 @@ router.get('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
 // POST /api/products
 router.post('/', authenticateBoth_1.authenticateBoth, upload.single('image'), async (req, res) => {
     if (!req.user)
-        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
-    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, description, optionGroupIds } = req.body;
+        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
+    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, description, optionGroupIds, inventoryUsages } = req.body;
     let imageUrl = undefined;
     if (req.file) {
-        imageUrl = await (0, cloudinaryService_1.uploadImage)(req.file.buffer); // Upload to Cloudinary
+        imageUrl = await (0, cloudinaryService_1.uploadImage)(req.file.buffer);
     }
+    const usages = inventoryUsages ? JSON.parse(inventoryUsages) : [];
     const createdProduct = await db_1.default.product.create({
         data: {
             name,
@@ -57,6 +66,12 @@ router.post('/', authenticateBoth_1.authenticateBoth, upload.single('image'), as
             optionGroups: optionGroupIds ? {
                 connect: optionGroupIds.map((id) => ({ id: parseInt(id) }))
             } : undefined,
+            inventoryUsages: {
+                create: usages.map((usage) => ({
+                    inventoryId: usage.inventoryId,
+                    usageAmount: usage.usageAmount,
+                })),
+            },
             owner: {
                 connect: {
                     storeId: req.user.storeId,
@@ -69,12 +84,13 @@ router.post('/', authenticateBoth_1.authenticateBoth, upload.single('image'), as
 // PUT /api/products/:id
 router.put('/:id', authenticateBoth_1.authenticateBoth, upload.single('image'), async (req, res) => {
     if (!req.user)
-        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
-    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, description, optionGroupIds } = req.body;
-    let imageUrl = req.body.imageUrl; // Keep existing image URL by default
+        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
+    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, description, optionGroupIds, inventoryUsages } = req.body;
+    let imageUrl = req.body.imageUrl;
     if (req.file) {
-        imageUrl = await (0, cloudinaryService_1.uploadImage)(req.file.buffer); // Upload new image to Cloudinary
+        imageUrl = await (0, cloudinaryService_1.uploadImage)(req.file.buffer);
     }
+    const usages = inventoryUsages ? JSON.parse(inventoryUsages) : [];
     const updatedProduct = await db_1.default.product.update({
         where: { id: parseInt(req.params.id) },
         data: {
@@ -90,7 +106,14 @@ router.put('/:id', authenticateBoth_1.authenticateBoth, upload.single('image'), 
             estimatedDeliveryDays: estimatedDeliveryDays ? parseInt(estimatedDeliveryDays) : null,
             optionGroups: optionGroupIds ? {
                 set: optionGroupIds.map((id) => ({ id: parseInt(id) }))
-            } : { set: [] } // Disconnect all if optionGroupIds is not provided
+            } : { set: [] },
+            inventoryUsages: {
+                deleteMany: {}, // Delete all existing usages
+                create: usages.map((usage) => ({
+                    inventoryId: usage.inventoryId,
+                    usageAmount: usage.usageAmount,
+                })),
+            },
         },
     });
     res.json(updatedProduct);
@@ -98,7 +121,7 @@ router.put('/:id', authenticateBoth_1.authenticateBoth, upload.single('image'), 
 // DELETE /api/products/:id
 router.delete('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
-        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
+        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
     await db_1.default.product.delete({
         where: { id: parseInt(req.params.id), storeId: req.user.storeId },
     });

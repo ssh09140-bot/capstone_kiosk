@@ -7,7 +7,92 @@ const express_1 = __importDefault(require("express"));
 const db_1 = __importDefault(require("./db"));
 const auth_1 = require("./middleware/auth");
 const openaiService_1 = require("./services/openaiService");
+const date_fns_1 = require("date-fns");
 const router = express_1.default.Router();
+// [GET] /api/analytics/reports
+router.get('/analytics/reports', auth_1.authenticateToken, async (req, res) => {
+    if (!req.user)
+        return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    const { startDate: startDateQuery, endDate: endDateQuery } = req.query;
+    let startDate = startDateQuery ? new Date(startDateQuery) : (0, date_fns_1.subDays)(new Date(), 29);
+    let endDate = endDateQuery ? new Date(endDateQuery) : new Date();
+    if (isNaN(startDate.getTime()))
+        startDate = (0, date_fns_1.subDays)(new Date(), 29);
+    if (isNaN(endDate.getTime()))
+        endDate = new Date();
+    startDate = (0, date_fns_1.startOfDay)(startDate);
+    endDate = (0, date_fns_1.endOfDay)(endDate);
+    try {
+        const [summary, dailyTrends, topProductsData, salesByHourData] = await Promise.all([
+            // 1. Sales Summary
+            db_1.default.order.aggregate({
+                _sum: { totalAmount: true },
+                _count: { id: true },
+                where: {
+                    storeId: req.user.storeId,
+                    createdAt: { gte: startDate, lte: endDate },
+                },
+            }),
+            // 2. Daily Sales Trends
+            db_1.default.$queryRaw `
+        SELECT
+          TO_CHAR(DATE_TRUNC('day', "createdAt"), 'YYYY-MM-DD') as date,
+          SUM("totalAmount")::integer as sales
+        FROM "Order"
+        WHERE "storeId" = ${req.user.storeId} AND "createdAt" BETWEEN ${startDate} AND ${endDate}
+        GROUP BY date
+        ORDER BY date ASC;
+      `,
+            // 3. Top Products
+            db_1.default.orderItem.groupBy({
+                by: ['productId'],
+                _sum: { quantity: true },
+                where: {
+                    order: {
+                        storeId: req.user.storeId,
+                        createdAt: { gte: startDate, lte: endDate },
+                    },
+                },
+                orderBy: { _sum: { quantity: 'desc' } },
+                take: 5,
+            }),
+            // 4. Sales by Hour
+            db_1.default.$queryRaw `
+        SELECT
+          EXTRACT(hour FROM "createdAt" AT TIME ZONE 'Asia/Seoul') as hour,
+          SUM("totalAmount")::integer as sales
+        FROM "Order"
+        WHERE "storeId" = ${req.user.storeId} AND "createdAt" BETWEEN ${startDate} AND ${endDate}
+        GROUP BY hour
+        ORDER BY hour ASC;
+      `,
+        ]);
+        // Fetch product names for top products
+        const topProductDetails = await db_1.default.product.findMany({
+            where: { id: { in: topProductsData.map(p => p.productId) } },
+            select: { id: true, name: true },
+        });
+        const productMap = new Map(topProductDetails.map(p => [p.id, p.name]));
+        const topProducts = topProductsData.map(p => ({
+            name: productMap.get(p.productId) || '알 수 없는 상품',
+            quantity: p._sum.quantity || 0,
+        }));
+        res.json({
+            summary: {
+                totalSales: summary._sum.totalAmount || 0,
+                totalOrders: summary._count.id || 0,
+                averageOrderValue: (summary._sum.totalAmount || 0) / (summary._count.id || 1),
+            },
+            dailyTrends,
+            topProducts,
+            salesByHour: salesByHourData,
+        });
+    }
+    catch (error) {
+        console.error('Error fetching report data:', error);
+        res.status(500).json({ message: '리포트 데이터를 가져오는데 실패했습니다.' });
+    }
+});
 // [GET] /api/sales/summary
 router.get('/sales/summary', auth_1.authenticateToken, async (req, res) => {
     if (!req.user)
@@ -15,7 +100,6 @@ router.get('/sales/summary', auth_1.authenticateToken, async (req, res) => {
     try {
         const twelveMonthsAgo = new Date();
         twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-        // Prisma를 사용하여 월별 매출 집계 (Raw Query 사용)
         const monthlySalesResult = await db_1.default.$queryRaw `
       SELECT
         TO_CHAR(DATE_TRUNC('month', "createdAt"), 'YYYY-MM') as month,
@@ -25,8 +109,7 @@ router.get('/sales/summary', auth_1.authenticateToken, async (req, res) => {
       GROUP BY month
       ORDER BY month ASC;
     `;
-        // 현재 달의 매출 찾기
-        const currentMonthStr = new Date().toISOString().slice(0, 7); // YYYY-MM 형식
+        const currentMonthStr = new Date().toISOString().slice(0, 7);
         const currentMonthData = monthlySalesResult.find(d => d.month === currentMonthStr);
         res.json({
             monthlySalesData: monthlySalesResult,
@@ -43,32 +126,18 @@ router.get('/analytics/top-products', auth_1.authenticateToken, async (req, res)
     if (!req.user)
         return res.status(401).json({ message: '인증 정보가 없습니다.' });
     try {
-        const topProducts = await db_1.default.orderItem.groupBy({
+        const topProductsData = await db_1.default.orderItem.groupBy({
             by: ['productId'],
-            _sum: {
-                quantity: true,
-            },
-            where: {
-                order: {
-                    storeId: req.user.storeId,
-                },
-            },
-            orderBy: {
-                _sum: {
-                    quantity: 'desc',
-                },
-            },
+            _sum: { quantity: true },
+            where: { order: { storeId: req.user.storeId } },
+            orderBy: { _sum: { quantity: 'desc' } },
             take: 5,
         });
         const products = await db_1.default.product.findMany({
-            where: {
-                id: {
-                    in: topProducts.map((p) => p.productId),
-                },
-            },
+            where: { id: { in: topProductsData.map((p) => p.productId) } },
         });
         const productMap = new Map(products.map((p) => [p.id, p.name]));
-        const result = topProducts.map((p) => ({
+        const result = topProductsData.map((p) => ({
             name: productMap.get(p.productId) || '알 수 없는 상품',
             quantity: p._sum.quantity || 0,
         }));
@@ -87,13 +156,9 @@ router.get('/analytics/low-stock', auth_1.authenticateToken, async (req, res) =>
         const lowStockProducts = await db_1.default.product.findMany({
             where: {
                 storeId: req.user.storeId,
-                stock: {
-                    lte: 10,
-                },
+                stock: { lte: 10 },
             },
-            orderBy: {
-                stock: 'asc',
-            },
+            orderBy: { stock: 'asc' },
         });
         res.json(lowStockProducts.map(p => ({ name: p.name, stock: p.stock })));
     }
@@ -114,14 +179,10 @@ router.get('/analytics/monthly-summary', auth_1.authenticateToken, async (req, r
             where: {
                 order: {
                     storeId: req.user.storeId,
-                    createdAt: {
-                        gte: thirtyDaysAgo,
-                    },
+                    createdAt: { gte: thirtyDaysAgo },
                 },
             },
-            _sum: {
-                quantity: true,
-            },
+            _sum: { quantity: true },
         });
         if (salesData.length < 2) {
             return res.status(404).json({ message: '분석을 위한 데이터가 충분하지 않습니다 (최소 2개 이상의 상품 판매 내역 필요).' });

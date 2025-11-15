@@ -21,6 +21,10 @@ const users_1 = __importDefault(require("./users"));
 const payments_1 = __importDefault(require("./payments"));
 const notifications_1 = __importDefault(require("./notifications"));
 const purchase_orders_1 = __importDefault(require("./purchase-orders"));
+const inventory_1 = __importDefault(require("./inventory"));
+const suppliers_1 = __importDefault(require("./suppliers"));
+const inventory_logs_1 = __importDefault(require("./inventory-logs")); // Import the new inventory log router
+const recommendations_1 = __importDefault(require("./recommendations"));
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
@@ -43,6 +47,10 @@ app.use('/api', payments_1.default);
 app.use('/api', users_1.default);
 app.use('/api/notifications', notifications_1.default);
 app.use('/api/purchase-orders', purchase_orders_1.default);
+app.use('/api/inventory', inventory_1.default);
+app.use('/api/suppliers', suppliers_1.default);
+app.use('/api/inventory-logs', inventory_logs_1.default); // Use the new inventory log router
+app.use('/api/recommendations', recommendations_1.default);
 // --- Scheduled Tasks ---
 if (process.env.NODE_ENV !== 'test') {
     node_cron_1.default.schedule('0 21 * * *', () => {
