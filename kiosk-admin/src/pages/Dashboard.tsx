@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Typography, message, List, Tag, Button } from 'antd';
+import { Row, Col, Card, Statistic, Typography, List, Tag, Button } from 'antd';
 import { ArrowUpOutlined, RobotOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/charts';
 import api from '../api';
@@ -28,10 +28,16 @@ const Dashboard: React.FC = () => {
         setTopProducts(topProdRes.data);
         setLowStockProducts(lowStockRes.data);
       } catch (error) {
-        message.error("대시보드 데이터를 불러오는데 실패했습니다.");
+        // 첫 로딩이 아닌 경우, 백그라운드 에러는 조용히 처리할 수 있도록 console.error 사용
+        console.error("Failed to refresh dashboard data:", error);
       }
     };
-    fetchData();
+
+    fetchData(); // 초기 데이터 로딩
+
+    const intervalId = setInterval(fetchData, 30000); // 30초마다 데이터 새로고침
+
+    return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 정리
   }, []);
 
   const chartConfig = {

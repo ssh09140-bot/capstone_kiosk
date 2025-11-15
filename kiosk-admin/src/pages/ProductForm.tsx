@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, Divider, Switch, List, Avatar } from 'antd';
+import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, Divider, Switch, List } from 'antd';
 import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import api, { Inventory, getInventory } from '../api';
+import api, { type Inventory, getInventory } from '../api';
 import type { UploadFile } from 'antd/lib/upload/interface';
 
 const { Option } = Select;

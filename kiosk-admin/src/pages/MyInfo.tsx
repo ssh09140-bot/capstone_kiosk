@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { Card, Descriptions, Spin, Typography, message, Button, Divider, Input, Image } from 'antd';
-import { LogoutOutlined, CreditCardOutlined, UploadOutlined, SaveOutlined } from '@ant-design/icons';
+import { LogoutOutlined, CreditCardOutlined, SaveOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 

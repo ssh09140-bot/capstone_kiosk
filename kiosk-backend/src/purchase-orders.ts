@@ -5,6 +5,53 @@ import { PurchaseOrderStatus, NotificationType } from '@prisma/client';
 
 const router = express.Router();
 
+// [POST] /api/purchase-orders/from-recommendation
+router.post('/from-recommendation', authenticateToken, async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    const { inventoryId, supplierId, quantity } = req.body;
+
+    if (!inventoryId || !supplierId || !quantity) {
+        return res.status(400).json({ message: '필수 정보(inventoryId, supplierId, quantity)가 누락되었습니다.' });
+    }
+
+    try {
+        const newPurchaseOrder = await prisma.purchaseOrder.create({
+            data: {
+                storeId: req.user.storeId,
+                supplierId: supplierId,
+                status: PurchaseOrderStatus.PENDING_CONFIRMATION,
+                purchaseOrderItems: {
+                    create: [{
+                        inventoryId: inventoryId,
+                        quantity: quantity,
+                    }],
+                },
+            },
+            include: {
+                purchaseOrderItems: {
+                    include: {
+                        inventory: true,
+                    }
+                }
+            }
+        });
+
+        await prisma.notification.create({
+            data: {
+                storeId: req.user.storeId,
+                message: `AI 추천으로 발주 #${newPurchaseOrder.id}가 생성되었습니다. 확정이 필요합니다.`,
+                type: NotificationType.ORDER_CONFIRMATION,
+            },
+        });
+
+        res.status(201).json(newPurchaseOrder);
+    } catch (error) {
+        console.error('Error creating purchase order from recommendation:', error);
+        res.status(500).json({ message: '추천 기반 발주 생성에 실패했습니다.' });
+    }
+});
+
+
 // [GET] /api/purchase-orders
 router.get('/', authenticateToken, async (req, res) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
@@ -12,6 +59,7 @@ router.get('/', authenticateToken, async (req, res) => {
         where: { storeId: req.user.storeId },
         orderBy: { createdAt: 'desc' },
         include: {
+            supplier: true, // Include supplier info
             purchaseOrderItems: {
                 include: {
                     product: true,

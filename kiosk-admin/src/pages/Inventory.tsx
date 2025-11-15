@@ -1,28 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Space, Typography, Flex, message, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { getInventory, deleteInventoryItem, Inventory } from '../api';
+import { getInventory, deleteInventoryItem, type Inventory } from '../api';
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 
-interface InventoryItem extends Inventory {
-    key: string;
-    autoOrderEnabled: boolean;
-    minStockThreshold?: number;
-    orderQuantity?: number;
-}
-
 const InventoryPage: React.FC = () => {
     const navigate = useNavigate();
-    const [inventory, setInventory] = useState<InventoryItem[]>([]);
+    const [inventory, setInventory] = useState<(Inventory & { key: string })[]>([]);
     const [loading, setLoading] = useState(false);
 
     const fetchInventory = useCallback(async () => {
         setLoading(true);
         try {
             const response = await getInventory();
-            const dataWithKeys = response.map((item: any) => ({ ...item, key: item.id.toString() }));
+            const dataWithKeys = response.map((item: Inventory) => ({ ...item, key: item.id.toString() }));
             setInventory(dataWithKeys);
         } catch (error) {
             console.error("재고 목록 로딩 실패:", error);
@@ -64,18 +57,18 @@ const InventoryPage: React.FC = () => {
             title: '발주 기준 재고',
             dataIndex: 'minStockThreshold',
             key: 'minStockThreshold',
-            render: (stock?: number) => (stock ? `${stock} 이하` : '-'),
+            render: (stock?: number | null) => (stock != null ? `${stock} 이하` : '-'),
         },
         {
             title: '자동 발주 수량',
             dataIndex: 'orderQuantity',
             key: 'orderQuantity',
-            render: (quantity?: number) => (quantity ? `${quantity}` : '-'),
+            render: (quantity?: number | null) => (quantity != null ? `${quantity}` : '-'),
         },
         {
             title: '관리',
             key: 'action',
-            render: (_: any, record: InventoryItem) => (
+            render: (_: any, record: Inventory) => (
                 <Space size="middle">
                     <Button onClick={() => navigate(`/inventory/${record.id}`)}>수정</Button>
                     <Button danger onClick={() => handleDelete(record.id)}>삭제</Button>

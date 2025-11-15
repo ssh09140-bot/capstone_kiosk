@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, InputNumber, message, Card, Spin, Switch, Divider } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getInventoryItem, createInventoryItem, updateInventoryItem, CreateInventoryItemDto, UpdateInventoryItemDto } from '../api';
+import { getInventoryItem, createInventoryItem, updateInventoryItem, type CreateInventoryItemDto, type UpdateInventoryItemDto } from '../api';
 
 const FormItem = Form.Item;
+
+interface InventoryFormValues {
+    name: string;
+    quantity: number;
+    unit: string;
+    threshold: number | null;
+    autoOrderEnabled: boolean;
+    minStockThreshold?: number | null;
+    orderQuantity?: number | null;
+    estimatedDeliveryDays?: number | null;
+}
 
 const InventoryForm: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
-    const [form] = Form.useForm();
+    const [form] = Form.useForm<InventoryFormValues>();
     const [loading, setLoading] = useState(false);
     const isEditMode = Boolean(id);
 
@@ -23,7 +34,9 @@ const InventoryForm: React.FC = () => {
                     const item = await getInventoryItem(numericId);
                     form.setFieldsValue({
                         ...item,
-                        threshold: item.threshold ?? undefined
+                        threshold: item.threshold ?? null,
+                        minStockThreshold: item.minStockThreshold ?? undefined,
+                        orderQuantity: item.orderQuantity ?? undefined,
                     });
                 } catch (error) {
                     message.error("재고 정보를 불러오는데 실패했습니다.");
@@ -35,12 +48,15 @@ const InventoryForm: React.FC = () => {
         }
     }, [id, isEditMode, form]);
 
-    const onFinish = async (values: any) => {
+    const onFinish = async (values: InventoryFormValues) => {
         setLoading(true);
         try {
             const payload: CreateInventoryItemDto | UpdateInventoryItemDto = {
                 ...values,
                 threshold: values.threshold || null,
+                minStockThreshold: values.minStockThreshold || null,
+                orderQuantity: values.orderQuantity || null,
+                estimatedDeliveryDays: values.estimatedDeliveryDays || null,
             };
 
             if (isEditMode) {
@@ -55,7 +71,8 @@ const InventoryForm: React.FC = () => {
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || '알 수 없는 오류';
             message.error(`저장 실패: ${errorMessage}`);
-        } finally {
+        }
+        finally {
             setLoading(false);
         }
     };

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, Typography, Spin, List, Tag, Button, Flex, message } from 'antd';
 import { BulbOutlined } from '@ant-design/icons';
-import { getRecommendations, RecommendationResponse } from '../api';
+import { getRecommendations, createPurchaseOrderFromRecommendation, Recommendation, RecommendationResponse } from '../api';
 import { useNavigate } from 'react-router-dom';
 
 const { Title, Text, Paragraph } = Typography;
@@ -9,31 +9,46 @@ const { Title, Text, Paragraph } = Typography;
 const RecommendationCard: React.FC = () => {
   const [data, setData] = useState<RecommendationResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [orderingId, setOrderingId] = useState<number | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchRecommendations = async () => {
-      try {
-        setLoading(true);
-        const response = await getRecommendations();
-        setData(response);
-      } catch (error) {
-        message.error('AI 발주 추천을 불러오는 데 실패했습니다.');
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecommendations();
+  const fetchRecommendations = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getRecommendations();
+      setData(response);
+    } catch (error) {
+      message.error('AI 발주 추천을 불러오는 데 실패했습니다.');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleGoToPurchaseOrder = () => {
-    // TODO: 추천 내용을 담아서 발주 페이지로 이동하는 로직 추가
-    navigate('/purchase-orders');
+  useEffect(() => {
+    fetchRecommendations();
+  }, [fetchRecommendations]);
+
+  const handleCreateOrder = async (item: Recommendation) => {
+    setOrderingId(item.inventoryId);
+    try {
+      await createPurchaseOrderFromRecommendation({
+        inventoryId: item.inventoryId,
+        supplierId: item.supplierId,
+        quantity: item.recommendedOrderAmount,
+      });
+      message.success(`'${item.inventoryName}' 발주가 생성되었습니다. 발주 목록에서 확인해주세요.`);
+      // Refresh recommendations after ordering
+      fetchRecommendations();
+    } catch (error) {
+      message.error('발주 생성에 실패했습니다.');
+      console.error(error);
+    } finally {
+      setOrderingId(null);
+    }
   };
 
-  if (loading) {
+  if (loading && !data) { // Show initial loading spinner only on first load
     return (
       <Card>
         <Spin />
@@ -43,13 +58,14 @@ const RecommendationCard: React.FC = () => {
   }
 
   if (!data) {
-    return null; // 에러 발생 시 카드 숨김
+    return null; // Error case
   }
 
   return (
     <Card 
       title={<><BulbOutlined style={{ marginRight: 8 }} /> AI 발주 추천</>}
       style={{ marginBottom: 24 }}
+      extra={loading && <Spin size="small" />}
     >
       <Paragraph>{data.message}</Paragraph>
       {data.recommendations.length > 0 ? (
@@ -60,16 +76,23 @@ const RecommendationCard: React.FC = () => {
             <List.Item
               key={item.inventoryId}
               actions={[
-                <Button type="primary" onClick={handleGoToPurchaseOrder}>
-                  발주하러 가기
+                <Button 
+                  type="primary" 
+                  onClick={() => handleCreateOrder(item)}
+                  loading={orderingId === item.inventoryId}
+                >
+                  이대로 발주 생성
+                </Button>,
+                <Button onClick={() => navigate('/purchase-orders')}>
+                  발주 목록 보기
                 </Button>
               ]}
             >
               <List.Item.Meta
-                title={<Title level={5}>{item.inventoryName} {item.recommendedOrderAmount}{item.unit} 발주 추천</Title>}
+                title={`${item.inventoryName} ${item.recommendedOrderAmount}${item.unit} 발주 추천`}
                 description={<Text type="secondary">{item.reason}</Text>}
               />
-              <Flex gap="large" style={{ marginTop: 16 }}>
+              <Flex gap="large" style={{ marginTop: 16, flexWrap: 'wrap' }}>
                 <div>
                   <Text strong>현재 재고: </Text>
                   <Text>{item.currentStock}{item.unit}</Text>

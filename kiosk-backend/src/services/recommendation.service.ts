@@ -161,6 +161,7 @@ export const generateRecommendations = async (storeId: string) => {
       currentStock: inventoryItem.quantity,
       unit: inventoryItem.unit,
       predictedUsage: parseFloat(predictedUsage.toFixed(2)),
+      supplierId: bestSupplierInfo.supplier.id,
       supplierName: bestSupplierInfo.supplier.name,
       leadTimeDays: leadTime,
       recommendedOrderAmount: parseFloat(recommendedOrderAmount.toFixed(2)),

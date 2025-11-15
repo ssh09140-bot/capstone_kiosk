@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Form, InputNumber, Button, Typography, Space } from 'antd';
-import type { PurchaseOrder, PurchaseOrderItem } from '../pages/PurchaseOrderList'; // Assuming the interface is exported from here
+import type { PurchaseOrder, PurchaseOrderItem } from '../pages/PurchaseOrderList';
 
 const { Text } = Typography;
 
@@ -37,19 +37,22 @@ const ReceiveOrderModal: React.FC<ReceiveOrderModalProps> = ({ visible, order, o
     >
       <Form id="receiveOrderForm" form={form} onFinish={handleFinish} layout="vertical">
         <p>각 상품별로 불량(폐기) 수량을 입력해주세요. 입력하지 않으면 0개로 처리됩니다.</p>
-        {order.purchaseOrderItems.map((item: PurchaseOrderItem) => (
-          <Form.Item key={item.id} label={`${item.product.name} (주문 수량: ${item.quantity}개)`}>
-            <Space>
-              <Form.Item
-                name={`item_${item.id}`}
-                noStyle
-              >
-                <InputNumber min={0} max={item.quantity} placeholder="불량 수량" />
-              </Form.Item>
-              <Text>개</Text>
-            </Space>
-          </Form.Item>
-        ))}
+        {order.purchaseOrderItems.map((item: PurchaseOrderItem) => {
+          const itemName = item.product?.name || item.inventory?.name || '알 수 없는 품목';
+          return (
+            <Form.Item key={item.id} label={`${itemName} (주문 수량: ${item.quantity}개)`}>
+              <Space>
+                <Form.Item
+                  name={`item_${item.id}`}
+                  noStyle
+                >
+                  <InputNumber min={0} max={item.quantity} placeholder="불량 수량" />
+                </Form.Item>
+                <Text>개</Text>
+              </Space>
+            </Form.Item>
+          );
+        })}
       </Form>
     </Modal>
   );

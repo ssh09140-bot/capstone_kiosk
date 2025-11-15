@@ -29,20 +29,31 @@ export interface Inventory {
   createdAt: string;
   updatedAt: string;
   storeId: string;
+  autoOrderEnabled?: boolean;
+  minStockThreshold?: number | null;
+  orderQuantity?: number | null;
 }
 
 export interface CreateInventoryItemDto {
   name: string;
   quantity: number;
   unit: string;
-  threshold?: number;
+  threshold?: number | null;
+  autoOrderEnabled?: boolean;
+  minStockThreshold?: number | null;
+  orderQuantity?: number | null;
+  estimatedDeliveryDays?: number | null;
 }
 
 export interface UpdateInventoryItemDto {
   name?: string;
   quantity?: number;
   unit?: string;
-  threshold?: number;
+  threshold?: number | null;
+  autoOrderEnabled?: boolean;
+  minStockThreshold?: number | null;
+  orderQuantity?: number | null;
+  estimatedDeliveryDays?: number | null;
 }
 
 export const getInventory = async (): Promise<Inventory[]> => {
@@ -120,6 +131,17 @@ export const deleteSupplier = async (id: number): Promise<void> => {
   await api.delete(`/suppliers/${id}`);
 };
 
+// --- Purchase Order API ---
+export const createPurchaseOrderFromRecommendation = async (data: {
+  inventoryId: number;
+  supplierId: number;
+  quantity: number;
+}) => {
+  const response = await api.post('/purchase-orders/from-recommendation', data);
+  return response.data;
+};
+
+
 // --- Inventory Log API ---
 
 export interface InventoryLog {
@@ -146,6 +168,7 @@ export interface Recommendation {
   currentStock: number;
   unit: string;
   predictedUsage: number;
+  supplierId: number;
   supplierName: string;
   leadTimeDays: number;
   recommendedOrderAmount: number;
@@ -158,5 +181,40 @@ export interface RecommendationResponse {
 
 export const getRecommendations = async (): Promise<RecommendationResponse> => {
   const response = await api.get<RecommendationResponse>('/recommendations');
+  return response.data;
+};
+
+// --- Analytics API ---
+
+export interface ReportSummary {
+  totalSales: number;
+  totalOrders: number;
+  averageOrderValue: number;
+}
+
+export interface DailyTrend {
+  date: string;
+  sales: number;
+}
+
+export interface TopProduct {
+  name: string;
+  quantity: number;
+}
+
+export interface SalesByHour {
+  hour: number;
+  sales: number;
+}
+
+export interface ReportResponse {
+  summary: ReportSummary;
+  dailyTrends: DailyTrend[];
+  topProducts?: TopProduct[];
+  salesByHour?: SalesByHour[];
+}
+
+export const getAnalyticsReport = async (params: { startDate?: string; endDate?: string }): Promise<ReportResponse> => {
+  const response = await api.get<ReportResponse>('/analytics/reports', { params });
   return response.data;
 };

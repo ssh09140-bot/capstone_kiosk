@@ -10,9 +10,8 @@ const { Title } = Typography;
 // Define interfaces for better type checking
 export interface PurchaseOrderItem {
   id: number;
-  product: {
-    name: string;
-  };
+  product: { name: string } | null;
+  inventory: { name: string } | null;
   quantity: number;
 }
 
@@ -21,6 +20,7 @@ export interface PurchaseOrder {
   id: number;
   createdAt: string;
   status: 'PENDING_CONFIRMATION' | 'ORDERED' | 'DELIVERED' | 'CANCELLED';
+  supplier: { name: string } | null;
   purchaseOrderItems: PurchaseOrderItem[];
 }
 
@@ -107,16 +107,23 @@ const PurchaseOrderList: React.FC = () => {
   };
 
   const columns = [
-    { title: '발주 ID', dataIndex: 'id', key: 'id' },
+    { title: '발주 ID', dataIndex: 'id', key: 'id', width: 80 },
+    {
+      title: '공급처',
+      dataIndex: 'supplier',
+      key: 'supplier',
+      render: (supplier: { name: string } | null) => supplier?.name || '-',
+    },
     {
       title: '발주 항목',
       dataIndex: 'purchaseOrderItems',
       key: 'items',
       render: (items: PurchaseOrderItem[]) => (
         <ul style={{ margin: 0, paddingLeft: '16px' }}>
-          {items.map(item => (
-            <li key={item.id}>{`${item.product.name} (${item.quantity}개)`}</li>
-          ))}
+          {items.map(item => {
+            const itemName = item.product?.name || item.inventory?.name || '알 수 없는 품목';
+            return <li key={item.id}>{`${itemName} (${item.quantity}개)`}</li>
+          })}
         </ul>
       ),
     },
@@ -137,6 +144,8 @@ const PurchaseOrderList: React.FC = () => {
     {
       title: '관리',
       key: 'action',
+      fixed: 'right' as const,
+      width: 180,
       render: (_: any, record: PurchaseOrder) => (
         <Space size="middle">
           {record.status === 'PENDING_CONFIRMATION' && (

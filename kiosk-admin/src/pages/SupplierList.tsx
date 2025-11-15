@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Space, Typography, Flex, message, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { getSuppliers, deleteSupplier, Supplier, SupplierInventory } from '../api';
+import { getSuppliers, deleteSupplier, type Supplier, type SupplierInventory } from '../api';
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
@@ -54,7 +54,7 @@ const SupplierList: React.FC = () => {
             title: '공급 품목',
             dataIndex: 'supplies',
             key: 'supplies',
-            render: (supplies: SupplierInventory[] | undefined) => {
+            render: (supplies: SupplierInventory[]) => {
                 if (!supplies || supplies.length === 0) {
                     return '-';
                 }

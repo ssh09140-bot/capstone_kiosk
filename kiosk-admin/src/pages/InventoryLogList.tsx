@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Typography, Flex, message, Tag } from 'antd';
-import { getInventoryLogs, InventoryLog } from '../api';
+import { getInventoryLogs, type InventoryLog } from '../api';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;

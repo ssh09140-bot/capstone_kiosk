@@ -1,16 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, message, Card, Spin, Select, InputNumber, Space, Row, Col } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getSupplier, createSupplier, updateSupplier, SupplierDto, getInventory, Inventory } from '../api';
+import { getSupplier, createSupplier, updateSupplier, type SupplierDto, getInventory, type Inventory } from '../api';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 const FormItem = Form.Item;
 
+interface SupplierFormValues {
+    name: string;
+    contact?: string | null;
+    email?: string | null;
+    address?: string | null;
+    supplies?: {
+        inventoryId: number;
+        price?: number | null;
+        leadTimeDays?: number | null;
+    }[];
+}
+
 const SupplierForm: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
-    const [form] = Form.useForm();
+    const [form] = Form.useForm<SupplierFormValues>();
     const [loading, setLoading] = useState(false);
     const [inventoryItems, setInventoryItems] = useState<Inventory[]>([]);
     const isEditMode = Boolean(id);
@@ -54,15 +66,15 @@ const SupplierForm: React.FC = () => {
         }
     }, [id, isEditMode, form]);
 
-    const onFinish = async (values: any) => {
+    const onFinish = async (values: SupplierFormValues) => {
         setLoading(true);
         const dto: SupplierDto = {
             name: values.name,
-            contact: values.contact,
-            email: values.email,
-            address: values.address,
-            supplies: values.supplies?.map((s: any) => ({
-                ...s,
+            contact: values.contact ?? null,
+            email: values.email ?? null,
+            address: values.address ?? null,
+            supplies: values.supplies?.map(s => ({
+                inventoryId: s.inventoryId,
                 price: s.price ? Number(s.price) : null,
                 leadTimeDays: s.leadTimeDays ? Number(s.leadTimeDays) : null,
             })) || [],

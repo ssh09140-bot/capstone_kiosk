@@ -11,7 +11,8 @@ import {
     BellOutlined,
     ContainerOutlined,
     TeamOutlined,
-    HistoryOutlined // Import HistoryOutlined for Logs
+    HistoryOutlined, // Import HistoryOutlined for Logs
+    AreaChartOutlined
 } from '@ant-design/icons';
 import api from '../api';
 import NotificationPanel from './NotificationPanel';
@@ -75,6 +76,7 @@ const AppLayout: React.FC = () => {
 
   const menuItems = [
     { key: '/', icon: <DashboardOutlined />, label: '대시보드', onClick: () => navigate('/') },
+    { key: '/reports', icon: <AreaChartOutlined />, label: '상세 리포트', onClick: () => navigate('/reports') },
     { key: '/products', icon: <UnorderedListOutlined />, label: '상품 관리', onClick: () => navigate('/products') },
     { key: '/categories', icon: <AppstoreOutlined />, label: '카테고리 관리', onClick: () => navigate('/categories') },
     { key: '/option-groups', icon: <AppstoreOutlined />, label: '옵션 관리', onClick: () => navigate('/option-groups') },
