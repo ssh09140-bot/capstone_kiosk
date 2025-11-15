@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Card, Typography, Spin, List, Tag, Button, Flex, message } from 'antd';
+import { Card, Typography, Spin, List, Button, Flex, message } from 'antd';
 import { BulbOutlined } from '@ant-design/icons';
-import { getRecommendations, createPurchaseOrderFromRecommendation, Recommendation, RecommendationResponse } from '../api';
+import { getRecommendations, createPurchaseOrderFromRecommendation } from '../api';
+import type { Recommendation, RecommendationResponse } from '../api';
 import { useNavigate } from 'react-router-dom';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 const RecommendationCard: React.FC = () => {
   const [data, setData] = useState<RecommendationResponse | null>(null);
