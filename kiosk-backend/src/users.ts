@@ -22,7 +22,8 @@ router.get('/me', authenticateToken, async (req, res) => {
         cardCompany: true, 
         cardNumber: true,
         businessRegistrationNumber: true, // 사업자 등록번호 추가
-        businessLicenseImageUrl: true // 사업자 등록증 이미지 URL 추가
+        businessLicenseImageUrl: true, // 사업자 등록증 이미지 URL 추가
+        storeAddress: true // Added storeAddress
       },
     });
 
@@ -48,7 +49,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 router.put('/me/business-info', authenticateToken, upload.single('businessLicenseImage'), async (req, res) => {
   try {
     const userId = (req.user as JwtPayload).id;
-    const { businessRegistrationNumber } = req.body;
+    const { businessRegistrationNumber, storeAddress } = req.body; // Destructure storeAddress
     let businessLicenseImageUrl: string | undefined = req.body.businessLicenseImageUrl; // 기존 URL 유지 또는 업데이트
 
     if (!userId) {
@@ -76,6 +77,7 @@ router.put('/me/business-info', authenticateToken, upload.single('businessLicens
       data: {
         businessRegistrationNumber: businessRegistrationNumber || null,
         businessLicenseImageUrl: businessLicenseImageUrl || null,
+        storeAddress: storeAddress || null, // Added storeAddress
       },
       select: {
         email: true,
@@ -83,6 +85,7 @@ router.put('/me/business-info', authenticateToken, upload.single('businessLicens
         storeId: true,
         businessRegistrationNumber: true,
         businessLicenseImageUrl: true,
+        storeAddress: true // Added storeAddress to select
       },
     });
 

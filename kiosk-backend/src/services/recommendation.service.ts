@@ -71,7 +71,60 @@ async function getWeatherForecast(city: string): Promise<SimplifiedWeather | nul
 }
 
 export const generateRecommendations = async (storeId: string) => {
-  const weather = await getWeatherForecast('Seoul');
+  // Fetch store information to get the address
+  const user = await prisma.user.findUnique({
+    where: { storeId },
+    select: { storeAddress: true },
+  });
+
+  let cityForWeather = 'Seoul'; // Default to Seoul if address not found or city extraction fails
+  if (user?.storeAddress) {
+    // Attempt to extract a recognizable city name for OpenWeatherMap
+    const fullAddress = user.storeAddress.trim();
+    
+    // Simple mapping for common Korean cities
+    let extractedCity = 'Seoul'; // Default if no specific match
+    
+    if (fullAddress.includes('서울')) {
+      extractedCity = 'Seoul';
+    } else if (fullAddress.includes('부산')) {
+      extractedCity = 'Busan';
+    } else if (fullAddress.includes('대구')) {
+      extractedCity = 'Daegu';
+    } else if (fullAddress.includes('인천')) {
+      extractedCity = 'Incheon';
+    } else if (fullAddress.includes('광주')) {
+      extractedCity = 'Gwangju';
+    } else if (fullAddress.includes('대전')) {
+      extractedCity = 'Daejeon';
+    } else if (fullAddress.includes('울산')) {
+      extractedCity = 'Ulsan';
+    } else if (fullAddress.includes('세종')) {
+      extractedCity = 'Sejong';
+    } else if (fullAddress.includes('경기')) { // Gyeonggi-do is a province, need a major city there or a more specific mapping
+      extractedCity = 'Suwon'; // Capital of Gyeonggi-do as a best guess
+    } else if (fullAddress.includes('강원')) {
+      extractedCity = 'Chuncheon'; // Capital of Gangwon-do
+    } else if (fullAddress.includes('충북')) {
+      extractedCity = 'Cheongju'; // Capital of Chungcheongbuk-do
+    } else if (fullAddress.includes('충남')) {
+      extractedCity = 'Cheonan'; // Major city in Chungcheongnam-do
+    } else if (fullAddress.includes('전북')) {
+      extractedCity = 'Jeonju'; // Capital of Jeollabuk-do
+    } else if (fullAddress.includes('전남')) {
+      extractedCity = 'Mokpo'; // Major city in Jeollanam-do
+    } else if (fullAddress.includes('경북')) {
+      extractedCity = 'Pohang'; // Major city in Gyeongsangbuk-do
+    } else if (fullAddress.includes('경남')) {
+      extractedCity = 'Changwon'; // Capital of Gyeongsangnam-do
+    } else if (fullAddress.includes('제주')) {
+      extractedCity = 'Jeju City'; // English name often used
+    }
+    
+    cityForWeather = extractedCity;
+  }
+
+  const weather = await getWeatherForecast(cityForWeather);
   
   if (!weather) {
     return {
@@ -171,7 +224,7 @@ export const generateRecommendations = async (storeId: string) => {
   }
 
   return {
-    message: `내일 서울의 예상 날씨는 ${weather.temp_celsius}°C, ${weather.condition} 입니다.`,
+    message: `내일 ${cityForWeather}의 예상 날씨는 ${weather.temp_celsius}°C, ${weather.condition} 입니다.`,
     recommendations: allRecommendations,
   };
 };

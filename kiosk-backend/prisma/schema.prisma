@@ -30,6 +30,7 @@ model User {
   cardNumber                 String?
   businessRegistrationNumber String?         @unique
   businessLicenseImageUrl    String?
+  storeAddress               String? // New field for store address
 }
 
 model Category {

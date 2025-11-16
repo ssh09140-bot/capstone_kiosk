@@ -19,6 +19,7 @@ interface UserInfo {
   } | null;
   businessRegistrationNumber?: string;
   businessLicenseImageUrl?: string;
+  storeAddress?: string; // Added new field
 }
 
 const MyInfo: React.FC = () => {
@@ -30,6 +31,7 @@ const MyInfo: React.FC = () => {
   const [businessNumber, setBusinessNumber] = useState('');
   const [licenseImageFile, setLicenseImageFile] = useState<File | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [storeAddress, setStoreAddress] = useState(''); // New state for storeAddress
 
   const fetchUserInfo = useCallback(async () => {
     setLoading(true);
@@ -38,6 +40,7 @@ const MyInfo: React.FC = () => {
       setUserInfo(response.data);
       setBusinessNumber(response.data.businessRegistrationNumber || '');
       setPreviewImageUrl(response.data.businessLicenseImageUrl || null);
+      setStoreAddress(response.data.storeAddress || ''); // Set initial value
     } catch (error) {
       console.error("사용자 정보를 불러오지 못했습니다.", error);
       message.error("사용자 정보를 불러오는 데 실패했습니다. 다시 로그인해주세요.");
@@ -108,16 +111,19 @@ const MyInfo: React.FC = () => {
       message.error('사업자 등록번호를 입력해주세요.');
       return;
     }
+    if (!storeAddress) { // Added validation for storeAddress
+      message.error('매장 주소를 입력해주세요.');
+      return;
+    }
 
     setLoading(true);
     try {
       const formData = new FormData();
       formData.append('businessRegistrationNumber', businessNumber);
+      formData.append('storeAddress', storeAddress); // Append storeAddress
       if (licenseImageFile) {
         formData.append('businessLicenseImage', licenseImageFile);
       } else if (previewImageUrl) {
-        // If there's a preview but no new file, it means we keep the existing image.
-        // The backend should handle the case where the image URL is passed but no file is uploaded.
         formData.append('businessLicenseImageUrl', previewImageUrl);
       }
 
@@ -161,6 +167,13 @@ const MyInfo: React.FC = () => {
             value={businessNumber}
             onChange={(e) => setBusinessNumber(e.target.value)}
             placeholder="'-' 없이 숫자만 입력"
+          />
+        </Descriptions.Item>
+        <Descriptions.Item label="매장 주소">
+          <Input
+            value={storeAddress}
+            onChange={(e) => setStoreAddress(e.target.value)}
+            placeholder="매장 주소를 입력해주세요 (예: 서울시 강남구 테헤란로 123)"
           />
         </Descriptions.Item>
         <Descriptions.Item label="사업자 등록증 이미지">
