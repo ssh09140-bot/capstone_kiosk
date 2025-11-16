@@ -23,7 +23,8 @@ router.get('/me', auth_1.authenticateToken, async (req, res) => {
                 cardCompany: true,
                 cardNumber: true,
                 businessRegistrationNumber: true, // 사업자 등록번호 추가
-                businessLicenseImageUrl: true // 사업자 등록증 이미지 URL 추가
+                businessLicenseImageUrl: true, // 사업자 등록증 이미지 URL 추가
+                storeAddress: true // Added storeAddress
             },
         });
         if (!user) {
@@ -46,7 +47,7 @@ router.get('/me', auth_1.authenticateToken, async (req, res) => {
 router.put('/me/business-info', auth_1.authenticateToken, upload.single('businessLicenseImage'), async (req, res) => {
     try {
         const userId = req.user.id;
-        const { businessRegistrationNumber } = req.body;
+        const { businessRegistrationNumber, storeAddress } = req.body; // Destructure storeAddress
         let businessLicenseImageUrl = req.body.businessLicenseImageUrl; // 기존 URL 유지 또는 업데이트
         if (!userId) {
             return res.status(401).json({ message: '인증 정보가 없습니다.' });
@@ -69,6 +70,7 @@ router.put('/me/business-info', auth_1.authenticateToken, upload.single('busines
             data: {
                 businessRegistrationNumber: businessRegistrationNumber || null,
                 businessLicenseImageUrl: businessLicenseImageUrl || null,
+                storeAddress: storeAddress || null, // Added storeAddress
             },
             select: {
                 email: true,
@@ -76,6 +78,7 @@ router.put('/me/business-info', auth_1.authenticateToken, upload.single('busines
                 storeId: true,
                 businessRegistrationNumber: true,
                 businessLicenseImageUrl: true,
+                storeAddress: true // Added storeAddress to select
             },
         });
         res.json(updatedUser);
