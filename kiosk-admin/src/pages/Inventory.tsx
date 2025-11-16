@@ -45,6 +45,7 @@ const InventoryPage: React.FC = () => {
         { title: '품목명', dataIndex: 'name', key: 'name' },
         { title: '현재 수량', dataIndex: 'quantity', key: 'quantity' },
         { title: '단위', dataIndex: 'unit', key: 'unit' },
+        { title: '품목 유형', dataIndex: 'itemType', key: 'itemType' }, // New column
         {
             title: '자동 발주',
             dataIndex: 'autoOrderEnabled',

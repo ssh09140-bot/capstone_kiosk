@@ -25,6 +25,7 @@ export interface Inventory {
   name: string;
   quantity: number;
   unit: string;
+  itemType: string;
   threshold: number | null;
   createdAt: string;
   updatedAt: string;
@@ -38,6 +39,7 @@ export interface CreateInventoryItemDto {
   name: string;
   quantity: number;
   unit: string;
+  itemType: string; // Added
   threshold?: number | null;
   autoOrderEnabled?: boolean;
   minStockThreshold?: number | null;
@@ -49,6 +51,7 @@ export interface UpdateInventoryItemDto {
   name?: string;
   quantity?: number;
   unit?: string;
+  itemType?: string; // Added as optional
   threshold?: number | null;
   autoOrderEnabled?: boolean;
   minStockThreshold?: number | null;

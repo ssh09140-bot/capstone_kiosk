@@ -80,96 +80,98 @@ export const generateRecommendations = async (storeId: string) => {
     };
   }
 
-  const KEY_INVENTORY_ITEM_NAME = '원두';
   const ANALYSIS_DAYS = 28; // 4주
+  const allRecommendations = [];
 
-  // 1. 핵심 재고 품목 정보 조회
-  const inventoryItem = await prisma.inventory.findFirst({
-    where: { name: KEY_INVENTORY_ITEM_NAME, storeId },
+  // 1. 자동 발주가 활성화된 모든 재고 품목 조회
+  const autoOrderEnabledInventories = await prisma.inventory.findMany({
+    where: { storeId, autoOrderEnabled: true },
   });
 
-  if (!inventoryItem) {
-    return { message: `'${KEY_INVENTORY_ITEM_NAME}' 품목을 찾을 수 없습니다.`, recommendations: [] };
+  if (autoOrderEnabledInventories.length === 0) {
+    return { message: "자동 발주가 활성화된 재고 품목이 없습니다.", recommendations: [] };
   }
 
-  // 2. 해당 재고를 사용하는 제품들 조회
-  const productUsages = await prisma.productInventoryUsage.findMany({
-    where: { inventoryId: inventoryItem.id },
-    select: { productId: true, usageAmount: true },
-  });
-
-  if (productUsages.length === 0) {
-    return { message: `'${KEY_INVENTORY_ITEM_NAME}'을 사용하는 제품이 없습니다.`, recommendations: [] };
-  }
-
-  const productIds = productUsages.map(p => p.productId);
-
-  // 3. 지난 N일간의 판매 데이터로 일 평균 소모량 계산
-  const pastOrders = await prisma.orderItem.findMany({
-    where: {
-      order: {
-        storeId,
-        createdAt: { gte: subDays(new Date(), ANALYSIS_DAYS) },
-      },
-      productId: { in: productIds },
-    },
-  });
-
-  const totalUsage = pastOrders.reduce((acc, orderItem) => {
-    const usageInfo = productUsages.find(p => p.productId === orderItem.productId);
-    return acc + (usageInfo ? usageInfo.usageAmount * orderItem.quantity : 0);
-  }, 0);
-
-  const baselineDailyUsage = totalUsage / ANALYSIS_DAYS;
-
-  // 4. 날씨 기반 규칙 적용하여 수요 예측
-  let predictedUsage = baselineDailyUsage;
-  let reason = `지난 ${ANALYSIS_DAYS}일간의 평균 소모량`;
-
-  if (weather.condition === 'Rain') {
-    predictedUsage *= 1.2; // 비 오는 날 20% 증가
-    reason = `비 예보로 인해 평소보다 20% 증가된 수요가 예상됩니다.`;
-  }
-  // 여기에 다른 규칙 추가 가능 (e.g., 온도, 주말 등)
-
-  // 5. 최적 공급처 탐색 (리드타임이 가장 짧은)
-  const bestSupplierInfo = await prisma.supplierInventory.findFirst({
-    where: { inventoryId: inventoryItem.id },
-    orderBy: { leadTimeDays: 'asc' },
-    include: { supplier: true },
-  });
-
-  if (!bestSupplierInfo || bestSupplierInfo.leadTimeDays === null) {
-    return { message: `'${inventoryItem.name}'의 공급처 정보(리드타임)가 부족합니다.`, recommendations: [] };
-  }
-
-  // 6. 발주 필요 여부 판단
-  const leadTime = bestSupplierInfo.leadTimeDays;
-  const stockAtDelivery = inventoryItem.quantity - (predictedUsage * leadTime);
-  const safetyStock = inventoryItem.minStockThreshold || 0;
-
-  const recommendations = [];
-
-  if (stockAtDelivery < safetyStock) {
-    const targetStock = safetyStock * 2; // 목표 재고량 (안전 재고의 2배)
-    const recommendedOrderAmount = Math.max(0, targetStock - stockAtDelivery);
-
-    recommendations.push({
-      inventoryId: inventoryItem.id,
-      inventoryName: inventoryItem.name,
-      reason,
-      currentStock: inventoryItem.quantity,
-      unit: inventoryItem.unit,
-      predictedUsage: parseFloat(predictedUsage.toFixed(2)),
-      supplierId: bestSupplierInfo.supplier.id,
-      supplierName: bestSupplierInfo.supplier.name,
-      leadTimeDays: leadTime,
-      recommendedOrderAmount: parseFloat(recommendedOrderAmount.toFixed(2)),
+  for (const inventoryItem of autoOrderEnabledInventories) {
+    // 2. 해당 재고를 사용하는 제품들 조회
+    const productUsages = await prisma.productInventoryUsage.findMany({
+      where: { inventoryId: inventoryItem.id },
+      select: { productId: true, usageAmount: true },
     });
+
+    if (productUsages.length === 0) {
+      // console.warn(`'${inventoryItem.name}'을 사용하는 제품이 없습니다. 이 품목은 추천에서 제외됩니다.`);
+      continue; // 다음 재고 품목으로 넘어감
+    }
+
+    const productIds = productUsages.map(p => p.productId);
+
+    // 3. 지난 N일간의 판매 데이터로 일 평균 소모량 계산
+    const pastOrders = await prisma.orderItem.findMany({
+      where: {
+        order: {
+          storeId,
+          createdAt: { gte: subDays(new Date(), ANALYSIS_DAYS) },
+        },
+        productId: { in: productIds },
+      },
+    });
+
+    const totalUsage = pastOrders.reduce((acc, orderItem) => {
+      const usageInfo = productUsages.find(p => p.productId === orderItem.productId);
+      return acc + (usageInfo ? usageInfo.usageAmount * orderItem.quantity : 0);
+    }, 0);
+
+    const baselineDailyUsage = totalUsage / ANALYSIS_DAYS;
+
+    // 4. 날씨 기반 규칙 적용하여 수요 예측
+    let predictedUsage = baselineDailyUsage;
+    let reason = `지난 ${ANALYSIS_DAYS}일간의 평균 소모량`;
+
+    if (weather.condition === 'Rain') {
+      predictedUsage *= 1.2; // 비 오는 날 20% 증가
+      reason = `비 예보로 인해 평소보다 20% 증가된 수요가 예상됩니다.`;
+    }
+    // 여기에 다른 규칙 추가 가능 (e.g., 온도, 주말 등)
+
+    // 5. 최적 공급처 탐색 (리드타임이 가장 짧은)
+    const bestSupplierInfo = await prisma.supplierInventory.findFirst({
+      where: { inventoryId: inventoryItem.id },
+      orderBy: { leadTimeDays: 'asc' },
+      include: { supplier: true },
+    });
+
+    if (!bestSupplierInfo || bestSupplierInfo.leadTimeDays === null) {
+      // console.warn(`'${inventoryItem.name}'의 공급처 정보(리드타임)가 부족합니다. 이 품목은 추천에서 제외됩니다.`);
+      continue; // 다음 재고 품목으로 넘어감
+    }
+
+    // 6. 발주 필요 여부 판단
+    const leadTime = bestSupplierInfo.leadTimeDays;
+    const stockAtDelivery = inventoryItem.quantity - (predictedUsage * leadTime);
+    const safetyStock = inventoryItem.minStockThreshold || 0;
+
+    if (stockAtDelivery < safetyStock) {
+      const targetStock = safetyStock * 2; // 목표 재고량 (안전 재고의 2배)
+      const recommendedOrderAmount = Math.max(0, targetStock - stockAtDelivery);
+
+      allRecommendations.push({
+        inventoryId: inventoryItem.id,
+        inventoryName: inventoryItem.name,
+        reason,
+        currentStock: inventoryItem.quantity,
+        unit: inventoryItem.unit,
+        predictedUsage: parseFloat(predictedUsage.toFixed(2)),
+        supplierId: bestSupplierInfo.supplier.id,
+        supplierName: bestSupplierInfo.supplier.name,
+        leadTimeDays: leadTime,
+        recommendedOrderAmount: parseFloat(recommendedOrderAmount.toFixed(2)),
+      });
+    }
   }
 
   return {
     message: `내일 서울의 예상 날씨는 ${weather.temp_celsius}°C, ${weather.condition} 입니다.`,
-    recommendations,
+    recommendations: allRecommendations,
   };
 };

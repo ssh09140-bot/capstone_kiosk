@@ -9,6 +9,7 @@ interface InventoryFormValues {
     name: string;
     quantity: number;
     unit: string;
+    itemType: string; // Added new field
     threshold: number | null;
     autoOrderEnabled: boolean;
     minStockThreshold?: number | null;
@@ -92,6 +93,9 @@ const InventoryForm: React.FC = () => {
                 </FormItem>
                 <FormItem label="단위" name="unit" rules={[{ required: true, message: '단위(예: kg, L, 개)를 입력해주세요.' }]}>
                     <Input placeholder="kg, L, 개 등" />
+                </FormItem>
+                <FormItem label="품목 유형" name="itemType" rules={[{ required: true, message: '품목 유형을 입력해주세요.' }]}>
+                    <Input placeholder="예: 원두, 우유, 시럽, 컵" />
                 </FormItem>
                 <FormItem label="재고 임계값" name="threshold">
                     <InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="이 수량 이하일 때 알림 (선택 사항)" />
