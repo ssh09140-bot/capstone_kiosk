@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Typography, List, Tag, Button } from 'antd';
+import { Row, Col, Card, Statistic, Typography, List, Button } from 'antd';
 import { ArrowUpOutlined, RobotOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/charts';
 import api from '../api';
@@ -12,21 +12,21 @@ const Dashboard: React.FC = () => {
   const [currentMonthSales, setCurrentMonthSales] = useState(0);
   const [monthlySales, setMonthlySales] = useState<{ month: string; sales: number }[]>([]);
   const [topProducts, setTopProducts] = useState<{ name: string; quantity: number }[]>([]);
-  const [lowStockProducts, setLowStockProducts] = useState<{ name: string; stock: number }[]>([]);
+  const [profitSummary, setProfitSummary] = useState<{ totalRevenue: number; totalCost: number; totalProfit: number; } | null>(null);
   const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [salesRes, topProdRes, lowStockRes] = await Promise.all([
+        const [salesRes, topProdRes, profitRes] = await Promise.all([
           api.get('/sales/summary'),
           api.get('/analytics/top-products'),
-          api.get('/analytics/low-stock'),
+          api.get('/analytics/profit-summary'), // Fetch profit data
         ]);
         setCurrentMonthSales(salesRes.data.currentMonthSales);
         setMonthlySales(salesRes.data.monthlySalesData);
         setTopProducts(topProdRes.data);
-        setLowStockProducts(lowStockRes.data);
+        setProfitSummary(profitRes.data.overallSummary); // Set profit data
       } catch (error) {
         // 첫 로딩이 아닌 경우, 백그라운드 에러는 조용히 처리할 수 있도록 console.error 사용
         console.error("Failed to refresh dashboard data:", error);
@@ -62,6 +62,22 @@ const Dashboard: React.FC = () => {
           <RecommendationCard />
         </Col>
       </Row>
+
+      {profitSummary && (
+        <Card title="최근 30일 수익 요약" style={{ marginTop: 24 }}>
+            <Row gutter={16}>
+                <Col span={8}>
+                    <Statistic title="총 매출" value={profitSummary.totalRevenue} suffix="원" />
+                </Col>
+                <Col span={8}>
+                    <Statistic title="총 원가" value={profitSummary.totalCost} suffix="원" />
+                </Col>
+                <Col span={8}>
+                    <Statistic title="총 이익" value={profitSummary.totalProfit} valueStyle={{ color: '#3f8600' }} suffix="원" />
+                </Col>
+            </Row>
+        </Card>
+      )}
 
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         {/* 월별 매출 현황 카드 */}
@@ -101,20 +117,6 @@ const Dashboard: React.FC = () => {
               renderItem={(item, index) => (
                 <List.Item>
                   <Text strong>{index + 1}. {item.name}</Text> <Text type="secondary">{item.quantity}개 판매</Text>
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-
-        {/* 재고 부족 상품 카드 */}
-        <Col xs={24} lg={12}>
-          <Card title="재고 부족 상품 (10개 이하)">
-            <List
-              dataSource={lowStockProducts}
-              renderItem={item => (
-                <List.Item>
-                  <Text>{item.name}</Text> <Tag color="red">{item.stock}개 남음</Tag>
                 </List.Item>
               )}
             />

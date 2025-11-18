@@ -8,6 +8,28 @@ const db_1 = __importDefault(require("./db"));
 const authenticateBoth_1 = require("./middleware/authenticateBoth"); // Import authenticateBoth middleware
 const multer_1 = __importDefault(require("multer"));
 const cloudinaryService_1 = require("./services/cloudinaryService"); // Import Cloudinary upload service
+const unitConversionService_1 = require("./services/unitConversionService"); // Import unit conversion service
+// Helper function to calculate available stock based on inventory usages
+function calculateAvailableStock(product) {
+    if (!product.inventoryUsages || product.inventoryUsages.length === 0) {
+        return 999999; // Assume virtually infinite stock if no ingredients are defined
+    }
+    let maxPossibleProducts = Infinity;
+    for (const usage of product.inventoryUsages) {
+        if (!usage.inventory) {
+            return 0;
+        }
+        const availableUnits = usage.inventory.quantity;
+        // Convert usage amount to the inventory's base unit before calculation
+        const requiredUnits = (0, unitConversionService_1.convertToBaseUnit)(usage.usageAmount, usage.usageUnit, usage.inventory.unit);
+        if (requiredUnits <= 0) {
+            continue; // Avoid division by zero or infinite stock from zero requirement
+        }
+        const possibleProducts = Math.floor(availableUnits / requiredUnits);
+        maxPossibleProducts = Math.min(maxPossibleProducts, possibleProducts);
+    }
+    return maxPossibleProducts;
+}
 const router = express_1.default.Router();
 // Configure Multer to store files in memory
 const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
@@ -23,7 +45,11 @@ router.get('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
             inventoryUsages: { include: { inventory: true } }, // Include recipe info
         },
     });
-    res.json(products);
+    const productsWithAvailableStock = products.map(product => ({
+        ...product,
+        availableStock: calculateAvailableStock(product),
+    }));
+    res.json(productsWithAvailableStock);
 });
 // GET /api/products/:id
 router.get('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
@@ -40,13 +66,17 @@ router.get('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!product) {
         return res.status(404).json({ message: '상품을 찾을 수 없습니다.' });
     }
-    res.json(product);
+    const productWithAvailableStock = {
+        ...product,
+        availableStock: calculateAvailableStock(product),
+    };
+    res.json(productWithAvailableStock);
 });
 // POST /api/products
 router.post('/', authenticateBoth_1.authenticateBoth, upload.single('image'), async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
-    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, description, optionGroupIds, inventoryUsages } = req.body;
+    const { name, price, categoryId, description, optionGroupIds, inventoryUsages } = req.body;
     let imageUrl = undefined;
     if (req.file) {
         imageUrl = await (0, cloudinaryService_1.uploadImage)(req.file.buffer);
@@ -57,12 +87,7 @@ router.post('/', authenticateBoth_1.authenticateBoth, upload.single('image'), as
             name,
             description,
             price: parseInt(price),
-            stock: parseInt(stock),
             imageUrl,
-            autoOrderEnabled: autoOrderEnabled === 'true',
-            minStockThreshold: minStockThreshold ? parseInt(minStockThreshold) : null,
-            orderQuantity: orderQuantity ? parseInt(orderQuantity) : null,
-            estimatedDeliveryDays: estimatedDeliveryDays ? parseInt(estimatedDeliveryDays) : null,
             optionGroups: optionGroupIds ? {
                 connect: optionGroupIds.map((id) => ({ id: parseInt(id) }))
             } : undefined,
@@ -70,6 +95,7 @@ router.post('/', authenticateBoth_1.authenticateBoth, upload.single('image'), as
                 create: usages.map((usage) => ({
                     inventoryId: usage.inventoryId,
                     usageAmount: usage.usageAmount,
+                    usageUnit: usage.usageUnit,
                 })),
             },
             owner: {
@@ -85,7 +111,7 @@ router.post('/', authenticateBoth_1.authenticateBoth, upload.single('image'), as
 router.put('/:id', authenticateBoth_1.authenticateBoth, upload.single('image'), async (req, res) => {
     if (!req.user)
         return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
-    const { name, price, stock, categoryId, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, description, optionGroupIds, inventoryUsages } = req.body;
+    const { name, price, categoryId, description, optionGroupIds, inventoryUsages } = req.body;
     let imageUrl = req.body.imageUrl;
     if (req.file) {
         imageUrl = await (0, cloudinaryService_1.uploadImage)(req.file.buffer);
@@ -97,13 +123,8 @@ router.put('/:id', authenticateBoth_1.authenticateBoth, upload.single('image'), 
             name,
             description,
             price: parseInt(price),
-            stock: parseInt(stock),
             imageUrl,
             categoryId: categoryId ? parseInt(categoryId) : null,
-            autoOrderEnabled: autoOrderEnabled === 'true',
-            minStockThreshold: minStockThreshold ? parseInt(minStockThreshold) : null,
-            orderQuantity: orderQuantity ? parseInt(orderQuantity) : null,
-            estimatedDeliveryDays: estimatedDeliveryDays ? parseInt(estimatedDeliveryDays) : null,
             optionGroups: optionGroupIds ? {
                 set: optionGroupIds.map((id) => ({ id: parseInt(id) }))
             } : { set: [] },
@@ -112,6 +133,7 @@ router.put('/:id', authenticateBoth_1.authenticateBoth, upload.single('image'), 
                 create: usages.map((usage) => ({
                     inventoryId: usage.inventoryId,
                     usageAmount: usage.usageAmount,
+                    usageUnit: usage.usageUnit,
                 })),
             },
         },

@@ -9,8 +9,6 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const node_cron_1 = __importDefault(require("node-cron"));
-const autoOrderService_1 = require("./services/autoOrderService");
 const auth_1 = __importDefault(require("./auth"));
 const analytics_1 = __importDefault(require("./analytics"));
 const products_1 = __importDefault(require("./products"));
@@ -51,19 +49,4 @@ app.use('/api/inventory', inventory_1.default);
 app.use('/api/suppliers', suppliers_1.default);
 app.use('/api/inventory-logs', inventory_logs_1.default); // Use the new inventory log router
 app.use('/api/recommendations', recommendations_1.default);
-// --- Scheduled Tasks ---
-if (process.env.NODE_ENV !== 'test') {
-    node_cron_1.default.schedule('0 21 * * *', () => {
-        console.log('--- Running Daily Auto-Order Check (9 PM) ---');
-        (0, autoOrderService_1.checkStockAndCreatePurchaseOrders)();
-    }, {
-        timezone: "Asia/Seoul"
-    });
-    node_cron_1.default.schedule('0 10 * * *', () => {
-        console.log('--- Running Daily Delivery Check (10 AM) ---');
-        (0, autoOrderService_1.checkExpectedDeliveriesAndNotify)();
-    }, {
-        timezone: "Asia/Seoul"
-    });
-}
 exports.default = app;

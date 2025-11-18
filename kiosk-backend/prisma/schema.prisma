@@ -47,8 +47,6 @@ model Product {
   description           String?
   price                 Int
   imageUrl              String?
-  stock                 Int
-  costPerUnit           Float? // 원가
   createdAt             DateTime              @default(now())
   owner                 User                  @relation(fields: [storeId], references: [storeId])
   storeId               String
@@ -58,11 +56,6 @@ model Product {
   orderItems            OrderItem[]
   purchaseOrderItems    PurchaseOrderItem[]
   inventoryUsages       ProductInventoryUsage[] // 재고 소모량 연결
-  // Fields for automated ordering
-  autoOrderEnabled      Boolean               @default(false)
-  minStockThreshold     Int?
-  orderQuantity         Int?
-  estimatedDeliveryDays Int?
   // Fields for events
   isEventProduct        Boolean               @default(false)
   eventPrice            Int?
@@ -88,11 +81,15 @@ model Option {
 model Order {
   id            Int            @id @default(autoincrement())
   totalAmount   Int
+  totalCost     Float? // 주문 총 원가
   createdAt     DateTime       @default(now())
   store         User           @relation(fields: [storeId], references: [storeId])
   storeId       String
   orderItems    OrderItem[]
   inventoryLogs InventoryLog[] // 재고 변동 로그 연결
+  // Fields for recommendation engine
+  weather       String? // e.g., "Rain", "Clear"
+  temperature   Float? // e.g., 25.5
 }
 
 model OrderItem {
@@ -103,6 +100,7 @@ model OrderItem {
   productId       Int
   quantity        Int
   pricePerItem    Int
+  costPerItem     Float? // 주문 시점의 개당 원가
   selectedOptions Json?
 }
 
@@ -200,6 +198,7 @@ model ProductInventoryUsage {
   inventory   Inventory @relation(fields: [inventoryId], references: [id])
   inventoryId Int
   usageAmount Float // e.g., 15 for 15g of coffee beans
+  usageUnit   String? // e.g., "g", "ml", "pcs"
 
   @@unique([productId, inventoryId])
 }

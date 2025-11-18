@@ -10,12 +10,8 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-import cron from 'node-cron';
-import { checkStockAndCreatePurchaseOrders, checkExpectedDeliveriesAndNotify } from './services/autoOrderService';
 import authRoutes from './auth';
 import analyticsRoutes from './analytics';
-import { authenticateToken } from './middleware/auth';
-import { authenticateBoth } from './middleware/authenticateBoth'; // Import authenticateBoth middleware
 import productRoutes from './products';
 import categoryRoutes from './categories';
 import optionGroupRoutes from './option-groups';
@@ -65,22 +61,5 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/inventory-logs', inventoryLogRoutes); // Use the new inventory log router
 app.use('/api/recommendations', recommendationRouter);
 
-
-// --- Scheduled Tasks ---
-if (process.env.NODE_ENV !== 'test') {
-    cron.schedule('0 21 * * *', () => {
-        console.log('--- Running Daily Auto-Order Check (9 PM) ---');
-        checkStockAndCreatePurchaseOrders();
-    }, {
-        timezone: "Asia/Seoul"
-    });
-
-    cron.schedule('0 10 * * *', () => {
-        console.log('--- Running Daily Delivery Check (10 AM) ---');
-        checkExpectedDeliveriesAndNotify();
-    }, {
-        timezone: "Asia/Seoul"
-    });
-}
 
 export default app;

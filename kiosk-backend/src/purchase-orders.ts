@@ -75,21 +75,40 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/:id/confirm', authenticateToken, async (req, res) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
     const orderId = parseInt(req.params.id);
-    const purchaseOrder = await prisma.purchaseOrder.findUnique({ where: { id: orderId, storeId: req.user.storeId } });
+    
+    const purchaseOrder = await prisma.purchaseOrder.findUnique({ 
+        where: { id: orderId, storeId: req.user.storeId },
+        include: { supplier: true, purchaseOrderItems: { include: { inventory: true, product: true } } }
+    });
+
     if (!purchaseOrder || purchaseOrder.status !== PurchaseOrderStatus.PENDING_CONFIRMATION) {
         return res.status(404).json({ message: '확인 대기 중인 발주를 찾을 수 없습니다.' });
     }
 
-    const { estimatedDeliveryDays } = req.body;
-    const firstItem = await prisma.purchaseOrderItem.findFirst({
-        where: { purchaseOrderId: orderId },
-        include: { product: true, inventory: true },
-    });
+    const { estimatedDeliveryDays: reqBodyEstimatedDeliveryDays } = req.body;
+    let calculatedDeliveryDays = 2; // Default fallback
 
-    const itemEntity = firstItem?.product || firstItem?.inventory;
-    const deliveryDays = estimatedDeliveryDays || itemEntity?.estimatedDeliveryDays || 2;
+    // Try to get lead time from the first item's supplier inventory
+    const firstItem = purchaseOrder.purchaseOrderItems[0];
+    if (firstItem && firstItem.inventoryId && purchaseOrder.supplierId) {
+        const supplierInventory = await prisma.supplierInventory.findUnique({
+            where: {
+                supplierId_inventoryId: {
+                    supplierId: purchaseOrder.supplierId,
+                    inventoryId: firstItem.inventoryId,
+                },
+            },
+        });
+        if (supplierInventory?.leadTimeDays) {
+            calculatedDeliveryDays = supplierInventory.leadTimeDays;
+        }
+    }
+
+    // req.body provided estimatedDeliveryDays takes precedence
+    const finalDeliveryDays = reqBodyEstimatedDeliveryDays || calculatedDeliveryDays;
+
     const estimatedDeliveryAt = new Date();
-    estimatedDeliveryAt.setDate(estimatedDeliveryAt.getDate() + deliveryDays);
+    estimatedDeliveryAt.setDate(estimatedDeliveryAt.getDate() + finalDeliveryDays);
 
     const updatedOrder = await prisma.purchaseOrder.update({
         where: { id: orderId },
@@ -132,12 +151,7 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
 
                 const stockToAdd = orderItem.quantity - (item.defectiveQuantity || 0);
                 if (stockToAdd > 0) {
-                    if (orderItem.productId) {
-                        await tx.product.update({
-                            where: { id: orderItem.productId },
-                            data: { stock: { increment: stockToAdd } },
-                        });
-                    } else if (orderItem.inventoryId) {
+                    if (orderItem.inventoryId) {
                         await tx.inventory.update({
                             where: { id: orderItem.inventoryId },
                             data: { quantity: { increment: stockToAdd } },

@@ -12,7 +12,7 @@ import {
     ContainerOutlined,
     TeamOutlined,
     HistoryOutlined, // Import HistoryOutlined for Logs
-    AreaChartOutlined
+    AreaChartOutlined,
 } from '@ant-design/icons';
 import api from '../api';
 import NotificationPanel from './NotificationPanel';

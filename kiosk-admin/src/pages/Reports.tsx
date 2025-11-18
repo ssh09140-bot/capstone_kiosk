@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Typography, message, DatePicker, Spin, Flex } from 'antd';
 import { LineChartOutlined, ShoppingCartOutlined, DollarCircleOutlined } from '@ant-design/icons';
-import { Line, Bar } from '@ant-design/charts';
+import { Line, Bar, Area } from '@ant-design/charts';
 import { getAnalyticsReport, type ReportResponse } from '../api';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -42,6 +42,15 @@ const Reports: React.FC = () => {
   const onRangeChange = (dates: RangeValue) => {
     setDateRange(dates);
   };
+
+  // --- Data processing for Sales by Hour Chart ---
+  const processedSalesByHour = Array.from({ length: 24 }, (_, i) => {
+    const hourData = (data?.salesByHour || []).find(d => d.hour === i);
+    return {
+      hour: `${i}시`,
+      sales: hourData ? hourData.sales : 0,
+    };
+  });
 
   const lineChartConfig = {
     data: data?.dailyTrends || [],
@@ -88,13 +97,18 @@ const Reports: React.FC = () => {
   };
 
   const salesByHourConfig = {
-    data: data?.salesByHour || [],
+    data: processedSalesByHour,
     xField: 'hour',
     yField: 'sales',
     height: 300,
+    smooth: true,
+    color: 'l(270) 0:#ffffff 1:#7ec2f3',
+    areaStyle: () => ({
+      fill: 'l(270) 0:#ffffff 1:#7ec2f3',
+    }),
     xAxis: {
-      title: { text: '시간' },
-      tickCount: 24,
+      range: [0, 1],
+      tickCount: 12,
     },
     yAxis: {
       label: {
@@ -168,7 +182,7 @@ const Reports: React.FC = () => {
             </Col>
             <Col xs={24} lg={12}>
               <Card title="시간대별 매출 분석">
-                <Bar {...salesByHourConfig} />
+                <Area {...salesByHourConfig} />
               </Card>
             </Col>
           </Row>

@@ -4,6 +4,8 @@ import { Prisma, NotificationType } from '@prisma/client';
 import { authenticateToken } from './middleware/auth';
 import { authenticateBoth } from './middleware/authenticateBoth';
 import { generateLowStockNotification } from './services/openaiService';
+import { getCurrentWeather } from './services/weatherService';
+import { convertToBaseUnit } from './services/unitConversionService';
 
 const router = express.Router();
 
@@ -59,69 +61,100 @@ router.post('/', authenticateBoth, async (req, res) => {
     if (!req.user) { 
         return res.status(401).json({ message: 'User not authenticated' });
     }
-    const { items } = req.body; // items: { productId: number, quantity: number, pricePerItem: number }[]
+    const { items } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: 'Order must contain an array of items.' });
     }
 
-    const calculatedTotalAmount = items.reduce((sum: number, item: { pricePerItem: number, quantity: number }) => {
-        const price = Number(item.pricePerItem) || 0;
-        const quantity = Number(item.quantity) || 0;
-        return sum + (price * quantity);
-    }, 0);
-
     try {
-        const inventoryUpdates: { id: number; newQuantity: number; }[] = [];
+        const weatherData = await getCurrentWeather();
 
-        const newOrder = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const productIds = items.map((item: { productId: number }) => item.productId);
+        const products = await prisma.product.findMany({
+            where: { id: { in: productIds } },
+            include: {
+                inventoryUsages: {
+                    include: {
+                        inventory: true, // Include inventory to get the base unit
+                    },
+                },
+            },
+        });
+        const productMap = new Map(products.map(p => [p.id, p]));
+
+        const inventoryIds = products.flatMap(p => p.inventoryUsages.map(u => u.inventoryId));
+        const uniqueInventoryIds = [...new Set(inventoryIds)];
+
+        const inventoryCosts = await prisma.supplierInventory.findMany({
+            where: { inventoryId: { in: uniqueInventoryIds } },
+            distinct: ['inventoryId'],
+        });
+        const inventoryCostMap = new Map(inventoryCosts.map(ic => [ic.inventoryId, ic.price || 0]));
+
+        const productCostMap = new Map<number, number>();
+        let calculatedTotalCost = 0;
+        let calculatedTotalAmount = 0;
+
+        for (const product of products) {
+            const productCost = product.inventoryUsages.reduce((sum, usage) => {
+                const costPerBaseUnit = inventoryCostMap.get(usage.inventoryId) || 0;
+                const convertedUsageAmount = convertToBaseUnit(
+                    usage.usageAmount,
+                    usage.usageUnit,
+                    usage.inventory.unit
+                );
+                return sum + (costPerBaseUnit * convertedUsageAmount);
+            }, 0);
+            productCostMap.set(product.id, productCost);
+        }
+
+        for (const item of items) {
+            const product = productMap.get(item.productId);
+            if (!product) {
+                return res.status(400).json({ message: `Product with ID ${item.productId} not found.` });
+            }
+            const costPerItem = productCostMap.get(item.productId) || 0;
+            calculatedTotalCost += costPerItem * item.quantity;
+            calculatedTotalAmount += item.pricePerItem * item.quantity;
+        }
+
+        const inventoryUpdates: { id: number; newQuantity: number; }[] = [];
+        const newOrder = await prisma.$transaction(async (tx) => {
             const order = await tx.order.create({
                 data: {
                     storeId: req.user!.storeId,
                     totalAmount: calculatedTotalAmount,
+                    totalCost: calculatedTotalCost,
+                    weather: weatherData?.weather,
+                    temperature: weatherData?.temperature,
                     orderItems: {
-                        create: items.map((item: { productId: number, quantity: number, pricePerItem: number }) => ({ 
+                        create: items.map((item: { productId: number, quantity: number, pricePerItem: number }) => ({
                             productId: item.productId,
                             quantity: item.quantity,
                             pricePerItem: item.pricePerItem,
+                            costPerItem: productCostMap.get(item.productId) || 0,
                         })),
                     },
                 },
-                include: {
-                    orderItems: {
-                        include: {
-                            product: {
-                                include: {
-                                    inventoryUsages: {
-                                        include: {
-                                            inventory: true,
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             });
 
-            for (const item of order.orderItems) {
-                // 1. Decrement product stock
-                await tx.product.update({
-                    where: { id: item.productId },
-                    data: { stock: { decrement: item.quantity } },
-                });
+            for (const item of items) {
+                const product = productMap.get(item.productId)!;
+                if (product.inventoryUsages) {
+                    for (const usage of product.inventoryUsages) {
+                        const amountToDecrement = convertToBaseUnit(
+                            usage.usageAmount,
+                            usage.usageUnit,
+                            usage.inventory.unit
+                        ) * item.quantity;
 
-                // 2. Decrement inventory based on recipe and create logs
-                if (item.product.inventoryUsages) {
-                    for (const usage of item.product.inventoryUsages) {
-                        const amountToDecrement = usage.usageAmount * item.quantity;
                         const updatedInventory = await tx.inventory.update({
                             where: { id: usage.inventoryId },
                             data: { quantity: { decrement: amountToDecrement } },
                         });
                         inventoryUpdates.push({ id: updatedInventory.id, newQuantity: updatedInventory.quantity });
 
-                        // Create inventory log
                         await tx.inventoryLog.create({
                             data: {
                                 inventoryId: usage.inventoryId,
@@ -137,21 +170,6 @@ router.post('/', authenticateBoth, async (req, res) => {
             return order;
         });
 
-        // After transaction, check for low stock notifications
-        // For products
-        for (const item of newOrder.orderItems) {
-            const updatedProduct = await prisma.product.findUnique({ where: { id: item.productId } });
-            if (updatedProduct && updatedProduct.minStockThreshold && updatedProduct.stock < updatedProduct.minStockThreshold) {
-                const message = await generateLowStockNotification(updatedProduct.name, updatedProduct.stock);
-                if (message) {
-                    await prisma.notification.create({
-                        data: { storeId: req.user!.storeId, message, type: NotificationType.LOW_STOCK_WARNING },
-                    });
-                }
-            }
-        }
-
-        // For inventory
         for (const invUpdate of inventoryUpdates) {
             const inventoryItem = await prisma.inventory.findUnique({ where: { id: invUpdate.id } });
             if (inventoryItem && inventoryItem.threshold && invUpdate.newQuantity < inventoryItem.threshold) {
@@ -168,6 +186,11 @@ router.post('/', authenticateBoth, async (req, res) => {
 
     } catch (error) {
         console.error("Failed to create order:", error);
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            if (error.code === 'P2025' || error.code === 'P2034') {
+                 return res.status(400).json({ message: '재고가 부족하여 주문을 처리할 수 없습니다.' });
+            }
+        }
         res.status(500).json({ message: 'Failed to create order.' });
     }
 });

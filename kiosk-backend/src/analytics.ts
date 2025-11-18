@@ -4,8 +4,41 @@ import { authenticateToken } from './middleware/auth';
 import { generateSalesAnalysis } from './services/openaiService';
 import { Prisma } from '@prisma/client';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
+import { convertToBaseUnit } from './services/unitConversionService';
 
 const router = express.Router();
+
+// Helper function to calculate available stock based on inventory usages
+function calculateAvailableStock(product: any): number {
+  if (!product.inventoryUsages || product.inventoryUsages.length === 0) {
+    return 999999; // Assume virtually infinite stock if no ingredients are defined
+  }
+
+  let maxPossibleProducts = Infinity;
+
+  for (const usage of product.inventoryUsages) {
+    if (!usage.inventory) {
+      return 0;
+    }
+    const availableUnits = usage.inventory.quantity;
+    
+    // Convert usage amount to the inventory's base unit before calculation
+    const requiredUnits = convertToBaseUnit(
+      usage.usageAmount,
+      usage.usageUnit,
+      usage.inventory.unit
+    );
+
+    if (requiredUnits <= 0) {
+      continue;
+    }
+
+    const possibleProducts = Math.floor(availableUnits / requiredUnits);
+    maxPossibleProducts = Math.min(maxPossibleProducts, possibleProducts);
+  }
+
+  return maxPossibleProducts;
+}
 
 // [GET] /api/analytics/reports
 router.get('/analytics/reports', authenticateToken, async (req, res) => {
@@ -59,7 +92,7 @@ router.get('/analytics/reports', authenticateToken, async (req, res) => {
       // 4. Sales by Hour
       prisma.$queryRaw< { hour: number; sales: number }[]>`
         SELECT
-          EXTRACT(hour FROM "createdAt" AT TIME ZONE 'Asia/Seoul') as hour,
+          CAST(TO_CHAR("createdAt" AT TIME ZONE 'Asia/Seoul', 'HH24') AS INTEGER) as hour,
           SUM("totalAmount")::integer as sales
         FROM "Order"
         WHERE "storeId" = ${req.user.storeId} AND "createdAt" BETWEEN ${startDate} AND ${endDate}
@@ -160,24 +193,99 @@ router.get('/analytics/top-products', authenticateToken, async (req, res) => {
   }
 });
 
-// [GET] /api/analytics/low-stock
-router.get('/analytics/low-stock', authenticateToken, async (req, res) => {
-  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+// [GET] /api/analytics/profit-summary
+router.get('/analytics/profit-summary', authenticateToken, async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
-  try {
-    const lowStockProducts = await prisma.product.findMany({
-      where: {
-        storeId: req.user.storeId,
-        stock: { lte: 10 },
-      },
-      orderBy: { stock: 'asc' },
-    });
+    const { startDate: startDateQuery, endDate: endDateQuery } = req.query;
 
-    res.json(lowStockProducts.map(p => ({ name: p.name, stock: p.stock })));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: '재고 부족 상품 정보를 가져오는데 실패했습니다.' });
-  }
+    let startDate = startDateQuery ? new Date(startDateQuery as string) : subDays(new Date(), 29);
+    let endDate = endDateQuery ? new Date(endDateQuery as string) : new Date();
+
+    if (isNaN(startDate.getTime())) startDate = subDays(new Date(), 29);
+    if (isNaN(endDate.getTime())) endDate = new Date();
+
+    startDate = startOfDay(startDate);
+    endDate = endOfDay(endDate);
+
+    try {
+        // 1. Overall Profit Summary
+        const overallSummary = await prisma.order.aggregate({
+            _sum: {
+                totalAmount: true,
+                totalCost: true,
+            },
+            where: {
+                storeId: req.user!.storeId,
+                createdAt: { gte: startDate, lte: endDate },
+            },
+        });
+
+        const totalRevenue = overallSummary._sum.totalAmount || 0;
+        const totalCost = overallSummary._sum.totalCost || 0;
+        const totalProfit = totalRevenue - totalCost;
+
+        // 2. Product-level Profitability
+        const productProfitData = await prisma.orderItem.groupBy({
+            by: ['productId'],
+            _sum: {
+                quantity: true,
+            },
+            where: {
+                order: {
+                    storeId: req.user!.storeId,
+                    createdAt: { gte: startDate, lte: endDate },
+                },
+            },
+        });
+        
+        const productProfits = await Promise.all(productProfitData.map(async (item) => {
+            const product = await prisma.product.findUnique({ where: { id: item.productId } });
+            
+            const orderItems = await prisma.orderItem.findMany({
+                where: {
+                    productId: item.productId,
+                    order: {
+                        storeId: req.user!.storeId,
+                        createdAt: { gte: startDate, lte: endDate },
+                    }
+                }
+            });
+
+            const revenue = orderItems.reduce((acc, oi) => acc + (oi.pricePerItem * oi.quantity), 0);
+            const cost = orderItems.reduce((acc, oi) => acc + ((oi.costPerItem || 0) * oi.quantity), 0);
+            const profit = revenue - cost;
+
+            return {
+                productId: item.productId,
+                name: product?.name || 'Unknown Product',
+                totalQuantity: item._sum.quantity,
+                totalRevenue: revenue,
+                totalCost: cost,
+                totalProfit: profit,
+            };
+        }));
+
+        productProfits.sort((a, b) => b.totalProfit - a.totalProfit);
+
+        const mostProfitableProducts = productProfits.slice(0, 5);
+        const leastProfitableProducts = productProfits.slice(-5).reverse();
+
+        res.json({
+            overallSummary: {
+                totalRevenue,
+                totalCost,
+                totalProfit,
+                profitMargin: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
+            },
+            mostProfitableProducts,
+            leastProfitableProducts,
+        });
+
+    } catch (error) {
+        console.error('Error fetching profit summary:', error);
+        res.status(500).json({ message: '수익성 요약 정보를 가져오는데 실패했습니다.' });
+    }
 });
 
 // [GET] /api/analytics/monthly-summary

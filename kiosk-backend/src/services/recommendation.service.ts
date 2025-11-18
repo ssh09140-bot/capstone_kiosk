@@ -1,6 +1,7 @@
 import axios from 'axios';
 import prisma from '../db';
-import { subDays } from 'date-fns';
+import { convertToBaseUnit } from './unitConversionService';
+import { subDays, addDays, format } from 'date-fns';
 
 // OpenWeatherMap API 응답에 대한 간단한 타입 정의
 interface WeatherInfo {
@@ -16,196 +17,186 @@ interface WeatherInfo {
 
 // 우리가 사용할 정제된 날씨 정보 타입
 export interface SimplifiedWeather {
+  date: string;
   temp_celsius: number;
   condition: 'Rain' | 'Snow' | 'Clear' | 'Clouds' | 'Other';
 }
 
 /**
- * 지정된 도시의 다음 날 정오(12:00) 날씨 예보를 가져옵니다.
+ * 지정된 도시의 향후 N일간의 정오(12:00) 날씨 예보를 가져옵니다.
  * @param city 도시 이름 (영문)
- * @returns 정제된 날씨 정보
+ * @param days 예보를 가져올 일수 (최대 5)
+ * @returns 일별 예보 정보 배열
  */
-async function getWeatherForecast(city: string): Promise<SimplifiedWeather | null> {
+async function getWeatherForecast(city: string, days: number): Promise<SimplifiedWeather[]> {
   const apiKey = process.env.OPENWEATHER_API_KEY;
   if (!apiKey) {
     console.error('OPENWEATHER_API_KEY is not set in .env file.');
-    return null;
+    return [];
   }
 
   const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}`;
+  const forecasts: SimplifiedWeather[] = [];
 
   try {
     const response = await axios.get<{ list: WeatherInfo[] }>(url);
     
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDateString = tomorrow.toISOString().split('T')[0];
+    for (let i = 1; i <= days; i++) {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + i);
+      const targetDateString = targetDate.toISOString().split('T')[0];
 
-    const nextDayForecast = response.data.list.find(item => {
-      return item.dt_txt.startsWith(tomorrowDateString) && item.dt_txt.endsWith('12:00:00');
-    });
+      const dayForecast = response.data.list.find(item => {
+        return item.dt_txt.startsWith(targetDateString) && item.dt_txt.endsWith('12:00:00');
+      });
 
-    if (!nextDayForecast) {
-      console.warn(`Could not find forecast for ${city} at noon tomorrow.`);
-      return null;
+      if (dayForecast) {
+        const temp_kelvin = dayForecast.main.temp;
+        const temp_celsius = parseFloat((temp_kelvin - 273.15).toFixed(1));
+        const main_condition = dayForecast.weather[0]?.main;
+
+        let condition: SimplifiedWeather['condition'] = 'Other';
+        if (main_condition === 'Rain' || main_condition === 'Snow' || main_condition === 'Clear' || main_condition === 'Clouds') {
+          condition = main_condition;
+        }
+        
+        forecasts.push({
+          date: targetDateString,
+          temp_celsius,
+          condition,
+        });
+      }
     }
-
-    const temp_kelvin = nextDayForecast.main.temp;
-    const temp_celsius = parseFloat((temp_kelvin - 273.15).toFixed(1));
-    const main_condition = nextDayForecast.weather[0]?.main;
-
-    let condition: SimplifiedWeather['condition'] = 'Other';
-    if (main_condition === 'Rain' || main_condition === 'Snow' || main_condition === 'Clear' || main_condition === 'Clouds') {
-      condition = main_condition;
-    }
-
-    return {
-      temp_celsius,
-      condition,
-    };
+    return forecasts;
 
   } catch (error) {
     console.error('Failed to fetch weather forecast:', error);
-    return null;
+    return [];
   }
 }
 
 export const generateRecommendations = async (storeId: string) => {
-  // Fetch store information to get the address
-  const user = await prisma.user.findUnique({
-    where: { storeId },
-    select: { storeAddress: true },
-  });
-
-  let cityForWeather = 'Seoul'; // Default to Seoul if address not found or city extraction fails
+  const user = await prisma.user.findUnique({ where: { storeId }, select: { storeAddress: true } });
+  let cityForWeather = 'Seoul';
   if (user?.storeAddress) {
-    // Attempt to extract a recognizable city name for OpenWeatherMap
     const fullAddress = user.storeAddress.trim();
-    
-    // Simple mapping for common Korean cities
-    let extractedCity = 'Seoul'; // Default if no specific match
-    
-    if (fullAddress.includes('서울')) {
-      extractedCity = 'Seoul';
-    } else if (fullAddress.includes('부산')) {
-      extractedCity = 'Busan';
-    } else if (fullAddress.includes('대구')) {
-      extractedCity = 'Daegu';
-    } else if (fullAddress.includes('인천')) {
-      extractedCity = 'Incheon';
-    } else if (fullAddress.includes('광주')) {
-      extractedCity = 'Gwangju';
-    } else if (fullAddress.includes('대전')) {
-      extractedCity = 'Daejeon';
-    } else if (fullAddress.includes('울산')) {
-      extractedCity = 'Ulsan';
-    } else if (fullAddress.includes('세종')) {
-      extractedCity = 'Sejong';
-    } else if (fullAddress.includes('경기')) { // Gyeonggi-do is a province, need a major city there or a more specific mapping
-      extractedCity = 'Suwon'; // Capital of Gyeonggi-do as a best guess
-    } else if (fullAddress.includes('강원')) {
-      extractedCity = 'Chuncheon'; // Capital of Gangwon-do
-    } else if (fullAddress.includes('충북')) {
-      extractedCity = 'Cheongju'; // Capital of Chungcheongbuk-do
-    } else if (fullAddress.includes('충남')) {
-      extractedCity = 'Cheonan'; // Major city in Chungcheongnam-do
-    } else if (fullAddress.includes('전북')) {
-      extractedCity = 'Jeonju'; // Capital of Jeollabuk-do
-    } else if (fullAddress.includes('전남')) {
-      extractedCity = 'Mokpo'; // Major city in Jeollanam-do
-    } else if (fullAddress.includes('경북')) {
-      extractedCity = 'Pohang'; // Major city in Gyeongsangbuk-do
-    } else if (fullAddress.includes('경남')) {
-      extractedCity = 'Changwon'; // Capital of Gyeongsangnam-do
-    } else if (fullAddress.includes('제주')) {
-      extractedCity = 'Jeju City'; // English name often used
-    }
-    
-    cityForWeather = extractedCity;
+    if (fullAddress.includes('서울')) cityForWeather = 'Seoul';
+    else if (fullAddress.includes('부산')) cityForWeather = 'Busan';
+    else if (fullAddress.includes('대구')) cityForWeather = 'Daegu';
+    else if (fullAddress.includes('인천')) cityForWeather = 'Incheon';
+    else if (fullAddress.includes('광주')) cityForWeather = 'Gwangju';
+    else if (fullAddress.includes('대전')) cityForWeather = 'Daejeon';
+    else if (fullAddress.includes('울산')) cityForWeather = 'Ulsan';
+    else if (fullAddress.includes('세종')) cityForWeather = 'Sejong';
+    else if (fullAddress.includes('경기')) cityForWeather = 'Suwon';
+    else if (fullAddress.includes('강원')) cityForWeather = 'Chuncheon';
+    else if (fullAddress.includes('충북')) cityForWeather = 'Cheongju';
+    else if (fullAddress.includes('충남')) cityForWeather = 'Cheonan';
+    else if (fullAddress.includes('전북')) cityForWeather = 'Jeonju';
+    else if (fullAddress.includes('전남')) cityForWeather = 'Mokpo';
+    else if (fullAddress.includes('경북')) cityForWeather = 'Pohang';
+    else if (fullAddress.includes('경남')) cityForWeather = 'Changwon';
+    else if (fullAddress.includes('제주')) cityForWeather = 'Jeju City';
   }
 
-  const weather = await getWeatherForecast(cityForWeather);
-  
-  if (!weather) {
-    return {
-      message: "날씨 정보를 가져올 수 없어 추천을 생성할 수 없습니다.",
-      recommendations: [],
-    };
-  }
-
-  const ANALYSIS_DAYS = 28; // 4주
+  const ANALYSIS_DAYS = 28;
   const allRecommendations = [];
 
-  // 1. 자동 발주가 활성화된 모든 재고 품목 조회
   const autoOrderEnabledInventories = await prisma.inventory.findMany({
     where: { storeId, autoOrderEnabled: true },
+    include: { suppliedBy: { include: { supplier: true } } },
   });
 
-  if (autoOrderEnabledInventories.length === 0) {
-    return { message: "자동 발주가 활성화된 재고 품목이 없습니다.", recommendations: [] };
+  if (autoOrderEnabledInventories.length === 0) return { message: "자동 발주가 활성화된 재고 품목이 없습니다.", recommendations: [] };
+
+  const maxLeadTime = Math.max(...autoOrderEnabledInventories.map(inv => inv.suppliedBy.reduce((max, s) => Math.max(max, s.leadTimeDays || 0), 0)), 1);
+  const forecast = await getWeatherForecast(cityForWeather, Math.min(maxLeadTime, 5)); // API는 최대 5일 예보 제공
+
+  if (forecast.length === 0) {
+    return { message: "날씨 예보를 가져올 수 없어 추천을 생성할 수 없습니다.", recommendations: [] };
   }
 
+  const endDate = new Date();
+  const startDate = subDays(endDate, ANALYSIS_DAYS);
+  const allPastOrderItems = await prisma.orderItem.findMany({
+    where: { order: { storeId, createdAt: { gte: startDate, lte: endDate } } },
+    include: { order: true, product: { include: { inventoryUsages: true } } },
+  });
+
+  const dailyWeather = new Map<string, string | null>();
+  allPastOrderItems.forEach(item => {
+    const dateStr = format(item.order.createdAt, 'yyyy-MM-dd');
+    if (!dailyWeather.has(dateStr)) dailyWeather.set(dateStr, item.order.weather);
+  });
+  const totalRainyDays = [...dailyWeather.values()].filter(w => w === 'Rain').length;
+  const totalAnalysisDays = dailyWeather.size || ANALYSIS_DAYS;
+
   for (const inventoryItem of autoOrderEnabledInventories) {
-    // 2. 해당 재고를 사용하는 제품들 조회
-    const productUsages = await prisma.productInventoryUsage.findMany({
-      where: { inventoryId: inventoryItem.id },
-      select: { productId: true, usageAmount: true },
+    const relevantOrderItems = allPastOrderItems.filter(oi => oi.product.inventoryUsages.some(u => u.inventoryId === inventoryItem.id));
+    if (relevantOrderItems.length === 0) continue;
+
+    let totalUsage = 0;
+    let rainyDayUsage = 0;
+    relevantOrderItems.forEach(orderItem => {
+      const usageInfo = orderItem.product.inventoryUsages.find(u => u.inventoryId === inventoryItem.id);
+      if (usageInfo) {
+        const usageAmount = convertToBaseUnit(
+          usageInfo.usageAmount,
+          usageInfo.usageUnit,
+          inventoryItem.unit
+        ) * orderItem.quantity;
+        totalUsage += usageAmount;
+        if (orderItem.order.weather === 'Rain') rainyDayUsage += usageAmount;
+      }
     });
 
-    if (productUsages.length === 0) {
-      // console.warn(`'${inventoryItem.name}'을 사용하는 제품이 없습니다. 이 품목은 추천에서 제외됩니다.`);
-      continue; // 다음 재고 품목으로 넘어감
+    const baselineDailyUsage = totalUsage / totalAnalysisDays;
+    if (baselineDailyUsage === 0) continue;
+
+    const COLD_START_THRESHOLD_DAYS = 14; // 콜드 스타트 임계값 (일)
+    const COLD_START_RAIN_MULTIPLIER = 1.15; // 콜드 스타트 시 비 오는 날 판매량 15% 증가
+
+    let rainMultiplier = 1.0;
+    let currentReason = `지난 ${totalAnalysisDays}일간의 평균 소모량 기준`;
+
+    if (totalAnalysisDays < COLD_START_THRESHOLD_DAYS) {
+      // 콜드 스타트: 데이터가 부족하면 미리 정의된 규칙 사용
+      rainMultiplier = COLD_START_RAIN_MULTIPLIER;
+      currentReason = `신규 매장으로 ${COLD_START_THRESHOLD_DAYS}일 미만 데이터, 기본 날씨 규칙 적용 (비 예보 시 ${((COLD_START_RAIN_MULTIPLIER - 1) * 100).toFixed(0)}% 수요 증가)`;
+    } else {
+      // 데이터가 충분하면 데이터 기반 규칙 사용
+      const rainyDayDailyUsage = totalRainyDays > 0 ? rainyDayUsage / totalRainyDays : baselineDailyUsage;
+      if (baselineDailyUsage > 0 && totalRainyDays > 0) {
+        rainMultiplier = rainyDayDailyUsage / baselineDailyUsage;
+        currentReason = `비 예보로 인해 평소 대비 ${((rainMultiplier - 1) * 100).toFixed(0)}% 수요 변화가 예상됩니다.`;
+      }
     }
 
-    const productIds = productUsages.map(p => p.productId);
-
-    // 3. 지난 N일간의 판매 데이터로 일 평균 소모량 계산
-    const pastOrders = await prisma.orderItem.findMany({
-      where: {
-        order: {
-          storeId,
-          createdAt: { gte: subDays(new Date(), ANALYSIS_DAYS) },
-        },
-        productId: { in: productIds },
-      },
-    });
-
-    const totalUsage = pastOrders.reduce((acc, orderItem) => {
-      const usageInfo = productUsages.find(p => p.productId === orderItem.productId);
-      return acc + (usageInfo ? usageInfo.usageAmount * orderItem.quantity : 0);
-    }, 0);
-
-    const baselineDailyUsage = totalUsage / ANALYSIS_DAYS;
-
-    // 4. 날씨 기반 규칙 적용하여 수요 예측
-    let predictedUsage = baselineDailyUsage;
-    let reason = `지난 ${ANALYSIS_DAYS}일간의 평균 소모량`;
-
-    if (weather.condition === 'Rain') {
-      predictedUsage *= 1.2; // 비 오는 날 20% 증가
-      reason = `비 예보로 인해 평소보다 20% 증가된 수요가 예상됩니다.`;
-    }
-    // 여기에 다른 규칙 추가 가능 (e.g., 온도, 주말 등)
-
-    // 5. 최적 공급처 탐색 (리드타임이 가장 짧은)
-    const bestSupplierInfo = await prisma.supplierInventory.findFirst({
-      where: { inventoryId: inventoryItem.id },
-      orderBy: { leadTimeDays: 'asc' },
-      include: { supplier: true },
-    });
-
-    if (!bestSupplierInfo || bestSupplierInfo.leadTimeDays === null) {
-      // console.warn(`'${inventoryItem.name}'의 공급처 정보(리드타임)가 부족합니다. 이 품목은 추천에서 제외됩니다.`);
-      continue; // 다음 재고 품목으로 넘어감
-    }
-
-    // 6. 발주 필요 여부 판단
+    const bestSupplierInfo = inventoryItem.suppliedBy.sort((a, b) => (a.leadTimeDays || 99) - (b.leadTimeDays || 99))[0];
+    if (!bestSupplierInfo || bestSupplierInfo.leadTimeDays === null) continue;
+    
     const leadTime = bestSupplierInfo.leadTimeDays;
-    const stockAtDelivery = inventoryItem.quantity - (predictedUsage * leadTime);
+    let totalPredictedUsageDuringLeadTime = 0;
+    let reason = currentReason; // 초기 reason 설정
+
+    for (let i = 0; i < leadTime; i++) {
+      const futureDate = addDays(new Date(), i + 1);
+      const futureDateStr = format(futureDate, 'yyyy-MM-dd');
+      const dayForecast = forecast.find(f => f.date === futureDateStr);
+      
+      let dailyMultiplier = 1.0;
+      if (dayForecast?.condition === 'Rain') {
+        dailyMultiplier = rainMultiplier;
+      }
+      // 요일, 온도 등 다른 규칙 추가 가능
+      totalPredictedUsageDuringLeadTime += baselineDailyUsage * dailyMultiplier;
+    }
+
+    const stockAtDelivery = inventoryItem.quantity - totalPredictedUsageDuringLeadTime;
     const safetyStock = inventoryItem.minStockThreshold || 0;
 
     if (stockAtDelivery < safetyStock) {
-      const targetStock = safetyStock * 2; // 목표 재고량 (안전 재고의 2배)
+      const targetStock = safetyStock * 2;
       const recommendedOrderAmount = Math.max(0, targetStock - stockAtDelivery);
 
       allRecommendations.push({
@@ -214,7 +205,7 @@ export const generateRecommendations = async (storeId: string) => {
         reason,
         currentStock: inventoryItem.quantity,
         unit: inventoryItem.unit,
-        predictedUsage: parseFloat(predictedUsage.toFixed(2)),
+        predictedUsage: parseFloat((totalPredictedUsageDuringLeadTime / leadTime).toFixed(2)), // 일 평균으로 변환하여 표시
         supplierId: bestSupplierInfo.supplier.id,
         supplierName: bestSupplierInfo.supplier.name,
         leadTimeDays: leadTime,
@@ -223,8 +214,15 @@ export const generateRecommendations = async (storeId: string) => {
     }
   }
 
+  const forecastSummary = forecast.map(f => {
+    const date = new Date(f.date);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `[${month}/${day} ${f.condition} ${f.temp_celsius}°C]`;
+  }).join(', ');
+
   return {
-    message: `내일 ${cityForWeather}의 예상 날씨는 ${weather.temp_celsius}°C, ${weather.condition} 입니다.`,
+    message: `${cityForWeather}의 향후 ${forecast.length}일간 날씨 예보: ${forecastSummary}.`,
     recommendations: allRecommendations,
   };
 };

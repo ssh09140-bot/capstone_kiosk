@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, Divider, Switch, List } from 'antd';
+import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, Divider, List } from 'antd';
 import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import api, { type Inventory, getInventory } from '../api';
@@ -20,6 +20,7 @@ interface Usage {
     inventoryId: number;
     inventoryName: string;
     usageAmount: number;
+    usageUnit: string;
 }
 
 const ProductForm: React.FC = () => {
@@ -37,9 +38,8 @@ const ProductForm: React.FC = () => {
 
     // State for recipe input
     const [selectedInventory, setSelectedInventory] = useState<number | undefined>(undefined);
-    const [usageAmount, setUsageAmount] = useState<number>(0);
-
-    const autoOrderEnabled = Form.useWatch('autoOrderEnabled', form);
+    const [usageAmount, setUsageAmount] = useState<number | null>(null);
+    const [usageUnit, setUsageUnit] = useState<string>('g');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -76,6 +76,7 @@ const ProductForm: React.FC = () => {
                             inventoryId: u.inventory.id,
                             inventoryName: u.inventory.name,
                             usageAmount: u.usageAmount,
+                            usageUnit: u.usageUnit || u.inventory.unit, // Fallback to inventory unit
                         }));
                         setUsages(mappedUsages);
                     }
@@ -100,9 +101,10 @@ const ProductForm: React.FC = () => {
         }
         const inventory = inventories.find(i => i.id === selectedInventory);
         if (inventory) {
-            setUsages([...usages, { inventoryId: selectedInventory, inventoryName: inventory.name, usageAmount }]);
+            setUsages([...usages, { inventoryId: selectedInventory, inventoryName: inventory.name, usageAmount, usageUnit }]);
             setSelectedInventory(undefined);
-            setUsageAmount(0);
+            setUsageAmount(null);
+            setUsageUnit('g');
         }
     };
 
@@ -125,7 +127,7 @@ const ProductForm: React.FC = () => {
             }
 
             // Append recipe usages
-            const usagesToSubmit = usages.map(({ inventoryId, usageAmount }) => ({ inventoryId, usageAmount }));
+            const usagesToSubmit = usages.map(({ inventoryId, usageAmount, usageUnit }) => ({ inventoryId, usageAmount, usageUnit }));
             formData.append('inventoryUsages', JSON.stringify(usagesToSubmit));
 
             // Handle image
@@ -169,9 +171,7 @@ const ProductForm: React.FC = () => {
                 <FormItem label="가격" name="price" rules={[{ required: true, message: '가격을 입력해주세요.' }]}>
                     <InputNumber min={0} style={{ width: '100%' }} addonAfter="원" />
                 </FormItem>
-                <FormItem label="재고" name="stock" rules={[{ required: true, message: '재고 수량을 입력해주세요.' }]}>
-                    <InputNumber min={0} style={{ width: '100%' }} addonAfter="개" />
-                </FormItem>
+
                 <FormItem label="카테고리" name="categoryId">
                     <Select placeholder="카테고리를 선택하세요 (선택 사항)" allowClear>
                         {categories.map(cat => <Option key={cat.id} value={cat.id}>{cat.name}</Option>)}
@@ -211,7 +211,7 @@ const ProductForm: React.FC = () => {
                         >
                             <List.Item.Meta
                                 title={item.inventoryName}
-                                description={`소모량: ${item.usageAmount}`}
+                                description={`소모량: ${item.usageAmount}${item.usageUnit}`}
                             />
                         </List.Item>
                     )}
@@ -233,31 +233,16 @@ const ProductForm: React.FC = () => {
                         placeholder="소모량"
                         style={{ flex: 1 }}
                         value={usageAmount}
-                        onChange={(value) => setUsageAmount(value || 0)}
+                        onChange={(value) => setUsageAmount(value)}
+                    />
+                    <Input 
+                        placeholder="단위 (g, ml)" 
+                        style={{ flex: 1 }} 
+                        value={usageUnit} 
+                        onChange={(e) => setUsageUnit(e.target.value)} 
                     />
                     <Button type="primary" onClick={handleAddUsage}>추가</Button>
                 </div>
-
-
-                <Divider>자동 발주 설정</Divider>
-
-                <FormItem label="자동 발주 사용" name="autoOrderEnabled" valuePropName="checked">
-                    <Switch />
-                </FormItem>
-
-                {autoOrderEnabled && (
-                    <>
-                        <FormItem label="발주 기준 재고" name="minStockThreshold" rules={[{ required: true, message: '자동 발주를 사용하려면 기준 재고를 입력해야 합니다.' }]}>
-                            <InputNumber min={0} style={{ width: '100%' }} addonAfter="개 이하일 때" />
-                        </FormItem>
-                        <FormItem label="자동 발주 수량" name="orderQuantity" rules={[{ required: true, message: '자동 발주를 사용하려면 발주 수량을 입력해야 합니다.' }]}>
-                            <InputNumber min={1} style={{ width: '100%' }} addonAfter="개를 주문" />
-                        </FormItem>
-                        <FormItem label="예상 배송 기간" name="estimatedDeliveryDays">
-                            <InputNumber min={1} style={{ width: '100%' }} addonAfter="일 소요" />
-                        </FormItem>
-                    </>
-                )}
 
                 <FormItem style={{ marginTop: '32px' }}>
                     <Button type="primary" htmlType="submit" block>저장하기</Button>
