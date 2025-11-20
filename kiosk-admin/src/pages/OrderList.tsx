@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Typography, message, Button, Modal, Descriptions, DatePicker, Space, Flex } from 'antd';
+import { Table, Typography, message, Button, Modal, Descriptions, DatePicker, Flex, type TableProps } from 'antd';
 import api from '../api';
 import { useIsMobile } from '../hooks/useIsMobile';
 import dayjs from 'dayjs';
@@ -61,7 +61,7 @@ const OrderList: React.FC = () => {
     };
 
     // 테이블 컬럼(열) 구조 정의
-    const columns = [
+    const columns: TableProps<Order>['columns'] = [
         { 
             title: '주문 번호', 
             dataIndex: 'id', 

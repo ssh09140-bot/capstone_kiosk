@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Typography, Flex, message, Tag } from 'antd';
+import { Table, Button, Space, Typography, Flex, message, Tag, type TableProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { getInventory, deleteInventoryItem, type Inventory } from '../api';
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons';
@@ -43,7 +43,7 @@ const InventoryPage: React.FC = () => {
         }
     };
 
-    const columns = [
+    const columns: TableProps<Inventory & { key: string }>['columns'] = [
         { 
             title: '품목명', 
             dataIndex: 'name', 

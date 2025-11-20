@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Typography, Tag, message, Flex } from 'antd';
+import { Table, Button, Space, Typography, Tag, message, Flex, type TableProps } from 'antd';
 import { RedoOutlined } from '@ant-design/icons';
 import api from '../api';
 import ReceiveOrderModal from '../components/ReceiveOrderModal';
@@ -108,7 +108,7 @@ const PurchaseOrderList: React.FC = () => {
     }
   };
 
-  const columns = [
+  const columns: TableProps<PurchaseOrder>['columns'] = [
     { 
       title: '발주 ID', 
       dataIndex: 'id', 
@@ -173,7 +173,7 @@ const PurchaseOrderList: React.FC = () => {
     {
       title: '관리',
       key: 'action',
-      fixed: 'right' as const,
+      fixed: 'right',
       width: isMobile ? 100 : 180,
       render: (_: any, record: PurchaseOrder) => (
         <Space size="small" direction={isMobile ? 'vertical' : 'horizontal'}>

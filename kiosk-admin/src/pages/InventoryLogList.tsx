@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Typography, Flex, message, Tag } from 'antd';
+import { Table, Typography, Flex, message, Tag, type TableProps } from 'antd';
 import { getInventoryLogs, type InventoryLog } from '../api';
 import { useIsMobile } from '../hooks/useIsMobile';
 import dayjs from 'dayjs';
@@ -33,7 +33,7 @@ const InventoryLogList: React.FC = () => {
         fetchLogs();
     }, [fetchLogs]);
 
-    const columns = [
+    const columns: TableProps<InventoryLogItem>['columns'] = [
         { 
             title: '일시', 
             dataIndex: 'createdAt', 
