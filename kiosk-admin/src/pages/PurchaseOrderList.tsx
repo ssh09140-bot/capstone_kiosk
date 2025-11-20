@@ -4,6 +4,7 @@ import { RedoOutlined } from '@ant-design/icons';
 import api from '../api';
 import ReceiveOrderModal from '../components/ReceiveOrderModal';
 import DelayOrderModal from '../components/DelayOrderModal';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const { Title } = Typography;
 
@@ -32,6 +33,7 @@ const statusMap: { [key in PurchaseOrder['status']]: { color: string; text: stri
 };
 
 const PurchaseOrderList: React.FC = () => {
+  const isMobile = useIsMobile();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [isReceiveModalVisible, setIsReceiveModalVisible] = useState(false);
@@ -107,54 +109,100 @@ const PurchaseOrderList: React.FC = () => {
   };
 
   const columns = [
-    { title: '발주 ID', dataIndex: 'id', key: 'id', width: 80 },
+    { 
+      title: '발주 ID', 
+      dataIndex: 'id', 
+      key: 'id', 
+      width: isMobile ? 60 : 80,
+      fixed: isMobile ? 'left' : undefined,
+    },
     {
       title: '공급처',
       dataIndex: 'supplier',
       key: 'supplier',
+      width: isMobile ? 100 : 120,
       render: (supplier: { name: string } | null) => supplier?.name || '-',
     },
     {
       title: '발주 항목',
       dataIndex: 'purchaseOrderItems',
       key: 'items',
+      width: isMobile ? 150 : 200,
       render: (items: PurchaseOrderItem[]) => (
-        <ul style={{ margin: 0, paddingLeft: '16px' }}>
-          {items.map(item => {
+        <div style={{ fontSize: isMobile ? '12px' : '14px' }}>
+          {items.slice(0, isMobile ? 1 : 3).map(item => {
             const itemName = item.product?.name || item.inventory?.name || '알 수 없는 품목';
-            return <li key={item.id}>{`${itemName} (${item.quantity}개)`}</li>
+            return (
+              <div key={item.id} style={{ marginBottom: '4px' }}>
+                {itemName} ({item.quantity}개)
+              </div>
+            );
           })}
-        </ul>
+          {items.length > (isMobile ? 1 : 3) && (
+            <div style={{ color: '#8c8c8c', fontSize: '12px' }}>
+              +{items.length - (isMobile ? 1 : 3)}개 더보기
+            </div>
+          )}
+        </div>
       ),
     },
     {
       title: '상태',
       dataIndex: 'status',
       key: 'status',
+      width: isMobile ? 90 : 120,
       render: (status: PurchaseOrder['status']) => (
-        <Tag color={statusMap[status].color}>{statusMap[status].text}</Tag>
+        <Tag color={statusMap[status].color} style={{ fontSize: isMobile ? '11px' : '12px' }}>
+          {statusMap[status].text}
+        </Tag>
       ),
     },
     { 
       title: '생성일', 
       dataIndex: 'createdAt', 
-      key: 'createdAt', 
-      render: (date: string) => new Date(date).toLocaleString('ko-KR') 
+      key: 'createdAt',
+      width: isMobile ? 120 : 160,
+      render: (date: string) => {
+        const dateObj = new Date(date);
+        if (isMobile) {
+          return `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+        }
+        return dateObj.toLocaleString('ko-KR');
+      }
     },
     {
       title: '관리',
       key: 'action',
       fixed: 'right' as const,
-      width: 180,
+      width: isMobile ? 100 : 180,
       render: (_: any, record: PurchaseOrder) => (
-        <Space size="middle">
+        <Space size="small" direction={isMobile ? 'vertical' : 'horizontal'}>
           {record.status === 'PENDING_CONFIRMATION' && (
-            <Button type="primary" onClick={() => handleConfirm(record.id)}>확정</Button>
+            <Button 
+              type="primary" 
+              onClick={() => handleConfirm(record.id)}
+              size={isMobile ? 'small' : 'middle'}
+              block={isMobile}
+            >
+              확정
+            </Button>
           )}
           {record.status === 'ORDERED' && (
             <>
-              <Button onClick={() => handleReceive(record)}>배송 받음</Button>
-              <Button onClick={() => handleDelay(record)}>지연</Button>
+              <Button 
+                onClick={() => handleReceive(record)}
+                size={isMobile ? 'small' : 'middle'}
+                block={isMobile}
+              >
+                배송 받음
+              </Button>
+              <Button 
+                onClick={() => handleDelay(record)}
+                size={isMobile ? 'small' : 'middle'}
+                block={isMobile}
+              >
+                지연
+              </Button>
             </>
           )}
         </Space>
@@ -164,13 +212,41 @@ const PurchaseOrderList: React.FC = () => {
 
   return (
     <>
-      <Flex justify="space-between" align="center" style={{ marginBottom: '24px' }}>
-        <Title level={3} style={{ margin: 0 }}>자동 발주 관리</Title>
-        <Button icon={<RedoOutlined />} onClick={fetchPurchaseOrders} loading={loading}>
+      <Flex 
+        justify="space-between" 
+        align="center" 
+        wrap="wrap"
+        style={{ marginBottom: isMobile ? '16px' : '24px' }}
+        vertical={isMobile}
+      >
+        <Title 
+          level={isMobile ? 4 : 3} 
+          style={{ 
+            margin: 0,
+            fontSize: isMobile ? '20px' : '24px',
+            fontWeight: 700
+          }}
+        >
+          발주 관리
+        </Title>
+        <Button 
+          icon={<RedoOutlined />} 
+          onClick={fetchPurchaseOrders} 
+          loading={loading}
+          block={isMobile}
+          style={{ marginTop: isMobile ? '12px' : 0 }}
+        >
           새로고침
         </Button>
       </Flex>
-      <Table columns={columns} dataSource={purchaseOrders} loading={loading} scroll={{ x: 'max-content' }} />
+      <Table 
+        columns={columns} 
+        dataSource={purchaseOrders} 
+        loading={loading} 
+        scroll={{ x: 'max-content' }}
+        size={isMobile ? 'small' : 'middle'}
+        pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
+      />
       <ReceiveOrderModal 
         visible={isReceiveModalVisible}
         order={selectedOrder}

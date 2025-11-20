@@ -1,51 +1,154 @@
 .bottom-nav-container {
+  display: none;
   position: fixed;
   bottom: 0;
   left: 0;
-  width: 100%;
-  background-color: #fff;
-  border-top: 1px solid #f0f0f0;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  right: 0;
   z-index: 1000;
-  display: none; /* Hidden by default */
-  overflow-x: auto; /* Allow horizontal scrolling if items overflow */
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(20px);
+  padding: 8px 0;
+  justify-content: space-around;
+  align-items: center;
 }
 
-.bottom-nav-container .ant-menu-horizontal {
-  border-bottom: none;
-  flex-wrap: nowrap; /* Prevent wrapping */
-  width: 100%; /* Make it fill the container width */
-  /* min-width: 320px; Removed */
+@media (max-width: 768px) {
+  .bottom-nav-container {
+    display: flex;
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+  }
 }
 
-.bottom-nav-container .ant-menu-item {
-  padding: 0 5px;
-  margin: 0;
-  height: 50px;
-  line-height: 50px;
+.bottom-nav-item {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 1; /* Added to make items take equal space */
-  flex-shrink: 0; /* Prevent items from shrinking */
+  padding: 8px 4px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  min-width: 0;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.bottom-nav-container .ant-menu-item .anticon {
-  font-size: 18px;
-  margin-bottom: 2px; /* Adjusted to create space */
+.bottom-nav-item:active {
+  transform: scale(0.95);
 }
 
-.bottom-nav-container .ant-menu-item .ant-menu-title-content {
-  font-size: 12px;
-  line-height: 1;
-  text-align: center; /* Added to center the text */
-  width: 100%; /* Ensure text container takes full width */
+.bottom-nav-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+  color: #8c8c8c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Show on screens smaller than 768px */
-@media (max-width: 767px) {
-  .bottom-nav-container {
-    display: flex;
+.bottom-nav-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #8c8c8c;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.bottom-nav-item.active .bottom-nav-icon {
+  color: #667eea;
+  transform: scale(1.1);
+}
+
+.bottom-nav-item.active .bottom-nav-label {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.bottom-nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 0 0 3px 3px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 32px;
+    opacity: 1;
   }
 }
+
+.bottom-nav-item:hover:not(.active) .bottom-nav-icon {
+  color: #667eea;
+  transform: scale(1.05);
+}
+
+.bottom-nav-item:hover:not(.active) .bottom-nav-label {
+  color: #667eea;
+}
+
+/* Drawer 스타일 */
+.ant-drawer-content-wrapper {
+  border-radius: 20px 20px 0 0 !important;
+}
+
+.ant-drawer-body {
+  padding: 0 !important;
+}
+
+.ant-drawer-header {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px !important;
+}
+
+/* 더보기 메뉴 스타일 */
+.ant-menu-vertical {
+  border: none !important;
+}
+
+.ant-menu-vertical .ant-menu-item {
+  height: 56px;
+  line-height: 56px;
+  margin: 0 !important;
+  padding: 0 24px !important;
+  font-size: 15px;
+  border-bottom: 1px solid #f5f5f5;
+  transition: all 0.2s ease;
+}
+
+.ant-menu-vertical .ant-menu-item:hover {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%);
+  color: #667eea;
+}
+
+.ant-menu-vertical .ant-menu-item-selected {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, transparent 100%);
+  color: #667eea;
+  font-weight: 600;
+}
+
+.ant-menu-vertical .ant-menu-item-selected::after {
+  display: none;
+}
+
+.ant-menu-vertical .ant-menu-item-icon {
+  font-size: 18px;
+  margin-right: 12px;
+}
+

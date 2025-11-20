@@ -10,16 +10,90 @@
   display: none; /* Hidden by default on desktop */
 }
 
-@media (max-width: 767px) {
+/* Enhanced Sider Styles */
+.ant-layout-sider {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.ant-layout-sider .ant-menu {
+  border-right: none;
+  padding: 8px;
+}
+
+/* Enhanced Header Styles */
+.ant-layout-header {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Content Area */
+.ant-layout-content {
+  background: transparent !important;
+}
+
+.ant-layout-content > div {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
   .sider-desktop-only {
     display: none;
   }
 
   .header-desktop-only-logout {
-    display: none !important; /* Hide desktop logout button on mobile */
+    display: none !important;
   }
 
   .mobile-only-logout-button {
-    display: block; /* Visible on mobile */
+    display: block;
+  }
+
+  .ant-layout-content > div {
+    padding: 16px;
+    border-radius: 12px;
+    margin: 0;
+  }
+
+  /* Mobile Header */
+  .ant-layout-header {
+    padding: 0 16px !important;
+    height: 56px !important;
+    line-height: 56px !important;
+  }
+
+  /* Mobile Card Styles */
+  .ant-card {
+    margin-bottom: 16px;
+  }
+
+  .ant-card-head {
+    padding: 12px 16px !important;
+  }
+
+  .ant-card-body {
+    padding: 16px !important;
+  }
+
+  /* Mobile Statistic */
+  .ant-statistic-content {
+    font-size: 20px !important;
+  }
+
+  /* Mobile Button */
+  .ant-btn {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+
+  .ant-btn-lg {
+    height: 44px;
+    padding: 0 20px;
   }
 }

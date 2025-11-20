@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Typography, message, Button, Modal, Descriptions, DatePicker, Space } from 'antd';
+import { Table, Typography, message, Button, Modal, Descriptions, DatePicker, Space, Flex } from 'antd';
 import api from '../api';
+import { useIsMobile } from '../hooks/useIsMobile';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -17,6 +18,7 @@ interface Order {
 }
 
 const OrderList: React.FC = () => {
+    const isMobile = useIsMobile();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(false);
     const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
@@ -60,32 +62,93 @@ const OrderList: React.FC = () => {
 
     // 테이블 컬럼(열) 구조 정의
     const columns = [
-        { title: '주문 번호', dataIndex: 'id', key: 'id' },
-        { title: '주문 일시', dataIndex: 'createdAt', key: 'createdAt', render: (date: string) => new Date(date).toLocaleString('ko-KR') },
-        { title: '총 주문 금액', dataIndex: 'totalAmount', key: 'totalAmount', render: (amount: number) => `${amount.toLocaleString()}원` },
+        { 
+            title: '주문 번호', 
+            dataIndex: 'id', 
+            key: 'id',
+            width: isMobile ? 80 : 100,
+            fixed: isMobile ? 'left' : undefined,
+        },
+        { 
+            title: '주문 일시', 
+            dataIndex: 'createdAt', 
+            key: 'createdAt',
+            width: isMobile ? 140 : 180,
+            render: (date: string) => {
+                const dateObj = new Date(date);
+                if (isMobile) {
+                    return `${dateObj.getMonth() + 1}/${dateObj.getDate()} ${dateObj.getHours()}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+                }
+                return dateObj.toLocaleString('ko-KR');
+            }
+        },
+        { 
+            title: '총 주문 금액', 
+            dataIndex: 'totalAmount', 
+            key: 'totalAmount',
+            width: isMobile ? 100 : 140,
+            render: (amount: number) => `${amount.toLocaleString()}원` 
+        },
         {
             title: '상세보기',
             key: 'action',
+            fixed: isMobile ? 'right' : undefined,
+            width: isMobile ? 80 : 100,
             render: (_: any, record: Order) => (
-                <Button onClick={() => showDetailModal(record.id)}>상세보기</Button>
+                <Button 
+                    onClick={() => showDetailModal(record.id)}
+                    size={isMobile ? 'small' : 'middle'}
+                >
+                    상세
+                </Button>
             ),
         },
     ];
 
     return (
         <>
-            <Title level={3}>주문 내역</Title>
-            <Space style={{ marginBottom: 16 }} wrap>
-                <RangePicker onChange={(dates) => setDateRange(dates as any)} />
-                <Button onClick={() => setDateRange(null)}>날짜 필터 초기화</Button>
-            </Space>
-            <Table columns={columns} dataSource={orders} loading={loading} scroll={{ x: 'max-content' }} />
+            <Title 
+                level={isMobile ? 4 : 3}
+                style={{ 
+                    marginBottom: isMobile ? '16px' : '24px',
+                    fontSize: isMobile ? '20px' : '24px',
+                    fontWeight: 700
+                }}
+            >
+                주문 내역
+            </Title>
+            <Flex 
+                vertical={isMobile}
+                gap={isMobile ? 12 : 16}
+                style={{ marginBottom: isMobile ? 16 : 24 }}
+            >
+                <RangePicker 
+                    onChange={(dates) => setDateRange(dates as any)}
+                    style={{ width: isMobile ? '100%' : 'auto' }}
+                    size={isMobile ? 'middle' : 'large'}
+                />
+                <Button 
+                    onClick={() => setDateRange(null)}
+                    block={isMobile}
+                >
+                    날짜 필터 초기화
+                </Button>
+            </Flex>
+            <Table 
+                columns={columns} 
+                dataSource={orders} 
+                loading={loading} 
+                scroll={{ x: 'max-content' }}
+                size={isMobile ? 'small' : 'middle'}
+                pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
+            />
             <Modal
                 title={`주문 #${selectedOrder?.id} 상세 내역`}
                 open={isDetailModalVisible}
                 onOk={() => setIsDetailModalVisible(false)}
                 onCancel={() => setIsDetailModalVisible(false)}
                 footer={<Button key="ok" type="primary" onClick={() => setIsDetailModalVisible(false)}>닫기</Button>}
+                width={isMobile ? '90%' : 600}
             >
                 {selectedOrder && (
                     <Descriptions bordered column={1}>

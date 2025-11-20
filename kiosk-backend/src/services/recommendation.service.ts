@@ -1,7 +1,7 @@
 import axios from 'axios';
 import prisma from '../db';
 import { convertToBaseUnit } from './unitConversionService';
-import { subDays, addDays, format } from 'date-fns';
+import { subDays, addDays, format, getDay } from 'date-fns';
 
 // OpenWeatherMap API 응답에 대한 간단한 타입 정의
 interface WeatherInfo {
@@ -123,11 +123,27 @@ export const generateRecommendations = async (storeId: string) => {
     include: { order: true, product: { include: { inventoryUsages: true } } },
   });
 
+  // 발주 히스토리 가져오기 (과거 발주 패턴 학습용)
+  const pastPurchaseOrders = await prisma.purchaseOrder.findMany({
+    where: {
+      storeId,
+      status: { in: ['DELIVERED', 'ORDERED'] },
+      createdAt: { gte: subDays(endDate, 90) }, // 최근 90일간의 발주 히스토리
+    },
+    include: {
+      purchaseOrderItems: {
+        include: { inventory: true },
+      },
+    },
+  });
+
   const dailyWeather = new Map<string, string | null>();
+
   allPastOrderItems.forEach(item => {
     const dateStr = format(item.order.createdAt, 'yyyy-MM-dd');
     if (!dailyWeather.has(dateStr)) dailyWeather.set(dateStr, item.order.weather);
   });
+
   const totalRainyDays = [...dailyWeather.values()].filter(w => w === 'Rain').length;
   const totalAnalysisDays = dailyWeather.size || ANALYSIS_DAYS;
 
@@ -137,6 +153,11 @@ export const generateRecommendations = async (storeId: string) => {
 
     let totalUsage = 0;
     let rainyDayUsage = 0;
+    let weekendDayUsage = 0;
+    let weekdayDayUsage = 0;
+    let weekendDays = 0;
+    let weekdayDays = 0;
+
     relevantOrderItems.forEach(orderItem => {
       const usageInfo = orderItem.product.inventoryUsages.find(u => u.inventoryId === inventoryItem.id);
       if (usageInfo) {
@@ -147,29 +168,110 @@ export const generateRecommendations = async (storeId: string) => {
         ) * orderItem.quantity;
         totalUsage += usageAmount;
         if (orderItem.order.weather === 'Rain') rainyDayUsage += usageAmount;
+        
+        // 요일별 사용량 계산
+        const dayOfWeek = getDay(orderItem.order.createdAt);
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        if (isWeekend) {
+          weekendDayUsage += usageAmount;
+        } else {
+          weekdayDayUsage += usageAmount;
+        }
+      }
+    });
+
+    // 주말/평일 구분
+    const uniqueDates = new Set<string>();
+    relevantOrderItems.forEach(item => {
+      const dateStr = format(item.order.createdAt, 'yyyy-MM-dd');
+      uniqueDates.add(dateStr);
+    });
+    
+    uniqueDates.forEach(dateStr => {
+      const date = new Date(dateStr);
+      const dayOfWeek = getDay(date);
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        weekendDays++;
+      } else {
+        weekdayDays++;
       }
     });
 
     const baselineDailyUsage = totalUsage / totalAnalysisDays;
     if (baselineDailyUsage === 0) continue;
 
+    // 요일별 패턴 분석
+    const weekendDailyUsage = weekendDays > 0 ? weekendDayUsage / weekendDays : baselineDailyUsage;
+    const weekdayDailyUsage = weekdayDays > 0 ? weekdayDayUsage / weekdayDays : baselineDailyUsage;
+    const weekendMultiplier = baselineDailyUsage > 0 ? weekendDailyUsage / baselineDailyUsage : 1.0;
+    const weekdayMultiplier = baselineDailyUsage > 0 ? weekdayDailyUsage / baselineDailyUsage : 1.0;
+
+    // 발주 히스토리 기반 학습
+    const historicalOrders = pastPurchaseOrders
+      .flatMap(po => po.purchaseOrderItems)
+      .filter(poi => poi.inventoryId === inventoryItem.id);
+    
+    let historicalAverageQuantity = 0;
+    let historicalOrderFrequency = 0; // 평균 발주 간격 (일)
+    
+    if (historicalOrders.length > 0) {
+      historicalAverageQuantity = historicalOrders.reduce((sum, ho) => sum + ho.quantity, 0) / historicalOrders.length;
+      
+      // 발주 간격 계산
+      const orderDates = pastPurchaseOrders
+        .filter(po => po.purchaseOrderItems.some(poi => poi.inventoryId === inventoryItem.id))
+        .map(po => po.createdAt)
+        .sort((a, b) => a.getTime() - b.getTime());
+      
+      if (orderDates.length > 1) {
+        const intervals: number[] = [];
+        for (let i = 1; i < orderDates.length; i++) {
+          const diff = (orderDates[i].getTime() - orderDates[i - 1].getTime()) / (1000 * 60 * 60 * 24);
+          intervals.push(diff);
+        }
+        historicalOrderFrequency = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
+      }
+    }
+
     const COLD_START_THRESHOLD_DAYS = 14; // 콜드 스타트 임계값 (일)
     const COLD_START_RAIN_MULTIPLIER = 1.15; // 콜드 스타트 시 비 오는 날 판매량 15% 증가
 
     let rainMultiplier = 1.0;
+    let dayOfWeekMultiplier = 1.0;
     let currentReason = `지난 ${totalAnalysisDays}일간의 평균 소모량 기준`;
+    const reasonParts: string[] = [];
 
     if (totalAnalysisDays < COLD_START_THRESHOLD_DAYS) {
       // 콜드 스타트: 데이터가 부족하면 미리 정의된 규칙 사용
       rainMultiplier = COLD_START_RAIN_MULTIPLIER;
-      currentReason = `신규 매장으로 ${COLD_START_THRESHOLD_DAYS}일 미만 데이터, 기본 날씨 규칙 적용 (비 예보 시 ${((COLD_START_RAIN_MULTIPLIER - 1) * 100).toFixed(0)}% 수요 증가)`;
+      reasonParts.push(`신규 매장으로 ${COLD_START_THRESHOLD_DAYS}일 미만 데이터, 기본 날씨 규칙 적용 (비 예보 시 ${((COLD_START_RAIN_MULTIPLIER - 1) * 100).toFixed(0)}% 수요 증가)`);
     } else {
       // 데이터가 충분하면 데이터 기반 규칙 사용
       const rainyDayDailyUsage = totalRainyDays > 0 ? rainyDayUsage / totalRainyDays : baselineDailyUsage;
       if (baselineDailyUsage > 0 && totalRainyDays > 0) {
         rainMultiplier = rainyDayDailyUsage / baselineDailyUsage;
-        currentReason = `비 예보로 인해 평소 대비 ${((rainMultiplier - 1) * 100).toFixed(0)}% 수요 변화가 예상됩니다.`;
+        if (Math.abs(rainMultiplier - 1.0) > 0.05) { // 5% 이상 차이날 때만 표시
+          reasonParts.push(`비 예보로 인해 평소 대비 ${((rainMultiplier - 1) * 100).toFixed(0)}% 수요 변화 예상`);
+        }
       }
+
+      // 요일별 패턴 추가
+      if (weekendDays > 0 && weekdayDays > 0 && Math.abs(weekendMultiplier - weekdayMultiplier) > 0.1) {
+        if (weekendMultiplier > weekdayMultiplier) {
+          reasonParts.push(`주말 판매량이 평일 대비 ${((weekendMultiplier / weekdayMultiplier - 1) * 100).toFixed(0)}% 높음`);
+        } else {
+          reasonParts.push(`평일 판매량이 주말 대비 ${((weekdayMultiplier / weekendMultiplier - 1) * 100).toFixed(0)}% 높음`);
+        }
+      }
+
+      // 발주 히스토리 기반 학습 정보 추가
+      if (historicalOrders.length > 0) {
+        reasonParts.push(`과거 발주 패턴 반영 (평균 발주량: ${historicalAverageQuantity.toFixed(1)}${inventoryItem.unit})`);
+      }
+    }
+
+    if (reasonParts.length > 0) {
+      currentReason = reasonParts.join(', ');
     }
 
     const bestSupplierInfo = inventoryItem.suppliedBy.sort((a, b) => (a.leadTimeDays || 99) - (b.leadTimeDays || 99))[0];
@@ -185,11 +287,30 @@ export const generateRecommendations = async (storeId: string) => {
       const dayForecast = forecast.find(f => f.date === futureDateStr);
       
       let dailyMultiplier = 1.0;
+      
+      // 날씨 영향
       if (dayForecast?.condition === 'Rain') {
-        dailyMultiplier = rainMultiplier;
+        dailyMultiplier *= rainMultiplier;
       }
-      // 요일, 온도 등 다른 규칙 추가 가능
+      
+      // 요일별 패턴 적용
+      const dayOfWeek = getDay(futureDate);
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      if (isWeekend && weekendMultiplier > 0) {
+        dailyMultiplier *= (weekendMultiplier / weekdayMultiplier);
+      } else if (!isWeekend && weekdayMultiplier > 0) {
+        dailyMultiplier *= (weekdayMultiplier / weekendMultiplier);
+      }
+      
       totalPredictedUsageDuringLeadTime += baselineDailyUsage * dailyMultiplier;
+    }
+
+    // 발주 히스토리 기반 수량 조정
+    let historyAdjustedAmount = 0;
+    if (historicalAverageQuantity > 0 && historicalOrders.length >= 3) {
+      // 과거 발주 패턴이 충분히 쌓였을 때만 적용
+      const historyWeight = 0.3; // 30% 가중치
+      historyAdjustedAmount = historicalAverageQuantity * historyWeight;
     }
 
     const stockAtDelivery = inventoryItem.quantity - totalPredictedUsageDuringLeadTime;
@@ -197,12 +318,17 @@ export const generateRecommendations = async (storeId: string) => {
 
     if (stockAtDelivery < safetyStock) {
       const targetStock = safetyStock * 2;
-      const recommendedOrderAmount = Math.max(0, targetStock - stockAtDelivery);
+      let recommendedOrderAmount = Math.max(0, targetStock - stockAtDelivery);
+
+      // 발주 히스토리 기반 조정 적용
+      if (historyAdjustedAmount > 0) {
+        recommendedOrderAmount = recommendedOrderAmount * 0.7 + historyAdjustedAmount * 0.3;
+      }
 
       allRecommendations.push({
         inventoryId: inventoryItem.id,
         inventoryName: inventoryItem.name,
-        reason,
+        reason: currentReason,
         currentStock: inventoryItem.quantity,
         unit: inventoryItem.unit,
         predictedUsage: parseFloat((totalPredictedUsageDuringLeadTime / leadTime).toFixed(2)), // 일 평균으로 변환하여 표시
@@ -210,6 +336,7 @@ export const generateRecommendations = async (storeId: string) => {
         supplierName: bestSupplierInfo.supplier.name,
         leadTimeDays: leadTime,
         recommendedOrderAmount: parseFloat(recommendedOrderAmount.toFixed(2)),
+        confidence: totalAnalysisDays >= COLD_START_THRESHOLD_DAYS ? 'high' : 'low', // 신뢰도 추가
       });
     }
   }

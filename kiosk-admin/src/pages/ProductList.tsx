@@ -3,6 +3,7 @@ import { Table, Button, Space, Typography, Flex, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const { Title } = Typography;
 
@@ -15,6 +16,7 @@ interface Product {
 }
 
 const ProductList: React.FC = () => {
+    const isMobile = useIsMobile();
     const navigate = useNavigate();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
@@ -67,18 +69,57 @@ const ProductList: React.FC = () => {
 
     return (
         <>
-            <Flex justify="space-between" align="center" wrap="wrap" style={{ marginBottom: '24px' }}>
-                <Title level={3} style={{ margin: 0 }}>상품 목록</Title>
-                <Space style={{ marginTop: '8px' }}>
-                    <Button icon={<RedoOutlined />} onClick={fetchProducts} loading={loading}>
+            <Flex 
+                justify="space-between" 
+                align="center" 
+                wrap="wrap" 
+                style={{ marginBottom: isMobile ? '16px' : '24px' }}
+                vertical={isMobile}
+            >
+                <Title 
+                    level={isMobile ? 4 : 3} 
+                    style={{ 
+                        margin: 0,
+                        fontSize: isMobile ? '20px' : '24px',
+                        fontWeight: 700
+                    }}
+                >
+                    상품 목록
+                </Title>
+                <Space 
+                    direction={isMobile ? 'vertical' : 'horizontal'}
+                    style={{ 
+                        marginTop: isMobile ? '12px' : '8px',
+                        width: isMobile ? '100%' : 'auto'
+                    }}
+                >
+                    <Button 
+                        icon={<RedoOutlined />} 
+                        onClick={fetchProducts} 
+                        loading={loading}
+                        block={isMobile}
+                    >
                         새로고침
                     </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/products/new')}>
+                    <Button 
+                        type="primary" 
+                        icon={<PlusOutlined />} 
+                        onClick={() => navigate('/products/new')}
+                        block={isMobile}
+                        size={isMobile ? 'large' : 'middle'}
+                    >
                         새 상품 등록
                     </Button>
                 </Space>
             </Flex>
-            <Table columns={columns} dataSource={products} loading={loading} scroll={{ x: 'max-content' }} />
+            <Table 
+                columns={columns} 
+                dataSource={products} 
+                loading={loading} 
+                scroll={{ x: 'max-content' }}
+                size={isMobile ? 'small' : 'middle'}
+                pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
+            />
         </>
     );
 };

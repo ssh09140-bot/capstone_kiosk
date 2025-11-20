@@ -24,12 +24,17 @@ import inventoryRoutes from './inventory';
 import supplierRoutes from './suppliers';
 import inventoryLogRoutes from './inventory-logs'; // Import the new inventory log router
 import recommendationRouter from './recommendations';
-
+import { apiRateLimiter, authRateLimiter } from './middleware/rateLimiter';
+import { errorHandler } from './utils/errorHandler';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Apply rate limiting
+app.use('/api/auth', authRateLimiter);
+app.use('/api', apiRateLimiter);
 
 app.use((req, res, next) => {
     res.setHeader('Permissions-Policy', 'local-network-access=*');
@@ -61,5 +66,16 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/inventory-logs', inventoryLogRoutes); // Use the new inventory log router
 app.use('/api/recommendations', recommendationRouter);
 
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: '요청한 리소스를 찾을 수 없습니다.',
+    path: req.path,
+  });
+});
+
+// Global error handler (must be last)
+app.use(errorHandler);
 
 export default app;

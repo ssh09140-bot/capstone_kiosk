@@ -3,10 +3,12 @@ import { Table, Button, Space, Typography, Flex, message, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { getInventory, deleteInventoryItem, type Inventory } from '../api';
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const { Title } = Typography;
 
 const InventoryPage: React.FC = () => {
+    const isMobile = useIsMobile();
     const navigate = useNavigate();
     const [inventory, setInventory] = useState<(Inventory & { key: string })[]>([]);
     const [loading, setLoading] = useState(false);
@@ -42,37 +44,79 @@ const InventoryPage: React.FC = () => {
     };
 
     const columns = [
-        { title: '품목명', dataIndex: 'name', key: 'name' },
-        { title: '현재 수량', dataIndex: 'quantity', key: 'quantity' },
-        { title: '단위', dataIndex: 'unit', key: 'unit' },
-        { title: '품목 유형', dataIndex: 'itemType', key: 'itemType' }, // New column
+        { 
+            title: '품목명', 
+            dataIndex: 'name', 
+            key: 'name',
+            width: isMobile ? 120 : 150,
+            fixed: isMobile ? 'left' : undefined,
+        },
+        { 
+            title: '현재 수량', 
+            dataIndex: 'quantity', 
+            key: 'quantity',
+            width: isMobile ? 80 : 100,
+        },
+        { 
+            title: '단위', 
+            dataIndex: 'unit', 
+            key: 'unit',
+            width: isMobile ? 60 : 80,
+        },
+        { 
+            title: '품목 유형', 
+            dataIndex: 'itemType', 
+            key: 'itemType',
+            width: isMobile ? 100 : 120,
+            ellipsis: true,
+        },
         {
             title: '자동 발주',
             dataIndex: 'autoOrderEnabled',
             key: 'autoOrderEnabled',
+            width: isMobile ? 80 : 100,
             render: (enabled: boolean) => (
-                <Tag color={enabled ? 'blue' : 'default'}>{enabled ? 'ON' : 'OFF'}</Tag>
+                <Tag color={enabled ? 'blue' : 'default'} style={{ fontSize: isMobile ? '11px' : '12px' }}>
+                    {enabled ? 'ON' : 'OFF'}
+                </Tag>
             ),
         },
         {
-            title: '발주 기준 재고',
+            title: '발주 기준',
             dataIndex: 'minStockThreshold',
             key: 'minStockThreshold',
+            width: isMobile ? 90 : 120,
             render: (stock?: number | null) => (stock != null ? `${stock} 이하` : '-'),
         },
         {
-            title: '자동 발주 수량',
+            title: '발주 수량',
             dataIndex: 'orderQuantity',
             key: 'orderQuantity',
+            width: isMobile ? 80 : 100,
             render: (quantity?: number | null) => (quantity != null ? `${quantity}` : '-'),
         },
         {
             title: '관리',
             key: 'action',
+            fixed: isMobile ? 'right' : undefined,
+            width: isMobile ? 100 : 140,
             render: (_: any, record: Inventory) => (
-                <Space size="middle">
-                    <Button onClick={() => navigate(`/inventory/${record.id}`)}>수정</Button>
-                    <Button danger onClick={() => handleDelete(record.id)}>삭제</Button>
+                <Space size="small" direction={isMobile ? 'vertical' : 'horizontal'}>
+                    <Button 
+                        onClick={() => navigate(`/inventory/${record.id}`)}
+                        size={isMobile ? 'small' : 'middle'}
+                        block={isMobile}
+                    >
+                        수정
+                    </Button>
+                    <Button 
+                        danger 
+                        onClick={() => handleDelete(record.id)}
+                        size={isMobile ? 'small' : 'middle'}
+                        block={isMobile}
+                    >
+                        삭제
+                    </Button>
                 </Space>
             ),
         },
@@ -80,18 +124,57 @@ const InventoryPage: React.FC = () => {
 
     return (
         <>
-            <Flex justify="space-between" align="center" wrap="wrap" style={{ marginBottom: '24px' }}>
-                <Title level={3} style={{ margin: 0 }}>재고 관리</Title>
-                <Space style={{ marginTop: '8px' }}>
-                    <Button icon={<RedoOutlined />} onClick={fetchInventory} loading={loading}>
+            <Flex 
+                justify="space-between" 
+                align="center" 
+                wrap="wrap" 
+                style={{ marginBottom: isMobile ? '16px' : '24px' }}
+                vertical={isMobile}
+            >
+                <Title 
+                    level={isMobile ? 4 : 3} 
+                    style={{ 
+                        margin: 0,
+                        fontSize: isMobile ? '20px' : '24px',
+                        fontWeight: 700
+                    }}
+                >
+                    재고 관리
+                </Title>
+                <Space 
+                    direction={isMobile ? 'vertical' : 'horizontal'}
+                    style={{ 
+                        marginTop: isMobile ? '12px' : '8px',
+                        width: isMobile ? '100%' : 'auto'
+                    }}
+                >
+                    <Button 
+                        icon={<RedoOutlined />} 
+                        onClick={fetchInventory} 
+                        loading={loading}
+                        block={isMobile}
+                    >
                         새로고침
                     </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/inventory/new')}>
+                    <Button 
+                        type="primary" 
+                        icon={<PlusOutlined />} 
+                        onClick={() => navigate('/inventory/new')}
+                        block={isMobile}
+                        size={isMobile ? 'large' : 'middle'}
+                    >
                         새 품목 등록
                     </Button>
                 </Space>
             </Flex>
-            <Table columns={columns} dataSource={inventory} loading={loading} scroll={{ x: 'max-content' }} />
+            <Table 
+                columns={columns} 
+                dataSource={inventory} 
+                loading={loading} 
+                scroll={{ x: 'max-content' }}
+                size={isMobile ? 'small' : 'middle'}
+                pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
+            />
         </>
     );
 };

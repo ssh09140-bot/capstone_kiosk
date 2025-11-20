@@ -16,6 +16,32 @@ api.interceptors.request.use(config => {
   return Promise.reject(error);
 });
 
+// 응답 인터셉터: 에러 처리
+api.interceptors.response.use(
+  response => response,
+  error => {
+    // Rate limit 에러 (429) 처리
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.data?.retryAfter || 60;
+      console.warn(`Rate limit exceeded. Retry after ${retryAfter} seconds.`);
+      // 로그아웃하지 않고 에러만 반환
+      return Promise.reject(error);
+    }
+    
+    // 인증 에러 (401, 403) 처리 - 토큰이 만료되었거나 유효하지 않은 경우
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // 로그인 페이지가 아닌 경우에만 로그아웃 처리
+      if (!window.location.pathname.includes('/login')) {
+        localStorage.removeItem('authToken');
+        // 로그인 페이지로 리다이렉트하지 않고 에러만 반환
+        // (각 컴포넌트에서 필요시 처리하도록)
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 export default api;
 
 // --- Inventory API ---
@@ -144,6 +170,15 @@ export const createPurchaseOrderFromRecommendation = async (data: {
   return response.data;
 };
 
+export const createBatchPurchaseOrdersFromRecommendations = async (items: Array<{
+  inventoryId: number;
+  supplierId: number;
+  quantity: number;
+}>) => {
+  const response = await api.post('/purchase-orders/batch-from-recommendations', { items });
+  return response.data;
+};
+
 
 // --- Inventory Log API ---
 
@@ -175,6 +210,7 @@ export interface Recommendation {
   supplierName: string;
   leadTimeDays: number;
   recommendedOrderAmount: number;
+  confidence?: 'high' | 'low'; // 신뢰도 추가
 }
 
 export interface RecommendationResponse {
