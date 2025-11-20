@@ -1,0 +1,172 @@
+.category-list-container {
+    position: relative;
+    padding-bottom: 80px;
+    /* Space for FAB on mobile */
+}
+
+/* Mobile Vertical Card View */
+.category-cards-container {
+    display: grid;
+    gap: 16px;
+}
+
+.category-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.category-card:active {
+    transform: scale(0.98);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.category-card-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.category-icon-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.category-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    box-shadow: 0 4px 12px rgba(48, 207, 208, 0.3);
+}
+
+.category-number {
+    font-size: 11px;
+    color: #999;
+    font-weight: 500;
+}
+
+.category-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.category-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.category-card-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+}
+
+/* Floating Action Button */
+.mobile-fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px !important;
+    height: 56px !important;
+    box-shadow: 0 4px 12px rgba(22, 119, 255, 0.4);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-fab:hover {
+    box-shadow: 0 6px 16px rgba(22, 119, 255, 0.5);
+}
+
+.mobile-fab:active {
+    transform: scale(0.95);
+}
+
+/* Desktop styles */
+@media (min-width: 769px) {
+    .category-list-container {
+        padding-bottom: 0;
+    }
+
+    .mobile-fab {
+        display: none;
+    }
+}
+
+/* Animation for cards */
+.category-card {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stagger animation */
+.category-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.category-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.category-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.category-card:nth-child(4) {
+    animation-delay: 0.2s;
+}
+
+.category-card:nth-child(5) {
+    animation-delay: 0.25s;
+}
+
+.category-card:nth-child(6) {
+    animation-delay: 0.3s;
+}
+
+.category-card:nth-child(7) {
+    animation-delay: 0.35s;
+}
+
+.category-card:nth-child(8) {
+    animation-delay: 0.4s;
+}
+
+/* Empty state */
+.category-cards-container:empty::after {
+    content: '카테고리가 없습니다.';
+    display: block;
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-size: 14px;
+}

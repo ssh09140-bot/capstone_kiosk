@@ -1,0 +1,190 @@
+.order-list-container {
+    position: relative;
+}
+
+/* Mobile Card View */
+.order-cards-container {
+    display: grid;
+    gap: 16px;
+}
+
+.order-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.order-card:active {
+    transform: scale(0.98);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.order-card-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.order-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.order-main-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.order-number {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.order-date {
+    font-size: 13px;
+    color: #666;
+    display: flex;
+    align-items: center;
+}
+
+.order-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.order-amount {
+    display: flex;
+    align-items: center;
+    color: #1677ff;
+}
+
+/* Filter Controls */
+.order-filter-controls {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .order-filter-controls {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .order-filter-controls>* {
+        width: 100% !important;
+    }
+}
+
+/* Modal Enhancements */
+.order-item-detail {
+    padding: 12px;
+    background: #fafafa;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.order-item-detail:last-child {
+    margin-bottom: 0;
+}
+
+.order-item-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.order-item-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #e0e0e0;
+}
+
+/* Animation for cards */
+.order-card {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stagger animation */
+.order-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.order-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.order-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.order-card:nth-child(4) {
+    animation-delay: 0.2s;
+}
+
+.order-card:nth-child(5) {
+    animation-delay: 0.25s;
+}
+
+/* Empty state */
+.order-cards-container:empty::after {
+    content: '주문 내역이 없습니다.';
+    display: block;
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-size: 14px;
+}
+
+/* Mobile Modal Adjustments */
+@media (max-width: 768px) {
+    .ant-modal {
+        max-width: 100vw !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .ant-modal-content {
+        border-radius: 16px 16px 0 0 !important;
+    }
+
+    .ant-modal-body {
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+    }
+
+    .order-item-detail {
+        padding: 10px;
+    }
+}

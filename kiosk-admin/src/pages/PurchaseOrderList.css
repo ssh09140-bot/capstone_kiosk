@@ -1,0 +1,155 @@
+.purchase-order-container {
+    position: relative;
+}
+
+/* Mobile Card View */
+.purchase-cards-container {
+    display: grid;
+    gap: 16px;
+}
+
+.purchase-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.purchase-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.purchase-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.purchase-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.purchase-id {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.purchase-supplier {
+    font-size: 13px;
+}
+
+.purchase-card-body {
+    margin-bottom: 16px;
+}
+
+.purchase-date {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.purchase-items {
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.purchase-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed #e0e0e0;
+}
+
+.purchase-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.purchase-card-footer {
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.purchase-card-footer .ant-space {
+    display: flex;
+}
+
+.purchase-card-footer .ant-btn {
+    flex: 1;
+}
+
+/* Animation for cards */
+.purchase-card {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stagger animation */
+.purchase-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.purchase-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.purchase-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.purchase-card:nth-child(4) {
+    animation-delay: 0.2s;
+}
+
+.purchase-card:nth-child(5) {
+    animation-delay: 0.25s;
+}
+
+/* Empty state */
+.purchase-cards-container:empty::after {
+    content: '발주 내역이 없습니다.';
+    display: block;
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-size: 14px;
+}
+
+/* Desktop styles */
+@media (min-width: 769px) {
+    .purchase-order-container {
+        padding-bottom: 0;
+    }
+}

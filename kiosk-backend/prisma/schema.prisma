@@ -46,6 +46,7 @@ model Product {
   name                  String
   description           String?
   price                 Int
+  stock                 Int                   @default(0)  // ← 여기 추가
   imageUrl              String?
   createdAt             DateTime              @default(now())
   owner                 User                  @relation(fields: [storeId], references: [storeId])
@@ -55,11 +56,11 @@ model Product {
   optionGroups          OptionGroup[]
   orderItems            OrderItem[]
   purchaseOrderItems    PurchaseOrderItem[]
-  inventoryUsages       ProductInventoryUsage[] // 재고 소모량 연결
-  // Fields for events
+  inventoryUsages       ProductInventoryUsage[] 
   isEventProduct        Boolean               @default(false)
   eventPrice            Int?
 }
+
 
 model OptionGroup {
   id       Int      @id @default(autoincrement())

@@ -1,0 +1,163 @@
+.mobile-home {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
+    padding: 20px;
+    padding-bottom: 40px;
+}
+
+.mobile-home-header {
+    margin-bottom: 32px;
+    padding-top: 8px;
+}
+
+.welcome-title {
+    margin: 0 !important;
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    color: #1a1a1a;
+    line-height: 1.2 !important;
+}
+
+.welcome-subtitle {
+    font-size: 16px;
+    color: #666;
+    margin-top: 4px;
+}
+
+.navigation-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.nav-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    -webkit-tap-highlight-color: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.nav-card:active {
+    transform: scale(0.97);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-card-icon-wrapper {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+}
+
+.nav-card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nav-card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.3;
+}
+
+.nav-card-description {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+}
+
+/* Hover effect for desktop */
+@media (hover: hover) {
+    .nav-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .nav-card:hover .nav-card-icon-wrapper {
+        transform: scale(1.05);
+    }
+}
+
+/* Animation */
+.nav-card {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stagger animation */
+.nav-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.nav-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.nav-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.nav-card:nth-child(4) {
+    animation-delay: 0.2s;
+}
+
+.nav-card:nth-child(5) {
+    animation-delay: 0.25s;
+}
+
+.nav-card:nth-child(6) {
+    animation-delay: 0.3s;
+}
+
+.nav-card:nth-child(7) {
+    animation-delay: 0.35s;
+}
+
+.nav-card:nth-child(8) {
+    animation-delay: 0.4s;
+}
+
+/* Pulse animation for icon */
+@keyframes iconPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    50% {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+}
+
+.nav-card:active .nav-card-icon-wrapper {
+    animation: iconPulse 0.3s ease-in-out;
+}

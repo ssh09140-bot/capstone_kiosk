@@ -10,8 +10,16 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "types": ["jest"]
+    "types": [
+      "jest",
+      "node"
+    ] // <-- 여기 수정
   },
-  "include": ["src/**/*", "src/custom.d.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/**/*",
+    "src/custom.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

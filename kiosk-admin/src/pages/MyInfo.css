@@ -1,0 +1,191 @@
+.myinfo-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+
+.myinfo-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Profile Header */
+.profile-header {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.profile-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 36px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(252, 182, 159, 0.3);
+}
+
+/* Info Sections */
+.info-section {
+    margin: 20px 0;
+}
+
+.section-title {
+    font-size: 16px !important;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 16px !important;
+}
+
+/* Action Buttons */
+.action-button {
+    width: 100%;
+    margin-top: 16px;
+    height: 44px;
+    font-size: 15px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.logout-button {
+    width: 100%;
+    height: 44px;
+    font-size: 15px;
+    border-radius: 8px;
+    font-weight: 500;
+    margin-top: 24px;
+}
+
+/* No Card Notice */
+.no-card-notice {
+    background: #fafafa;
+    border: 1px dashed #d9d9d9;
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+/* Loading Container */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .myinfo-container {
+        padding: 0;
+    }
+
+    .myinfo-card {
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .myinfo-card .ant-card-body {
+        padding: 20px 16px;
+    }
+
+    .profile-icon {
+        width: 64px;
+        height: 64px;
+        font-size: 28px;
+    }
+
+    .profile-header {
+        padding: 16px 0;
+    }
+
+    /* Descriptions */
+    .ant-descriptions-item-label {
+        font-weight: 600;
+        background: #fafafa;
+    }
+
+    .ant-descriptions-item-content {
+        word-break: break-all;
+    }
+
+    /* Input Fields */
+    .ant-input {
+        font-size: 15px !important;
+    }
+
+    /* Image Preview */
+    .ant-image {
+        width: 100% !important;
+    }
+
+    /* Divider */
+    .ant-divider {
+        margin: 16px 0;
+    }
+
+    .section-title {
+        font-size: 15px !important;
+        margin-bottom: 12px !important;
+    }
+}
+
+/* Desktop Enhancements */
+@media (min-width: 769px) {
+    .myinfo-container {
+        padding: 20px;
+    }
+
+    .myinfo-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .action-button,
+    .logout-button {
+        max-width: 100%;
+    }
+}
+
+/* Animation */
+.myinfo-card {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* File Input Styling */
+.ant-descriptions-item-content input[type="file"] {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #d9d9d9;
+    width: 100%;
+    cursor: pointer;
+}
+
+.ant-descriptions-item-content input[type="file"]:hover {
+    border-color: #1677ff;
+}
+
+/* Card in Descriptions */
+.ant-descriptions-bordered .ant-descriptions-item-label {
+    font-weight: 500;
+}
+
+.ant-descriptions-bordered .ant-descriptions-item-content {
+    background: #fff;
+}

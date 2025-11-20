@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Typography, List, Button } from 'antd';
-import { ArrowUpOutlined, RobotOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Statistic, Typography, List, Button, Space, Tag } from 'antd';
+import { ArrowUpOutlined, RobotOutlined, ShopOutlined, DollarOutlined, ShoppingOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/charts';
 import api from '../api';
 import SalesAnalysisModal from '../components/SalesAnalysisModal';
@@ -21,23 +21,20 @@ const Dashboard: React.FC = () => {
         const [salesRes, topProdRes, profitRes] = await Promise.all([
           api.get('/sales/summary'),
           api.get('/analytics/top-products'),
-          api.get('/analytics/profit-summary'), // Fetch profit data
+          api.get('/analytics/profit-summary'),
         ]);
         setCurrentMonthSales(salesRes.data.currentMonthSales);
         setMonthlySales(salesRes.data.monthlySalesData);
         setTopProducts(topProdRes.data);
-        setProfitSummary(profitRes.data.overallSummary); // Set profit data
+        setProfitSummary(profitRes.data.overallSummary);
       } catch (error) {
-        // 첫 로딩이 아닌 경우, 백그라운드 에러는 조용히 처리할 수 있도록 console.error 사용
         console.error("Failed to refresh dashboard data:", error);
       }
     };
 
-    fetchData(); // 초기 데이터 로딩
-
-    const intervalId = setInterval(fetchData, 30000); // 30초마다 데이터 새로고침
-
-    return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 정리
+    fetchData();
+    const intervalId = setInterval(fetchData, 30000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const chartConfig = {
@@ -45,89 +42,142 @@ const Dashboard: React.FC = () => {
     xField: 'month',
     yField: 'sales',
     height: 200,
+    color: '#1677ff',
     meta: {
       sales: {
         alias: '매출액',
         formatter: (v: number) => `${v.toLocaleString()}원`,
       },
     },
+    xAxis: {
+      label: {
+        autoHide: true,
+        autoRotate: false,
+      },
+    },
   };
 
   return (
-    <div>
-      <Title level={3} style={{ marginBottom: '24px' }}>대시보드</Title>
-      
-      <Row>
-        <Col span={24}>
-          <RecommendationCard />
-        </Col>
-      </Row>
+    <div style={{ maxWidth: 1600, margin: '0 auto', padding: '0 12px' }}>
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        {/* Header Section */}
+        <div style={{ marginBottom: 16 }}>
+          <Title level={2} style={{ margin: 0 }}>대시보드</Title>
+          <Text type="secondary">매장 현황을 한눈에 확인하고 AI 기반 인사이트를 얻으세요.</Text>
+        </div>
 
-      {profitSummary && (
-        <Card title="최근 30일 수익 요약" style={{ marginTop: 24 }}>
-            <Row gutter={16}>
-                <Col span={8}>
-                    <Statistic title="총 매출" value={profitSummary.totalRevenue} suffix="원" />
-                </Col>
-                <Col span={8}>
-                    <Statistic title="총 원가" value={profitSummary.totalCost} suffix="원" />
-                </Col>
-                <Col span={8}>
-                    <Statistic title="총 이익" value={profitSummary.totalProfit} valueStyle={{ color: '#3f8600' }} suffix="원" />
-                </Col>
-            </Row>
-        </Card>
-      )}
+        {/* Key Metrics Section */}
+        {profitSummary && (
+          <Row gutter={[24, 24]}>
+            <Col xs={24} sm={8}>
+              <Card bordered={false} hoverable style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <Statistic
+                  title="총 매출"
+                  value={profitSummary.totalRevenue}
+                  suffix="원"
+                  prefix={<DollarOutlined style={{ color: '#1677ff', fontSize: 24, background: '#e6f7ff', padding: 8, borderRadius: '50%' }} />}
+                  valueStyle={{ fontWeight: 700, fontSize: 24 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card bordered={false} hoverable style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <Statistic
+                  title="총 원가"
+                  value={profitSummary.totalCost}
+                  suffix="원"
+                  prefix={<ShopOutlined style={{ color: '#faad14', fontSize: 24, background: '#fffbe6', padding: 8, borderRadius: '50%' }} />}
+                  valueStyle={{ fontWeight: 700, fontSize: 24 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card bordered={false} hoverable style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <Statistic
+                  title="총 이익"
+                  value={profitSummary.totalProfit}
+                  valueStyle={{ color: '#3f8600', fontWeight: 700, fontSize: 24 }}
+                  suffix="원"
+                  prefix={<ArrowUpOutlined style={{ fontSize: 24, background: '#f6ffed', padding: 8, borderRadius: '50%', color: '#52c41a' }} />}
+                />
+              </Card>
+            </Col>
+          </Row>
+        )}
 
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        {/* 월별 매출 현황 카드 */}
-        <Col xs={24} lg={12}>
-          <Card title="월별 매출 현황">
-            <Statistic
-              title="이번 달 매출액"
-              value={currentMonthSales}
-              precision={0}
-              valueStyle={{ color: '#3f8600' }}
-              prefix={<ArrowUpOutlined />}
-              suffix="원"
-            />
-            <div style={{ marginTop: 24 }}>
+        {/* AI Insights Section */}
+        <RecommendationCard />
+
+        {/* Charts & Analysis Section */}
+        <Row gutter={[24, 24]}>
+          <Col xs={24} lg={16}>
+            <Card title="월별 매출 추이" bordered={false} style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <div style={{ marginBottom: 24, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <Text type="secondary">이번 달 매출액</Text>
+                <Title level={3} style={{ margin: 0, color: '#1677ff' }}>
+                  {currentMonthSales.toLocaleString()}원
+                </Title>
+              </div>
               <Column {...chartConfig} />
-            </div>
-          </Card>
-        </Col>
+            </Card>
+          </Col>
 
-        {/* AI 월간 판매 분석 카드 */}
-        <Col xs={24} lg={12}>
-          <Card title="AI 월간 판매 분석">
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 328 }}>
-              <Text style={{ marginBottom: 16, textAlign: 'center' }}>지난 한 달간의 판매 데이터를 기반으로<br/>AI가 메뉴 개선 방안을 제안합니다.</Text>
-              <Button type="primary" icon={<RobotOutlined />} onClick={() => setAnalysisModalOpen(true)}>
-                분석 리포트 보기
-              </Button>
-            </div>
-          </Card>
-        </Col>
+          <Col xs={24} lg={8}>
+            <Space direction="vertical" size="large" style={{ width: '100%', height: '100%' }}>
+              <Card title="AI 월간 분석" bordered={false} style={{ flex: 1, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 200, padding: '20px 0' }}>
+                  <div style={{ background: '#e6f7ff', padding: 20, borderRadius: '50%', marginBottom: 20 }}>
+                    <RobotOutlined style={{ fontSize: 40, color: '#1677ff' }} />
+                  </div>
+                  <Text style={{ marginBottom: 24, textAlign: 'center', color: '#666', fontSize: 15, lineHeight: 1.6 }}>
+                    지난 한 달간의 판매 데이터를 분석하여<br />
+                    <strong>매출 증대 전략</strong>을 제안합니다.
+                  </Text>
+                  <Button type="primary" size="large" icon={<RobotOutlined />} onClick={() => setAnalysisModalOpen(true)} block style={{ height: 48, borderRadius: 8 }}>
+                    분석 리포트 확인하기
+                  </Button>
+                </div>
+              </Card>
 
-        {/* 인기 상품 TOP 5 카드 */}
-        <Col xs={24} lg={12}>
-          <Card title="인기 상품 TOP 5">
-            <List
-              dataSource={topProducts}
-              renderItem={(item, index) => (
-                <List.Item>
-                  <Text strong>{index + 1}. {item.name}</Text> <Text type="secondary">{item.quantity}개 판매</Text>
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-      </Row>
+              <Card title="인기 상품 TOP 5" bordered={false} style={{ flex: 1, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <List
+                  itemLayout="horizontal"
+                  dataSource={topProducts}
+                  renderItem={(item, index) => (
+                    <List.Item style={{ padding: '12px 0' }}>
+                      <List.Item.Meta
+                        avatar={
+                          <div style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '50%',
+                            backgroundColor: index < 3 ? '#1677ff' : '#f5f5f5',
+                            color: index < 3 ? '#fff' : '#8c8c8c',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: 14
+                          }}>
+                            {index + 1}
+                          </div>
+                        }
+                        title={<Text strong style={{ fontSize: 15 }}>{item.name}</Text>}
+                      />
+                      <Tag color="blue" style={{ borderRadius: 12, padding: '0 10px' }}>{item.quantity}개</Tag>
+                    </List.Item>
+                  )}
+                />
+              </Card>
+            </Space>
+          </Col>
+        </Row>
 
-      <SalesAnalysisModal 
-        isOpen={isAnalysisModalOpen} 
-        onClose={() => setAnalysisModalOpen(false)} 
-      />
+        <SalesAnalysisModal
+          isOpen={isAnalysisModalOpen}
+          onClose={() => setAnalysisModalOpen(false)}
+        />
+      </Space>
     </div>
   );
 };
