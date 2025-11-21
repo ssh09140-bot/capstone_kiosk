@@ -23,9 +23,14 @@ const inventory_1 = __importDefault(require("./inventory"));
 const suppliers_1 = __importDefault(require("./suppliers"));
 const inventory_logs_1 = __importDefault(require("./inventory-logs")); // Import the new inventory log router
 const recommendations_1 = __importDefault(require("./recommendations"));
+const rateLimiter_1 = require("./middleware/rateLimiter");
+const errorHandler_1 = require("./utils/errorHandler");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+// Apply rate limiting
+app.use('/api/auth', rateLimiter_1.authRateLimiter);
+app.use('/api', rateLimiter_1.apiRateLimiter);
 app.use((req, res, next) => {
     res.setHeader('Permissions-Policy', 'local-network-access=*');
     next();
@@ -49,4 +54,14 @@ app.use('/api/inventory', inventory_1.default);
 app.use('/api/suppliers', suppliers_1.default);
 app.use('/api/inventory-logs', inventory_logs_1.default); // Use the new inventory log router
 app.use('/api/recommendations', recommendations_1.default);
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: '요청한 리소스를 찾을 수 없습니다.',
+        path: req.path,
+    });
+});
+// Global error handler (must be last)
+app.use(errorHandler_1.errorHandler);
 exports.default = app;

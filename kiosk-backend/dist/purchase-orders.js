@@ -51,6 +51,69 @@ router.post('/from-recommendation', auth_1.authenticateToken, async (req, res) =
         res.status(500).json({ message: '추천 기반 발주 생성에 실패했습니다.' });
     }
 });
+// [POST] /api/purchase-orders/batch-from-recommendations
+router.post('/batch-from-recommendations', auth_1.authenticateToken, async (req, res) => {
+    if (!req.user)
+        return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    const { items } = req.body; // items: [{ inventoryId, supplierId, quantity }]
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: '발주할 품목 목록이 필요합니다.' });
+    }
+    try {
+        // 같은 공급업체끼리 그룹화
+        const ordersBySupplier = new Map();
+        for (const item of items) {
+            if (!item.inventoryId || !item.supplierId || !item.quantity) {
+                continue; // 필수 정보가 없는 항목은 건너뛰기
+            }
+            const supplierId = item.supplierId;
+            if (!ordersBySupplier.has(supplierId)) {
+                ordersBySupplier.set(supplierId, []);
+            }
+            ordersBySupplier.get(supplierId).push(item);
+        }
+        const createdOrders = [];
+        // 공급업체별로 발주 생성
+        for (const [supplierId, supplierItems] of ordersBySupplier.entries()) {
+            const newPurchaseOrder = await db_1.default.purchaseOrder.create({
+                data: {
+                    storeId: req.user.storeId,
+                    supplierId: supplierId,
+                    status: client_1.PurchaseOrderStatus.PENDING_CONFIRMATION,
+                    purchaseOrderItems: {
+                        create: supplierItems.map(item => ({
+                            inventoryId: item.inventoryId,
+                            quantity: item.quantity,
+                        })),
+                    },
+                },
+                include: {
+                    purchaseOrderItems: {
+                        include: {
+                            inventory: true,
+                        }
+                    }
+                }
+            });
+            await db_1.default.notification.create({
+                data: {
+                    storeId: req.user.storeId,
+                    message: `AI 추천으로 일괄 발주 #${newPurchaseOrder.id}가 생성되었습니다. (${supplierItems.length}개 품목) 확정이 필요합니다.`,
+                    type: client_1.NotificationType.ORDER_CONFIRMATION,
+                },
+            });
+            createdOrders.push(newPurchaseOrder);
+        }
+        res.status(201).json({
+            message: `${createdOrders.length}개의 발주가 생성되었습니다.`,
+            orders: createdOrders
+        });
+    }
+    catch (error) {
+        console.error('Error creating batch purchase orders from recommendations:', error);
+        res.status(500).json({ message: '일괄 발주 생성에 실패했습니다.' });
+    }
+});
 // [GET] /api/purchase-orders
 router.get('/', auth_1.authenticateToken, async (req, res) => {
     if (!req.user)
