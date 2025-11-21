@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Typography, Tag, message, Flex, type TableProps } from 'antd';
-import { RedoOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Typography, Tag, message, Flex, Card, type TableProps } from 'antd';
+import { RedoOutlined, ShoppingCartOutlined, CheckOutlined, ClockCircleOutlined, CalendarOutlined } from '@ant-design/icons';
 import api from '../api';
 import ReceiveOrderModal from '../components/ReceiveOrderModal';
 import DelayOrderModal from '../components/DelayOrderModal';
 import { useIsMobile } from '../hooks/useIsMobile';
+import './PurchaseOrderList.css';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
-// Define interfaces for better type checking
 export interface PurchaseOrderItem {
   id: number;
   product: { name: string } | null;
@@ -102,17 +102,16 @@ const PurchaseOrderList: React.FC = () => {
       await api.post(`/purchase-orders/${selectedOrder.id}/delay`, values);
       message.success(`다음 알림이 ${values.delayHours}시간 뒤로 설정되었습니다.`);
       handleModalCancel();
-      // No need to fetch orders, as the change is only on the backend notification timing
     } catch (error) {
       message.error('알림 지연 설정에 실패했습니다.');
     }
   };
 
   const columns: TableProps<PurchaseOrder>['columns'] = [
-    { 
-      title: '발주 ID', 
-      dataIndex: 'id', 
-      key: 'id', 
+    {
+      title: '발주 ID',
+      dataIndex: 'id',
+      key: 'id',
       width: isMobile ? 60 : 80,
       fixed: isMobile ? 'left' : undefined,
     },
@@ -157,9 +156,9 @@ const PurchaseOrderList: React.FC = () => {
         </Tag>
       ),
     },
-    { 
-      title: '생성일', 
-      dataIndex: 'createdAt', 
+    {
+      title: '생성일',
+      dataIndex: 'createdAt',
       key: 'createdAt',
       width: isMobile ? 120 : 160,
       render: (date: string) => {
@@ -178,8 +177,8 @@ const PurchaseOrderList: React.FC = () => {
       render: (_: any, record: PurchaseOrder) => (
         <Space size="small" direction={isMobile ? 'vertical' : 'horizontal'}>
           {record.status === 'PENDING_CONFIRMATION' && (
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               onClick={() => handleConfirm(record.id)}
               size={isMobile ? 'small' : 'middle'}
               block={isMobile}
@@ -189,14 +188,14 @@ const PurchaseOrderList: React.FC = () => {
           )}
           {record.status === 'ORDERED' && (
             <>
-              <Button 
+              <Button
                 onClick={() => handleReceive(record)}
                 size={isMobile ? 'small' : 'middle'}
                 block={isMobile}
               >
                 배송 받음
               </Button>
-              <Button 
+              <Button
                 onClick={() => handleDelay(record)}
                 size={isMobile ? 'small' : 'middle'}
                 block={isMobile}
@@ -210,18 +209,104 @@ const PurchaseOrderList: React.FC = () => {
     },
   ];
 
+  // Mobile Card View
+  const renderMobileCards = () => (
+    <div className="purchase-cards-container">
+      {purchaseOrders.map(order => (
+        <Card
+          key={order.id}
+          className="purchase-card"
+        >
+          <div className="purchase-card-header">
+            <div className="purchase-icon">
+              <ShoppingCartOutlined />
+            </div>
+            <div className="purchase-info">
+              <Text strong className="purchase-id">발주 #{order.id}</Text>
+              <Text type="secondary" className="purchase-supplier">
+                {order.supplier?.name || '공급처 없음'}
+              </Text>
+            </div>
+            <Tag color={statusMap[order.status].color}>
+              {statusMap[order.status].text}
+            </Tag>
+          </div>
+
+          <div className="purchase-card-body">
+            <div className="purchase-date">
+              <CalendarOutlined style={{ marginRight: 6, fontSize: 12 }} />
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                {new Date(order.createdAt).toLocaleString('ko-KR', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </Text>
+            </div>
+
+            <div className="purchase-items">
+              <Text strong style={{ fontSize: 13, marginBottom: 8, display: 'block' }}>발주 항목:</Text>
+              {order.purchaseOrderItems.map(item => {
+                const itemName = item.product?.name || item.inventory?.name || '알 수 없는 품목';
+                return (
+                  <div key={item.id} className="purchase-item">
+                    <Text>{itemName}</Text>
+                    <Tag color="blue">{item.quantity}개</Tag>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="purchase-card-footer">
+            {order.status === 'PENDING_CONFIRMATION' && (
+              <Button
+                type="primary"
+                icon={<CheckOutlined />}
+                onClick={() => handleConfirm(order.id)}
+                block
+              >
+                발주 확정
+              </Button>
+            )}
+            {order.status === 'ORDERED' && (
+              <Space style={{ width: '100%' }} size="small">
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  onClick={() => handleReceive(order)}
+                  style={{ flex: 1 }}
+                >
+                  배송 받음
+                </Button>
+                <Button
+                  icon={<ClockCircleOutlined />}
+                  onClick={() => handleDelay(order)}
+                  style={{ flex: 1 }}
+                >
+                  지연
+                </Button>
+              </Space>
+            )}
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+
   return (
     <>
-      <Flex 
-        justify="space-between" 
-        align="center" 
+      <Flex
+        justify="space-between"
+        align="center"
         wrap="wrap"
         style={{ marginBottom: isMobile ? '16px' : '24px' }}
         vertical={isMobile}
       >
-        <Title 
-          level={isMobile ? 4 : 3} 
-          style={{ 
+        <Title
+          level={isMobile ? 4 : 3}
+          style={{
             margin: 0,
             fontSize: isMobile ? '20px' : '24px',
             fontWeight: 700
@@ -229,9 +314,9 @@ const PurchaseOrderList: React.FC = () => {
         >
           발주 관리
         </Title>
-        <Button 
-          icon={<RedoOutlined />} 
-          onClick={fetchPurchaseOrders} 
+        <Button
+          icon={<RedoOutlined />}
+          onClick={fetchPurchaseOrders}
           loading={loading}
           block={isMobile}
           style={{ marginTop: isMobile ? '12px' : 0 }}
@@ -239,15 +324,32 @@ const PurchaseOrderList: React.FC = () => {
           새로고침
         </Button>
       </Flex>
-      <Table 
-        columns={columns} 
-        dataSource={purchaseOrders} 
-        loading={loading} 
-        scroll={{ x: 'max-content' }}
-        size={isMobile ? 'small' : 'middle'}
-        pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
-      />
-      <ReceiveOrderModal 
+
+      {isMobile ? (
+        loading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <Text>로딩 중...</Text>
+          </div>
+        ) : purchaseOrders.length === 0 ? (
+          <Card style={{ textAlign: 'center', padding: '40px' }}>
+            <ShoppingCartOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
+            <Text type="secondary">발주 내역이 없습니다.</Text>
+          </Card>
+        ) : (
+          renderMobileCards()
+        )
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={purchaseOrders}
+          loading={loading}
+          scroll={{ x: 'max-content' }}
+          size={isMobile ? 'small' : 'middle'}
+          pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
+        />
+      )}
+
+      <ReceiveOrderModal
         visible={isReceiveModalVisible}
         order={selectedOrder}
         onCancel={handleModalCancel}

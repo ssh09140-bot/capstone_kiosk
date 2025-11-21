@@ -1,34 +1,47 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Button, Popover, Badge, Drawer } from 'antd';
-import { 
-    DashboardOutlined, 
-    UnorderedListOutlined, 
-    UserOutlined,
-    LogoutOutlined,
-    AppstoreOutlined,
-    ShoppingCartOutlined,
-    BellOutlined,
-    ContainerOutlined,
-    TeamOutlined,
-    HistoryOutlined,
-    AreaChartOutlined,
-    MenuOutlined,
+import {
+  Layout,
+  Menu,
+  Button,
+  Popover,
+  Badge,
+  Drawer,
+  Avatar,
+  Typography,
+  Space
+} from 'antd';
+import {
+  DashboardOutlined,
+  UnorderedListOutlined,
+  UserOutlined,
+  LogoutOutlined,
+  AppstoreOutlined,
+  ShoppingCartOutlined,
+  BellOutlined,
+  ContainerOutlined,
+  TeamOutlined,
+  HistoryOutlined,
+  AreaChartOutlined,
+  ShopOutlined
 } from '@ant-design/icons';
 import api from '../api';
 import NotificationPanel from './NotificationPanel';
+import MobileHome from '../pages/MobileHome';
+import MobilePageHeader from './MobilePageHeader';
 import type { Notification } from '@kiosk/shared-types';
 import BottomNav from './BottomNav';
-import MobileProductSubNav from './MobileProductSubNav';
 import { useIsMobile } from '../hooks/useIsMobile';
 import './AppLayout.css';
 
 const { Header, Content, Sider } = Layout;
+const { Text } = Typography;
 
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -50,17 +63,16 @@ const AppLayout: React.FC = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // 1분마다 새로고침
+    const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
   const handleNotificationClick = async (notification: Notification) => {
     try {
       await api.post(`/notifications/${notification.id}/read`);
-      // Optimistic update
       setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
       setUnreadCount(prev => prev - 1);
-      
+
       if (notification.type === 'DELIVERY_PROMPT' || notification.type === 'LOW_STOCK_WARNING') {
         navigate('/purchase-orders');
       }
@@ -71,74 +83,134 @@ const AppLayout: React.FC = () => {
     }
   };
 
-  // Function to determine if MobileProductSubNav should be shown
-  const shouldShowMobileProductSubNav = () => {
-    const isMobile = window.innerWidth <= 767; 
-    const productRelatedPaths = ['/products', '/categories', '/option-groups'];
-    return isMobile && productRelatedPaths.some(path => location.pathname.startsWith(path));
+  const handleMenuClick = (path: string) => {
+    navigate(path);
+    setMobileMenuVisible(false);
   };
 
   const menuItems = [
-    { key: '/', icon: <DashboardOutlined />, label: '대시보드', onClick: () => navigate('/') },
-    { key: '/reports', icon: <AreaChartOutlined />, label: '상세 리포트', onClick: () => navigate('/reports') },
-    { key: '/products', icon: <UnorderedListOutlined />, label: '상품 관리', onClick: () => navigate('/products') },
-    { key: '/categories', icon: <AppstoreOutlined />, label: '카테고리 관리', onClick: () => navigate('/categories') },
-    { key: '/option-groups', icon: <AppstoreOutlined />, label: '옵션 관리', onClick: () => navigate('/option-groups') },
-    { key: '/orders', icon: <UnorderedListOutlined />, label: '주문 내역', onClick: () => navigate('/orders') },
-    { key: '/purchase-orders', icon: <ShoppingCartOutlined />, label: '발주 관리', onClick: () => navigate('/purchase-orders') },
-    { key: '/inventory', icon: <ContainerOutlined />, label: '재고 관리', onClick: () => navigate('/inventory') },
-    { key: '/inventory-logs', icon: <HistoryOutlined />, label: '재고 변동 내역', onClick: () => navigate('/inventory-logs') },
-    { key: '/suppliers', icon: <TeamOutlined />, label: '공급업체 관리', onClick: () => navigate('/suppliers') },
-    { key: '/my-info', icon: <UserOutlined />, label: '내 정보', onClick: () => navigate('/my-info') }
+    {
+      key: 'analysis',
+      label: '분석',
+      type: 'group' as const,
+      children: [
+        { key: '/', icon: <DashboardOutlined />, label: '대시보드', onClick: () => handleMenuClick('/') },
+        { key: '/reports', icon: <AreaChartOutlined />, label: '상세 리포트', onClick: () => handleMenuClick('/reports') },
+      ]
+    },
+    {
+      key: 'products',
+      label: '상품 관리',
+      type: 'group' as const,
+      children: [
+        { key: '/products', icon: <UnorderedListOutlined />, label: '상품 관리', onClick: () => handleMenuClick('/products') },
+        { key: '/categories', icon: <AppstoreOutlined />, label: '카테고리 관리', onClick: () => handleMenuClick('/categories') },
+        { key: '/option-groups', icon: <AppstoreOutlined />, label: '옵션 관리', onClick: () => handleMenuClick('/option-groups') },
+      ]
+    },
+    {
+      key: 'orders',
+      label: '주문 및 재고',
+      type: 'group' as const,
+      children: [
+        { key: '/orders', icon: <UnorderedListOutlined />, label: '주문 내역', onClick: () => handleMenuClick('/orders') },
+        { key: '/purchase-orders', icon: <ShoppingCartOutlined />, label: '발주 관리', onClick: () => handleMenuClick('/purchase-orders') },
+        { key: '/inventory', icon: <ContainerOutlined />, label: '재고 관리', onClick: () => handleMenuClick('/inventory') },
+        { key: '/inventory-logs', icon: <HistoryOutlined />, label: '재고 변동 내역', onClick: () => handleMenuClick('/inventory-logs') },
+        { key: '/suppliers', icon: <TeamOutlined />, label: '공급업체 관리', onClick: () => handleMenuClick('/suppliers') },
+      ]
+    },
+    {
+      key: 'settings',
+      label: '설정',
+      type: 'group' as const,
+      children: [
+        { key: '/my-info', icon: <UserOutlined />, label: '내 정보', onClick: () => handleMenuClick('/my-info') }
+      ]
+    }
   ];
 
   const notificationContent = (
-    <NotificationPanel 
+    <NotificationPanel
       notifications={notifications}
       onNotificationClick={handleNotificationClick}
       loading={loading}
     />
   );
 
+  // Mobile Layout
+  if (isMobile) {
+    const isHomePage = location.pathname === '/';
+
+    if (isHomePage) {
+      return <MobileHome unreadCount={unreadCount} />;
+    }
+
+    return (
+      <div className="mobile-layout">
+        <MobilePageHeader
+          unreadCount={unreadCount}
+          onNotificationClick={() => setPopoverVisible(true)}
+        />
+        <div className="mobile-content">
+          <Outlet />
+        </div>
+
+        {/* Notification Popover for Mobile */}
+        <Popover
+          content={notificationContent}
+          title="알림"
+          trigger="click"
+          open={popoverVisible}
+          onOpenChange={setPopoverVisible}
+          placement="bottomRight"
+        >
+          <div style={{ display: 'none' }} />
+        </Popover>
+
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <Layout style={{ minHeight: '100vh' }}>
       {/* Desktop Sidebar */}
-      <Sider width={220} breakpoint="lg" collapsedWidth="0" className="sider-desktop-only">
-        <div style={{ 
-          height: '48px', 
-          margin: '20px 12px', 
-          color: 'white', 
-          textAlign: 'center', 
-          lineHeight: '48px', 
-          borderRadius: '12px', 
+      <Sider width={240} breakpoint="lg" collapsedWidth="0" className="sider-desktop-only">
+        <div style={{
+          height: '64px',
+          margin: '16px',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '12px',
           background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
-          fontWeight: 700,
-          fontSize: '16px',
-          letterSpacing: '1px',
           backdropFilter: 'blur(10px)'
         }}>
-          ☕ KIOSK ADMIN
+          <Space>
+            <ShopOutlined style={{ fontSize: 24, color: '#fff' }} />
+            <Text strong style={{ color: '#fff', fontSize: 18 }}>KIOSK ADMIN</Text>
+          </Space>
         </div>
-        <Menu 
-          theme="dark" 
-          mode="inline" 
-          items={menuItems} 
+        <Menu
+          theme="dark"
+          mode="inline"
+          items={menuItems}
           selectedKeys={[location.pathname]}
+          style={{ background: 'transparent', borderRight: 0 }}
         />
       </Sider>
 
       {/* Mobile Drawer Menu */}
       <Drawer
         title={
-          <div style={{ 
-            color: 'white',
-            fontSize: '18px',
-            fontWeight: 700,
-            textAlign: 'center'
-          }}>
-            ☕ KIOSK ADMIN
-          </div>
+          <Space>
+            <ShopOutlined style={{ fontSize: 24, color: '#fff' }} />
+            <Text strong style={{ color: '#fff', fontSize: 18 }}>KIOSK ADMIN</Text>
+          </Space>
         }
         placement="left"
         onClose={() => setMobileMenuVisible(false)}
@@ -150,80 +222,81 @@ const AppLayout: React.FC = () => {
         <Menu
           theme="dark"
           mode="inline"
-          items={menuItems.map(item => ({
-            ...item,
-            onClick: () => {
-              item.onClick?.();
-              setMobileMenuVisible(false);
+          items={menuItems.map(item => {
+            if (item.type === 'group') {
+              return {
+                ...item,
+                children: item.children?.map(child => ({
+                  ...child,
+                  onClick: () => {
+                    child.onClick?.();
+                    setMobileMenuVisible(false);
+                  }
+                }))
+              };
             }
-          }))}
+            return {
+              ...item,
+              onClick: () => {
+                (item as any).onClick?.();
+                setMobileMenuVisible(false);
+              }
+            };
+          })}
           selectedKeys={[location.pathname]}
+          style={{ background: 'transparent' }}
         />
       </Drawer>
 
       <Layout>
-        <Header style={{ 
-          padding: isMobile ? '0 16px' : '0 24px', 
-          background: '#fff', 
-          display: 'flex', 
-          justifyContent: isMobile ? 'space-between' : 'flex-end', 
+        <Header style={{
+          padding: '0 24px',
+          background: '#fff',
+          display: 'flex',
+          justifyContent: 'flex-end',
           alignItems: 'center',
-          height: isMobile ? '56px' : '64px',
-          lineHeight: isMobile ? '56px' : '64px',
+          height: '64px',
+          lineHeight: '64px',
           position: 'sticky',
           top: 0,
           zIndex: 100,
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
         }}>
-          {isMobile && (
-            <Button 
-              type="text" 
-              icon={<MenuOutlined />} 
-              onClick={() => setMobileMenuVisible(true)}
-              style={{ fontSize: '20px', color: '#667eea' }}
-            />
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Space size="large">
             <Popover
               content={notificationContent}
               title="알림"
               trigger="click"
               open={popoverVisible}
               onOpenChange={setPopoverVisible}
-              placement={isMobile ? "bottomRight" : "bottomRight"}
+              placement="bottomRight"
             >
               <Badge count={unreadCount} size="small">
-                <Button 
-                  shape="circle" 
-                  icon={<BellOutlined />}
-                  style={isMobile ? { border: 'none', boxShadow: 'none' } : {}}
-                />
+                <Button shape="circle" icon={<BellOutlined />} />
               </Badge>
             </Popover>
-            {!isMobile && (
-              <Button 
-                type="primary" 
-                icon={<LogoutOutlined />} 
-                onClick={() => navigate('/login')} 
-                style={{ marginLeft: 16 }}
+            <Space>
+              <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
+              <Button
+                type="text"
+                icon={<LogoutOutlined />}
+                onClick={() => navigate('/login')}
               >
                 로그아웃
               </Button>
-            )}
-          </div>
+            </Space>
+          </Space>
         </Header>
-        <Content style={{ 
-          margin: isMobile ? '16px 12px' : '24px', 
+        <Content style={{
+          margin: '24px',
           padding: 0,
-          paddingBottom: isMobile ? '80px' : '24px'
         }}>
-          {shouldShowMobileProductSubNav() && <MobileProductSubNav />}
+          {/* MobileProductSubNav is handled in mobile view, but if needed for responsive desktop resizing: */}
           <div style={{ minHeight: 360 }}>
             <Outlet />
           </div>
         </Content>
       </Layout>
-      {isMobile && <BottomNav />}
     </Layout>
   );
 };

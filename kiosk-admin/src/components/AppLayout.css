@@ -6,8 +6,13 @@
   display: flex;
 }
 
-.mobile-only-logout-button {
-  display: none; /* Hidden by default on desktop */
+/* 모바일 전용 요소 - 기본 숨김 */
+.mobile-menu-button {
+  display: none;
+}
+
+.mobile-logo {
+  display: none;
 }
 
 /* Enhanced Sider Styles */
@@ -33,7 +38,7 @@
   background: transparent !important;
 }
 
-.ant-layout-content > div {
+.ant-layout-content>div {
   background: white;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -50,11 +55,18 @@
     display: none !important;
   }
 
-  .mobile-only-logout-button {
+  .mobile-menu-button {
     display: block;
   }
 
-  .ant-layout-content > div {
+  .mobile-logo {
+    display: block;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .ant-layout-content>div {
     padding: 16px;
     border-radius: 12px;
     margin: 0;
@@ -96,4 +108,40 @@
     height: 44px;
     padding: 0 20px;
   }
+}
+
+/* 드로어 애니메이션 */
+.mobile-drawer .ant-drawer-body {
+  padding: 0;
+}
+
+/* Mobile layout styles */
+.mobile-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+}
+
+.mobile-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* Page transition animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mobile-content>* {
+  animation: fadeIn 0.3s ease-out;
 }

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Typography, Flex, message, Tag, type TableProps } from 'antd';
+import { Table, Button, Space, Typography, Flex, message, Tag, Card, Progress, type TableProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { getInventory, deleteInventoryItem, type Inventory } from '../api';
-import { PlusOutlined, RedoOutlined } from '@ant-design/icons';
+import { PlusOutlined, RedoOutlined, EditOutlined, DeleteOutlined, InboxOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useIsMobile } from '../hooks/useIsMobile';
+import './Inventory.css';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const InventoryPage: React.FC = () => {
     const isMobile = useIsMobile();
@@ -43,29 +44,37 @@ const InventoryPage: React.FC = () => {
         }
     };
 
+    const getStockStatus = (quantity: number, minThreshold?: number | null) => {
+        if (!minThreshold) return { color: 'default', text: '정상', percent: 100 };
+        const percent = (quantity / minThreshold) * 100;
+        if (quantity <= minThreshold * 0.5) return { color: 'red', text: '부족', percent };
+        if (quantity <= minThreshold) return { color: 'orange', text: '주의', percent };
+        return { color: 'green', text: '충분', percent: Math.min(percent, 100) };
+    };
+
     const columns: TableProps<Inventory & { key: string }>['columns'] = [
-        { 
-            title: '품목명', 
-            dataIndex: 'name', 
+        {
+            title: '품목명',
+            dataIndex: 'name',
             key: 'name',
             width: isMobile ? 120 : 150,
             fixed: isMobile ? 'left' : undefined,
         },
-        { 
-            title: '현재 수량', 
-            dataIndex: 'quantity', 
+        {
+            title: '현재 수량',
+            dataIndex: 'quantity',
             key: 'quantity',
             width: isMobile ? 80 : 100,
         },
-        { 
-            title: '단위', 
-            dataIndex: 'unit', 
+        {
+            title: '단위',
+            dataIndex: 'unit',
             key: 'unit',
             width: isMobile ? 60 : 80,
         },
-        { 
-            title: '품목 유형', 
-            dataIndex: 'itemType', 
+        {
+            title: '품목 유형',
+            dataIndex: 'itemType',
             key: 'itemType',
             width: isMobile ? 100 : 120,
             ellipsis: true,
@@ -102,15 +111,15 @@ const InventoryPage: React.FC = () => {
             width: isMobile ? 100 : 140,
             render: (_: any, record: Inventory) => (
                 <Space size="small" direction={isMobile ? 'vertical' : 'horizontal'}>
-                    <Button 
+                    <Button
                         onClick={() => navigate(`/inventory/${record.id}`)}
                         size={isMobile ? 'small' : 'middle'}
                         block={isMobile}
                     >
                         수정
                     </Button>
-                    <Button 
-                        danger 
+                    <Button
+                        danger
                         onClick={() => handleDelete(record.id)}
                         size={isMobile ? 'small' : 'middle'}
                         block={isMobile}
@@ -122,18 +131,106 @@ const InventoryPage: React.FC = () => {
         },
     ];
 
+    // Mobile Card View
+    const renderMobileCards = () => (
+        <div className="inventory-cards-container">
+            {inventory.map(item => {
+                const stockStatus = getStockStatus(item.quantity, item.minStockThreshold);
+                return (
+                    <Card
+                        key={item.id}
+                        className="inventory-card"
+                        hoverable
+                        onClick={() => navigate(`/inventory/${item.id}`)}
+                    >
+                        <div className="inventory-card-header">
+                            <div className="inventory-icon">
+                                <InboxOutlined />
+                            </div>
+                            <div className="inventory-info">
+                                <Text strong className="inventory-name">{item.name}</Text>
+                                <Tag color="default" style={{ marginTop: 4 }}>{item.itemType}</Tag>
+                            </div>
+                        </div>
+
+                        <div className="inventory-card-body">
+                            <div className="inventory-quantity-section">
+                                <div className="quantity-display">
+                                    <Text type="secondary" style={{ fontSize: 12 }}>현재 재고</Text>
+                                    <Text strong style={{ fontSize: 24, color: '#1677ff' }}>
+                                        {item.quantity}
+                                    </Text>
+                                    <Text type="secondary">{item.unit}</Text>
+                                </div>
+                                {item.minStockThreshold && (
+                                    <div className="stock-status">
+                                        <Progress
+                                            percent={stockStatus.percent}
+                                            strokeColor={stockStatus.color === 'red' ? '#ff4d4f' : stockStatus.color === 'orange' ? '#faad14' : '#52c41a'}
+                                            showInfo={false}
+                                            size="small"
+                                        />
+                                        <Tag color={stockStatus.color} style={{ marginTop: 4 }}>
+                                            {stockStatus.text}
+                                        </Tag>
+                                    </div>
+                                )}
+                            </div>
+
+                            {item.autoOrderEnabled && (
+                                <div className="auto-order-badge">
+                                    <ThunderboltOutlined style={{ marginRight: 4 }} />
+                                    자동 발주 활성화
+                                    {item.minStockThreshold && (
+                                        <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>
+                                            기준: {item.minStockThreshold}{item.unit} / 수량: {item.orderQuantity}
+                                        </Text>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="inventory-card-footer">
+                            <Button
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/inventory/${item.id}`);
+                                }}
+                            >
+                                수정
+                            </Button>
+                            <Button
+                                size="small"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(item.id);
+                                }}
+                            >
+                                삭제
+                            </Button>
+                        </div>
+                    </Card>
+                );
+            })}
+        </div>
+    );
+
     return (
         <>
-            <Flex 
-                justify="space-between" 
-                align="center" 
-                wrap="wrap" 
+            <Flex
+                justify="space-between"
+                align="center"
+                wrap="wrap"
                 style={{ marginBottom: isMobile ? '16px' : '24px' }}
                 vertical={isMobile}
             >
-                <Title 
-                    level={isMobile ? 4 : 3} 
-                    style={{ 
+                <Title
+                    level={isMobile ? 4 : 3}
+                    style={{
                         margin: 0,
                         fontSize: isMobile ? '20px' : '24px',
                         fontWeight: 700
@@ -141,24 +238,24 @@ const InventoryPage: React.FC = () => {
                 >
                     재고 관리
                 </Title>
-                <Space 
+                <Space
                     direction={isMobile ? 'vertical' : 'horizontal'}
-                    style={{ 
+                    style={{
                         marginTop: isMobile ? '12px' : '8px',
                         width: isMobile ? '100%' : 'auto'
                     }}
                 >
-                    <Button 
-                        icon={<RedoOutlined />} 
-                        onClick={fetchInventory} 
+                    <Button
+                        icon={<RedoOutlined />}
+                        onClick={fetchInventory}
                         loading={loading}
                         block={isMobile}
                     >
                         새로고침
                     </Button>
-                    <Button 
-                        type="primary" 
-                        icon={<PlusOutlined />} 
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
                         onClick={() => navigate('/inventory/new')}
                         block={isMobile}
                         size={isMobile ? 'large' : 'middle'}
@@ -167,14 +264,48 @@ const InventoryPage: React.FC = () => {
                     </Button>
                 </Space>
             </Flex>
-            <Table 
-                columns={columns} 
-                dataSource={inventory} 
-                loading={loading} 
-                scroll={{ x: 'max-content' }}
-                size={isMobile ? 'small' : 'middle'}
-                pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
-            />
+
+            {isMobile ? (
+                <>
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '40px' }}>
+                            <Text>로딩 중...</Text>
+                        </div>
+                    ) : inventory.length === 0 ? (
+                        <Card style={{ textAlign: 'center', padding: '40px' }}>
+                            <InboxOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
+                            <Text type="secondary">재고 품목이 없습니다.</Text>
+                        </Card>
+                    ) : (
+                        renderMobileCards()
+                    )}
+                    {/* Floating Action Button */}
+                    <Button
+                        type="primary"
+                        shape="circle"
+                        icon={<PlusOutlined />}
+                        size="large"
+                        className="mobile-fab"
+                        onClick={() => navigate('/inventory/new')}
+                        style={{
+                            position: 'fixed',
+                            bottom: '80px',
+                            right: '24px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                            zIndex: 1000
+                        }}
+                    />
+                </>
+            ) : (
+                <Table
+                    columns={columns}
+                    dataSource={inventory}
+                    loading={loading}
+                    scroll={{ x: 'max-content' }}
+                    size={isMobile ? 'small' : 'middle'}
+                    pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
+                />
+            )}
         </>
     );
 };

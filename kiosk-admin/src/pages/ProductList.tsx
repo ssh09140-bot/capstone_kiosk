@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Typography, Flex, message } from 'antd';
+import { Table, Button, Space, Typography, Flex, message, Card, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { PlusOutlined, RedoOutlined } from '@ant-design/icons';
+import { PlusOutlined, RedoOutlined, EditOutlined, DeleteOutlined, ShoppingOutlined } from '@ant-design/icons';
 import { useIsMobile } from '../hooks/useIsMobile';
+import './ProductList.css';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 interface Product {
     key: string;
@@ -67,18 +68,70 @@ const ProductList: React.FC = () => {
         },
     ];
 
+    // Mobile Card View
+    const renderMobileCards = () => (
+        <div className="product-cards-container">
+            {products.map(product => (
+                <Card
+                    key={product.id}
+                    className="product-card"
+                    hoverable
+                    onClick={() => navigate(`/products/${product.id}`)}
+                >
+                    <div className="product-card-header">
+                        <div className="product-icon">
+                            <ShoppingOutlined />
+                        </div>
+                        <div className="product-info">
+                            <Text strong className="product-name">{product.name}</Text>
+                            <Text className="product-price">{product.price.toLocaleString()}원</Text>
+                        </div>
+                    </div>
+                    <div className="product-card-footer">
+                        <Tag color={product.availableStock === 999999 ? 'default' : (product.availableStock > 10 ? 'success' : 'warning')}>
+                            {product.availableStock === 999999 ? '재고 미관리' : `재고 ${product.availableStock}개`}
+                        </Tag>
+                        <Space size="small">
+                            <Button
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/products/${product.id}`);
+                                }}
+                            >
+                                수정
+                            </Button>
+                            <Button
+                                size="small"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(product.id);
+                                }}
+                            >
+                                삭제
+                            </Button>
+                        </Space>
+                    </div>
+                </Card>
+            ))}
+        </div>
+    );
+
     return (
         <>
-            <Flex 
-                justify="space-between" 
-                align="center" 
-                wrap="wrap" 
+            <Flex
+                justify="space-between"
+                align="center"
+                wrap="wrap"
                 style={{ marginBottom: isMobile ? '16px' : '24px' }}
                 vertical={isMobile}
             >
-                <Title 
-                    level={isMobile ? 4 : 3} 
-                    style={{ 
+                <Title
+                    level={isMobile ? 4 : 3}
+                    style={{
                         margin: 0,
                         fontSize: isMobile ? '20px' : '24px',
                         fontWeight: 700
@@ -86,24 +139,24 @@ const ProductList: React.FC = () => {
                 >
                     상품 목록
                 </Title>
-                <Space 
+                <Space
                     direction={isMobile ? 'vertical' : 'horizontal'}
-                    style={{ 
+                    style={{
                         marginTop: isMobile ? '12px' : '8px',
                         width: isMobile ? '100%' : 'auto'
                     }}
                 >
-                    <Button 
-                        icon={<RedoOutlined />} 
-                        onClick={fetchProducts} 
+                    <Button
+                        icon={<RedoOutlined />}
+                        onClick={fetchProducts}
                         loading={loading}
                         block={isMobile}
                     >
                         새로고침
                     </Button>
-                    <Button 
-                        type="primary" 
-                        icon={<PlusOutlined />} 
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
                         onClick={() => navigate('/products/new')}
                         block={isMobile}
                         size={isMobile ? 'large' : 'middle'}
@@ -112,14 +165,43 @@ const ProductList: React.FC = () => {
                     </Button>
                 </Space>
             </Flex>
-            <Table 
-                columns={columns} 
-                dataSource={products} 
-                loading={loading} 
-                scroll={{ x: 'max-content' }}
-                size={isMobile ? 'small' : 'middle'}
-                pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
-            />
+
+            {isMobile ? (
+                <>
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '40px' }}>
+                            <Text>로딩 중...</Text>
+                        </div>
+                    ) : (
+                        renderMobileCards()
+                    )}
+                    {/* Floating Action Button */}
+                    <Button
+                        type="primary"
+                        shape="circle"
+                        icon={<PlusOutlined />}
+                        size="large"
+                        className="mobile-fab"
+                        onClick={() => navigate('/products/new')}
+                        style={{
+                            position: 'fixed',
+                            bottom: '80px',
+                            right: '24px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                            zIndex: 1000
+                        }}
+                    />
+                </>
+            ) : (
+                <Table
+                    columns={columns}
+                    dataSource={products}
+                    loading={loading}
+                    scroll={{ x: 'max-content' }}
+                    size={isMobile ? 'small' : 'middle'}
+                    pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
+                />
+            )}
         </>
     );
 };

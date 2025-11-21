@@ -23,23 +23,20 @@ const Dashboard: React.FC = () => {
         const [salesRes, topProdRes, profitRes] = await Promise.all([
           api.get('/sales/summary'),
           api.get('/analytics/top-products'),
-          api.get('/analytics/profit-summary'), // Fetch profit data
+          api.get('/analytics/profit-summary'),
         ]);
         setCurrentMonthSales(salesRes.data.currentMonthSales);
         setMonthlySales(salesRes.data.monthlySalesData);
         setTopProducts(topProdRes.data);
-        setProfitSummary(profitRes.data.overallSummary); // Set profit data
+        setProfitSummary(profitRes.data.overallSummary);
       } catch (error) {
-        // 첫 로딩이 아닌 경우, 백그라운드 에러는 조용히 처리할 수 있도록 console.error 사용
         console.error("Failed to refresh dashboard data:", error);
       }
     };
 
-    fetchData(); // 초기 데이터 로딩
-
-    const intervalId = setInterval(fetchData, 30000); // 30초마다 데이터 새로고침
-
-    return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 정리
+    fetchData();
+    const intervalId = setInterval(fetchData, 30000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const chartConfig = {
@@ -68,6 +65,8 @@ const Dashboard: React.FC = () => {
           fill: '#595959',
           fontSize: 12,
         },
+        autoHide: true,
+        autoRotate: false,
       },
       line: {
         style: {
@@ -134,8 +133,8 @@ const Dashboard: React.FC = () => {
   return (
     <div>
       <div style={{ marginBottom: '32px' }}>
-        <Title level={2} style={{ 
-          margin: 0, 
+        <Title level={2} style={{
+          margin: 0,
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -149,7 +148,7 @@ const Dashboard: React.FC = () => {
           매장 운영 현황을 한눈에 확인하세요
         </Text>
       </div>
-      
+
       <Row gutter={[24, 24]}>
         <Col span={24}>
           <RecommendationCard />
@@ -157,57 +156,57 @@ const Dashboard: React.FC = () => {
       </Row>
 
       {profitSummary && (
-        <Card 
-          title={<span style={{ color: 'white' }}>💰 최근 30일 수익 요약</span>} 
+        <Card
+          title={<span style={{ color: 'white' }}>💰 최근 30일 수익 요약</span>}
           style={{ marginTop: isMobile ? 16 : 24 }}
           headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
         >
-            <Row gutter={[16, 16]}>
-                <Col xs={24} sm={8}>
-                    <Statistic 
-                      title="총 매출" 
-                      value={profitSummary.totalRevenue} 
-                      suffix="원"
-                      valueStyle={{ 
-                        color: '#1890ff', 
-                        fontSize: isMobile ? '22px' : '28px',
-                        fontWeight: 700
-                      }}
-                    />
-                </Col>
-                <Col xs={24} sm={8}>
-                    <Statistic 
-                      title="총 원가" 
-                      value={profitSummary.totalCost} 
-                      suffix="원"
-                      valueStyle={{ 
-                        color: '#fa8c16', 
-                        fontSize: isMobile ? '22px' : '28px',
-                        fontWeight: 700
-                      }}
-                    />
-                </Col>
-                <Col xs={24} sm={8}>
-                    <Statistic 
-                      title="총 이익" 
-                      value={profitSummary.totalProfit} 
-                      valueStyle={{ 
-                        color: '#52c41a', 
-                        fontSize: isMobile ? '22px' : '28px',
-                        fontWeight: 700
-                      }} 
-                      suffix="원"
-                      prefix={<ArrowUpOutlined />}
-                    />
-                </Col>
-            </Row>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={8}>
+              <Statistic
+                title="총 매출"
+                value={profitSummary.totalRevenue}
+                suffix="원"
+                valueStyle={{
+                  color: '#1890ff',
+                  fontSize: isMobile ? '22px' : '28px',
+                  fontWeight: 700
+                }}
+              />
+            </Col>
+            <Col xs={24} sm={8}>
+              <Statistic
+                title="총 원가"
+                value={profitSummary.totalCost}
+                suffix="원"
+                valueStyle={{
+                  color: '#fa8c16',
+                  fontSize: isMobile ? '22px' : '28px',
+                  fontWeight: 700
+                }}
+              />
+            </Col>
+            <Col xs={24} sm={8}>
+              <Statistic
+                title="총 이익"
+                value={profitSummary.totalProfit}
+                valueStyle={{
+                  color: '#52c41a',
+                  fontSize: isMobile ? '22px' : '28px',
+                  fontWeight: 700
+                }}
+                suffix="원"
+                prefix={<ArrowUpOutlined />}
+              />
+            </Col>
+          </Row>
         </Card>
       )}
 
       <Row gutter={[isMobile ? 16 : 24, isMobile ? 16 : 24]} style={{ marginTop: isMobile ? 16 : 24 }}>
         {/* 월별 매출 현황 카드 */}
         <Col xs={24} lg={12}>
-          <Card 
+          <Card
             title={<span style={{ color: 'white', fontSize: isMobile ? '14px' : '16px' }}>📊 월별 매출 현황</span>}
             headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
           >
@@ -215,7 +214,7 @@ const Dashboard: React.FC = () => {
               title="이번 달 매출액"
               value={currentMonthSales}
               precision={0}
-              valueStyle={{ 
+              valueStyle={{
                 color: '#52c41a',
                 fontSize: isMobile ? '24px' : '32px',
                 fontWeight: 700,
@@ -232,33 +231,33 @@ const Dashboard: React.FC = () => {
 
         {/* AI 월간 판매 분석 카드 */}
         <Col xs={24} lg={12}>
-          <Card 
+          <Card
             title={<span style={{ color: 'white', fontSize: isMobile ? '14px' : '16px' }}>🤖 AI 월간 판매 분석</span>}
             headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
           >
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              height: '100%', 
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
               minHeight: isMobile ? 240 : 328,
               padding: isMobile ? '24px 16px' : '40px 20px'
             }}>
               <RobotOutlined style={{ fontSize: isMobile ? '48px' : '64px', color: '#667eea', marginBottom: isMobile ? '16px' : '24px' }} />
-              <Text style={{ 
-                marginBottom: isMobile ? 16 : 24, 
+              <Text style={{
+                marginBottom: isMobile ? 16 : 24,
                 textAlign: 'center',
                 fontSize: isMobile ? '14px' : '16px',
                 color: '#595959',
                 lineHeight: '1.6'
               }}>
-                지난 한 달간의 판매 데이터를 기반으로<br/>
+                지난 한 달간의 판매 데이터를 기반으로<br />
                 AI가 메뉴 개선 방안을 제안합니다.
               </Text>
-              <Button 
-                type="primary" 
-                icon={<RobotOutlined />} 
+              <Button
+                type="primary"
+                icon={<RobotOutlined />}
                 onClick={() => setAnalysisModalOpen(true)}
                 size={isMobile ? 'middle' : 'large'}
                 style={{
@@ -276,14 +275,14 @@ const Dashboard: React.FC = () => {
 
         {/* 인기 상품 TOP 5 카드 */}
         <Col xs={24} lg={12}>
-          <Card 
+          <Card
             title={<span style={{ color: 'white' }}>🏆 인기 상품 TOP 5</span>}
             headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
           >
             <List
               dataSource={topProducts}
               renderItem={(item, index) => (
-                <List.Item style={{ 
+                <List.Item style={{
                   padding: '16px',
                   borderRadius: '8px',
                   marginBottom: '8px',
@@ -291,15 +290,15 @@ const Dashboard: React.FC = () => {
                   border: index === 0 ? '2px solid #667eea' : '1px solid #f0f0f0'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    <span style={{ 
+                    <span style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       width: '32px',
                       height: '32px',
                       borderRadius: '50%',
-                      background: index === 0 
-                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                      background: index === 0
+                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                         : '#f0f0f0',
                       color: index === 0 ? 'white' : '#595959',
                       fontWeight: 700,
@@ -318,9 +317,9 @@ const Dashboard: React.FC = () => {
         </Col>
       </Row>
 
-      <SalesAnalysisModal 
-        isOpen={isAnalysisModalOpen} 
-        onClose={() => setAnalysisModalOpen(false)} 
+      <SalesAnalysisModal
+        isOpen={isAnalysisModalOpen}
+        onClose={() => setAnalysisModalOpen(false)}
       />
     </div>
   );

@@ -4,17 +4,26 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
+  color: #1f1f1f;
+  line-height: 1.5;
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* Smooth transitions for all interactive elements */
+a,
+button,
+.ant-btn,
+.ant-menu-item,
+.ant-card {
+  transition: all 0.2s ease-in-out;
 }
 
 /* Custom scrollbar */

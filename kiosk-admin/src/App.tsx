@@ -1,5 +1,5 @@
-import CategoryList from './pages/CategoryList'; // CategoryList import 추가
-import OrderList from './pages/OrderList'; // OrderList import 추가
+import CategoryList from './pages/CategoryList';
+import OrderList from './pages/OrderList';
 import { Routes, Route } from 'react-router-dom';
 import ProductList from './pages/ProductList';
 import ProductForm from './pages/ProductForm';
@@ -8,15 +8,14 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import MyInfo from './pages/MyInfo';
 import AppLayout from './components/AppLayout';
-import OptionGroupList from './pages/OptionGroupList'; // 옵션 관리 경로 추가
-import PurchaseOrderList from './pages/PurchaseOrderList'; // 구매 주문 목록 import 추가
-import InventoryPage from './pages/Inventory'; // InventoryPage import 추가
-import InventoryForm from './pages/InventoryForm'; // InventoryForm import 추가
-import SupplierList from './pages/SupplierList'; // SupplierList import 추가
-import SupplierForm from './pages/SupplierForm'; // SupplierForm import 추가
-import InventoryLogList from './pages/InventoryLogList'; // InventoryLogList import 추가
-import Reports from './pages/Reports'; // Reports import 추가
-//import AutoOrder from './pages/AutoOrder'; // 자동 발주 페이지 import 추가
+import OptionGroupList from './pages/OptionGroupList';
+import PurchaseOrderList from './pages/PurchaseOrderList';
+import InventoryPage from './pages/Inventory';
+import InventoryForm from './pages/InventoryForm';
+import SupplierList from './pages/SupplierList';
+import SupplierForm from './pages/SupplierForm';
+import InventoryLogList from './pages/InventoryLogList';
+import Reports from './pages/Reports';
 
 function App() {
   return (
@@ -26,15 +25,16 @@ function App() {
 
       <Route path="/" element={<AppLayout />}>
         <Route index element={<Dashboard />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="reports" element={<Reports />} />
         <Route path="products" element={<ProductList />} />
         <Route path="products/new" element={<ProductForm />} />
         <Route path="products/:id" element={<ProductForm />} />
-        <Route path="categories" element={<CategoryList />} /> {/* 카테고리 경로 추가 */}
-        <Route path="orders" element={<OrderList />} /> {/* 주문 내역 경로 추가 */}
-        <Route path="option-groups" element={<OptionGroupList />} /> {/* 옵션 관리 경로 추가 */}
-        <Route path="purchase-orders" element={<PurchaseOrderList />} /> {/* 구매 주문 목록 경로 추가 */}
-        <Route path="inventory" element={<InventoryPage />} /> {/* 재고 관리 경로 추가 */}
+        <Route path="categories" element={<CategoryList />} />
+        <Route path="orders" element={<OrderList />} />
+        <Route path="option-groups" element={<OptionGroupList />} />
+        <Route path="purchase-orders" element={<PurchaseOrderList />} />
+        <Route path="inventory" element={<InventoryPage />} />
         <Route path="inventory/new" element={<InventoryForm />} />
         <Route path="inventory/:id" element={<InventoryForm />} />
         <Route path="inventory-logs" element={<InventoryLogList />} />

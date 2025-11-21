@@ -1,0 +1,154 @@
+.reports-container {
+    position: relative;
+}
+
+/* Loading State */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+}
+
+/* Summary Cards */
+.summary-cards {
+    margin-bottom: 16px;
+}
+
+.stat-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.stat-card .ant-statistic-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.stat-card .ant-statistic-content {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+/* Chart Cards */
+.chart-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.chart-card .ant-card-head {
+    border-bottom: 2px solid #f0f0f0;
+    font-weight: 600;
+}
+
+.chart-card .ant-card-body {
+    padding: 20px;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .reports-container {
+        padding-bottom: 20px;
+    }
+
+    /* Date Picker Full Width */
+    .ant-picker-range {
+        width: 100% !important;
+    }
+
+    /* Stat Cards */
+    .stat-card .ant-statistic-content {
+        font-size: 20px;
+    }
+
+    .stat-card .ant-card-body {
+        padding: 16px;
+    }
+
+    /* Chart Cards */
+    .chart-card .ant-card-head {
+        padding: 12px 16px;
+        font-size: 15px;
+    }
+
+    .chart-card .ant-card-body {
+        padding: 16px;
+    }
+
+    /* Chart Container */
+    .chart-card canvas {
+        max-width: 100%;
+        height: auto !important;
+    }
+
+    /* Reduce chart margins on mobile */
+    .chart-card .ant-card-body>div {
+        margin: 0 !important;
+    }
+
+    /* Summary Cards Animation */
+    .summary-cards .ant-col {
+        animation: fadeInUp 0.4s ease-out;
+    }
+
+    .summary-cards .ant-col:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .summary-cards .ant-col:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .summary-cards .ant-col:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+}
+
+/* Animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Desktop Enhancements */
+@media (min-width: 769px) {
+    .stat-card .ant-statistic-content {
+        font-size: 28px;
+    }
+
+    .chart-card .ant-card-body {
+        padding: 24px;
+    }
+}
+
+/* Chart Color Adjustments */
+.chart-card .g2-tooltip {
+    background: rgba(0, 0, 0, 0.75) !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+}
+
+.chart-card .g2-tooltip-title {
+    color: #fff !important;
+    font-weight: 600 !important;
+}
+
+.chart-card .g2-tooltip-list-item {
+    color: #fff !important;
+}

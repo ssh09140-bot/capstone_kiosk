@@ -6,6 +6,7 @@ import { getAnalyticsReport, type ReportResponse } from '../api';
 import { useIsMobile } from '../hooks/useIsMobile';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
+import './Reports.css';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -45,7 +46,6 @@ const Reports: React.FC = () => {
     setDateRange(dates);
   };
 
-  // --- Data processing for Sales by Hour Chart ---
   const processedSalesByHour = Array.from({ length: 24 }, (_, i) => {
     const hourData = (data?.salesByHour || []).find(d => d.hour === i);
     return {
@@ -374,8 +374,8 @@ const Reports: React.FC = () => {
   return (
     <div>
       <div style={{ marginBottom: isMobile ? '20px' : '32px' }}>
-        <Title level={2} style={{ 
-          margin: 0, 
+        <Title level={2} style={{
+          margin: 0,
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -391,8 +391,8 @@ const Reports: React.FC = () => {
       </div>
 
       <Flex justify="flex-end" align="center" wrap="wrap" style={{ marginBottom: isMobile ? '16px' : '24px' }}>
-        <RangePicker 
-          value={dateRange} 
+        <RangePicker
+          value={dateRange}
           onChange={onRangeChange}
           style={{ borderRadius: '8px', width: isMobile ? '100%' : 'auto' }}
           size={isMobile ? 'middle' : 'large'}
@@ -400,12 +400,15 @@ const Reports: React.FC = () => {
       </Flex>
 
       {loading ? (
-        <Spin size="large" style={{ display: 'block', marginTop: '50px' }} />
+        <div className="loading-container">
+          <Spin size="large" />
+          <Text type="secondary" style={{ marginTop: 16 }}>데이터 분석 중...</Text>
+        </div>
       ) : data ? (
         <>
           <Row gutter={[isMobile ? 16 : 24, isMobile ? 16 : 24]}>
             <Col xs={24} sm={8}>
-              <Card 
+              <Card
                 title={<span style={{ color: 'white', fontSize: isMobile ? '14px' : '16px' }}>💰 총 매출</span>}
                 headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
               >
@@ -419,7 +422,7 @@ const Reports: React.FC = () => {
               </Card>
             </Col>
             <Col xs={24} sm={8}>
-              <Card 
+              <Card
                 title={<span style={{ color: 'white', fontSize: isMobile ? '14px' : '16px' }}>🛒 총 주문 수</span>}
                 headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
               >
@@ -433,7 +436,7 @@ const Reports: React.FC = () => {
               </Card>
             </Col>
             <Col xs={24} sm={8}>
-              <Card 
+              <Card
                 title={<span style={{ color: 'white', fontSize: isMobile ? '14px' : '16px' }}>📈 평균 주문 금액</span>}
                 headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
               >
@@ -447,8 +450,8 @@ const Reports: React.FC = () => {
               </Card>
             </Col>
           </Row>
-          
-          <Card 
+
+          <Card
             title={<span style={{ color: 'white', fontSize: isMobile ? '14px' : '16px' }}>📊 매출 추이</span>}
             headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
             style={{ marginTop: isMobile ? 16 : 24 }}
@@ -458,7 +461,7 @@ const Reports: React.FC = () => {
 
           <Row gutter={[isMobile ? 16 : 24, isMobile ? 16 : 24]} style={{ marginTop: isMobile ? 16 : 24 }}>
             <Col xs={24} lg={12}>
-              <Card 
+              <Card
                 title={<span style={{ color: 'white', fontSize: isMobile ? '14px' : '16px' }}>🏆 인기 상품 Top 5</span>}
                 headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
               >
@@ -466,7 +469,7 @@ const Reports: React.FC = () => {
               </Card>
             </Col>
             <Col xs={24} lg={12}>
-              <Card 
+              <Card
                 title={<span style={{ color: 'white', fontSize: isMobile ? '14px' : '16px' }}>⏰ 시간대별 매출 분석</span>}
                 headStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
               >
