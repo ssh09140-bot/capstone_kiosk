@@ -89,7 +89,7 @@ const MobileHome: React.FC<MobileHomeProps> = ({ unreadCount }) => {
         <div className="mobile-home">
             <div className="mobile-home-header">
                 <Title level={2} className="welcome-title">
-                    안녕하세요! 👋
+                    안녕하세요 ! 👋
                 </Title>
                 <Text className="welcome-subtitle">
                     오늘도 좋은 하루 되세요

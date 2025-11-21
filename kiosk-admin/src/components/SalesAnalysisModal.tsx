@@ -27,7 +27,8 @@ const SalesAnalysisModal: React.FC<SalesAnalysisModalProps> = ({ isOpen, onClose
         try {
           const response = await api.get('/analytics/monthly-summary');
           setAnalysis(response.data);
-                   } catch (err: any) {          if (err.response && err.response.status === 404) {
+        } catch (err: any) {
+          if (err.response && err.response.status === 404) {
             setError(err.response.data.message || '분석을 위한 데이터가 충분하지 않습니다.');
           } else {
             setError('판매 분석을 가져오는 데 실패했습니다.');
@@ -50,7 +51,18 @@ const SalesAnalysisModal: React.FC<SalesAnalysisModalProps> = ({ isOpen, onClose
       <div className="modal-content">
         <button className="modal-close-button" onClick={onClose}>&times;</button>
         <h2>월간 판매 분석 리포트</h2>
-        {loading && <p>AI가 지난 한 달간의 데이터를 분석 중입니다...</p>}
+        {loading && (
+          <div className="loading-container">
+            <div className="loading-icon">🤖</div>
+            <p className="loading-text">
+              AI가 사장님을 위한<br />
+              <strong>맞춤 분석 리포트</strong>를 작성 중이에요!
+            </p>
+            <div className="loading-bar-container">
+              <div className="loading-bar"></div>
+            </div>
+          </div>
+        )}
         {error && <p className="error-message">오류: {error}</p>}
         {analysis && (
           <div className="analysis-results">
