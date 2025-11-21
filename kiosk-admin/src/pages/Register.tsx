@@ -1,8 +1,9 @@
 import React from 'react';
-import { Form, Input, Button, Card, Typography, message } from 'antd';
+import { Form, Input, Button, Typography, message } from 'antd';
 import { MailOutlined, LockOutlined, ShopOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import './Auth.css';
 
 const { Title } = Typography;
 
@@ -32,10 +33,15 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f0f2f5' }}>
-      <Card style={{ maxWidth: '600px', width: '90%' }}>
-        <Title level={2} style={{ textAlign: 'center', marginBottom: '24px' }}>관리자 회원가입</Title>
-        <Form name="register" onFinish={onFinish}>
+    <div className="auth-container">
+      <div className="auth-card">
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✨</div>
+          <Title level={2} className="auth-title">OPTIMA | ORDER</Title>
+          <p className="auth-subtitle">지금 바로 최적의 재고관리를 시작해보세요</p>
+        </div>
+
+        <Form name="register" onFinish={onFinish} layout="vertical" size="large">
           <Form.Item name="email" rules={[{ required: true, message: '이메일을 입력해주세요!', type: 'email' }]}>
             <Input prefix={<MailOutlined />} placeholder="이메일 (로그인 ID)" />
           </Form.Item>
@@ -63,17 +69,17 @@ const Register: React.FC = () => {
             <Input prefix={<ShopOutlined />} placeholder="가게 이름" />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" style={{ width: '100%' }}>
+            <Button type="primary" htmlType="submit" className="auth-button">
               회원가입
             </Button>
           </Form.Item>
           <Form.Item style={{ textAlign: 'center', marginBottom: 0 }}>
-             <Button type="link" onClick={() => navigate('/login')}>
-                이미 계정이 있으신가요? 로그인
-             </Button>
+            <Button type="link" onClick={() => navigate('/login')} className="auth-link-button">
+              이미 계정이 있으신가요? <span style={{ fontWeight: 'bold' }}>로그인</span>
+            </Button>
           </Form.Item>
         </Form>
-      </Card>
+      </div>
     </div>
   );
 };
