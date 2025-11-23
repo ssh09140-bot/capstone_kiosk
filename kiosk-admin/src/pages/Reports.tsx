@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Typography, message, DatePicker, Spin, Flex } from 'antd';
 import { LineChartOutlined, ShoppingCartOutlined, DollarCircleOutlined } from '@ant-design/icons';
-import { Line, Bar, Area } from '@ant-design/charts';
+import { Line, Column, Area } from '@ant-design/charts';
 import { getAnalyticsReport, type ReportResponse } from '../api';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -85,24 +86,38 @@ const Reports: React.FC = () => {
 
   const topProductsConfig = {
     data: data?.topProducts || [],
-    xField: 'quantity',
-    yField: 'name',
-    isStack: false,
+    xField: 'name',
+    yField: 'quantity',
     height: isMobile ? 250 : 300,
     xAxis: {
       label: {
-        formatter: (v: string) => `${v}개`,
+        autoHide: true,
+        autoRotate: false,
       },
     },
-    yAxis: {
-      title: { text: '상품명' }
+    meta: {
+      name: { alias: '상품명' },
+      quantity: { alias: '판매량' },
     },
-    tooltip: {
-      formatter: (datum: any) => ({
-        name: '판매량',
-        value: `${datum.quantity}개`,
-      }),
+    color: '#1677ff',
+  };
+
+  const bottomProductsConfig = {
+    data: data?.bottomProducts || [],
+    xField: 'name',
+    yField: 'quantity',
+    height: isMobile ? 250 : 300,
+    xAxis: {
+      label: {
+        autoHide: true,
+        autoRotate: false,
+      },
     },
+    meta: {
+      name: { alias: '상품명' },
+      quantity: { alias: '판매량' },
+    },
+    color: '#ff4d4f',
   };
 
   const salesByHourConfig = {
@@ -202,10 +217,18 @@ const Reports: React.FC = () => {
           <Row gutter={[16, 16]} style={{ marginTop: isMobile ? 16 : 24 }}>
             <Col xs={24} lg={12}>
               <Card title="인기 상품 Top 5" className="chart-card">
-                <Bar {...topProductsConfig} />
+                <Column {...topProductsConfig} />
               </Card>
             </Col>
             <Col xs={24} lg={12}>
+              <Card title="비인기 상품 Top 5" className="chart-card">
+                <Column {...bottomProductsConfig} />
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]} style={{ marginTop: isMobile ? 16 : 24 }}>
+            <Col xs={24}>
               <Card title="시간대별 매출 분석" className="chart-card">
                 <Area {...salesByHourConfig} />
               </Card>

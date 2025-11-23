@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Typography, Flex, message, Card, Tag } from 'antd';
+import { Button, Typography, Flex, message, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { PlusOutlined, RedoOutlined, EditOutlined, DeleteOutlined, ShoppingOutlined } from '@ant-design/icons';
@@ -59,46 +59,35 @@ const ProductList: React.FC = () => {
         }
     };
 
-    const columns = [
-        { title: '상품명', dataIndex: 'name', key: 'name' },
-        { title: '가격', dataIndex: 'price', key: 'price', render: (price: number) => `${price.toLocaleString()}원` },
-        { title: '재고', dataIndex: 'availableStock', key: 'availableStock', render: (stock: number) => (stock === 999999 ? '재고 미관리' : `${stock}개`) },
-        {
-            title: '관리',
-            key: 'action',
-            render: (_: any, record: Product) => (
-                <Space size="middle">
-                    <Button onClick={() => navigate(`/products/${record.id}`)}>수정</Button>
-                    <Button danger onClick={() => handleDelete(record.id)}>삭제</Button>
-                </Space>
-            ),
-        },
-    ];
-
-    // Mobile Card View
+    // Mobile Card View (Restored based on image)
     const renderMobileCards = () => (
-        <div className="product-cards-container">
+        <div className="product-mobile-list">
             {products.map(product => (
-                <Card
+                <div
                     key={product.id}
-                    className="product-card"
-                    hoverable
+                    className="mobile-product-card"
                     onClick={() => navigate(`/products/${product.id}`)}
                 >
-                    <div className="product-card-header">
-                        <div className="product-icon">
+                    <div className="mobile-card-header">
+                        <div className="mobile-icon-wrapper">
                             <ShoppingOutlined />
                         </div>
-                        <div className="product-info">
-                            <Text strong className="product-name">{product.name}</Text>
-                            <Text className="product-price">{product.price.toLocaleString()}원</Text>
+                        <div className="mobile-info">
+                            <Text strong className="mobile-name">{product.name}</Text>
+                            <Text className="mobile-price">{product.price.toLocaleString()}원</Text>
                         </div>
                     </div>
-                    <div className="product-card-footer">
-                        <Tag color={product.availableStock === 999999 ? 'default' : (product.availableStock > 10 ? 'success' : 'warning')}>
-                            {product.availableStock === 999999 ? '재고 미관리' : `재고 ${product.availableStock}개`}
+
+                    <div className="mobile-card-divider" />
+
+                    <div className="mobile-card-footer">
+                        <Tag
+                            className="mobile-stock-tag"
+                            color={product.availableStock === 999999 ? 'default' : (product.availableStock > 10 ? 'success' : 'warning')}
+                        >
+                            {product.availableStock === 999999 ? '재고 미관리' : `${product.availableStock}개`}
                         </Tag>
-                        <Space size="small">
+                        <div className="mobile-actions">
                             <Button
                                 size="small"
                                 icon={<EditOutlined />}
@@ -120,50 +109,108 @@ const ProductList: React.FC = () => {
                             >
                                 삭제
                             </Button>
-                        </Space>
+                        </div>
                     </div>
-                </Card>
+                </div>
+            ))}
+            {/* Floating Action Button */}
+            <Button
+                type="primary"
+                shape="circle"
+                icon={<PlusOutlined />}
+                size="large"
+                className="mobile-fab"
+                onClick={() => navigate('/products/new')}
+            />
+        </div>
+    );
+
+    // Unified Grid View (Desktop)
+    const renderProductGrid = () => (
+        <div className="product-grid-container">
+            {/* Add New Product Card */}
+            <div
+                className="product-card add-new-card"
+                onClick={() => navigate('/products/new')}
+            >
+                <div className="add-new-content">
+                    <div className="add-icon-wrapper">
+                        <PlusOutlined />
+                    </div>
+                    <Text strong className="add-text">새 상품 등록</Text>
+                </div>
+            </div>
+
+            {products.map(product => (
+                <div
+                    key={product.id}
+                    className="product-card"
+                    onClick={() => navigate(`/products/${product.id}`)}
+                >
+                    <div className="product-card-body">
+                        <div className="product-icon-wrapper">
+                            <ShoppingOutlined />
+                        </div>
+                        <div className="product-info-wrapper">
+                            <Text className="product-name">{product.name}</Text>
+                            <Text className="product-price">{product.price.toLocaleString()}원</Text>
+                            <Tag
+                                className="stock-tag"
+                                color={product.availableStock === 999999 ? 'default' : (product.availableStock > 10 ? 'success' : 'warning')}
+                            >
+                                {product.availableStock === 999999 ? '재고 미관리' : `${product.availableStock}개 남음`}
+                            </Tag>
+                        </div>
+                    </div>
+                    <div className="product-card-actions">
+                        <Button
+                            type="text"
+                            icon={<EditOutlined />}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/products/${product.id}`);
+                            }}
+                        />
+                        <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(product.id);
+                            }}
+                        />
+                    </div>
+                </div>
             ))}
         </div>
     );
 
     return (
         <div className="product-list-container">
-            <Flex justify="space-between" align="center" wrap="wrap" style={{ marginBottom: isMobile ? '16px' : '24px' }}>
-                <Title level={3} style={{ margin: 0 }}>상품 목록</Title>
+            <Flex justify="space-between" align="center" style={{ marginBottom: isMobile ? '16px' : '32px' }}>
+                <div className="page-header">
+                    <Title level={isMobile ? 3 : 2} style={{ margin: 0, fontWeight: 800 }}>상품 관리</Title>
+                    {!isMobile && <Text type="secondary">매장의 모든 상품을 한눈에 관리하세요</Text>}
+                </div>
                 {!isMobile && (
-                    <Space style={{ marginTop: '8px' }}>
-                        <Button icon={<RedoOutlined />} onClick={fetchProducts} loading={loading}>
-                            새로고침
-                        </Button>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/products/new')}>
-                            새 상품 등록
-                        </Button>
-                    </Space>
+                    <Button
+                        icon={<RedoOutlined />}
+                        onClick={fetchProducts}
+                        loading={loading}
+                        shape="circle"
+                        size="large"
+                        type="text"
+                    />
                 )}
             </Flex>
 
-            {isMobile ? (
-                <>
-                    {loading ? (
-                        <div style={{ textAlign: 'center', padding: '40px' }}>
-                            <Text>로딩 중...</Text>
-                        </div>
-                    ) : (
-                        renderMobileCards()
-                    )}
-                    {/* Floating Action Button */}
-                    <Button
-                        type="primary"
-                        shape="circle"
-                        icon={<PlusOutlined />}
-                        size="large"
-                        className="mobile-fab"
-                        onClick={() => navigate('/products/new')}
-                    />
-                </>
+            {loading ? (
+                <div className="loading-state">
+                    <Text>상품 정보를 불러오는 중...</Text>
+                </div>
             ) : (
-                <Table columns={columns} dataSource={products} loading={loading} scroll={{ x: 'max-content' }} />
+                isMobile ? renderMobileCards() : renderProductGrid()
             )}
         </div>
     );

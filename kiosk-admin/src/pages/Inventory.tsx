@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Space, Typography, Flex, message, Tag, Card, Progress } from 'antd';
+import { Button, Space, Typography, Flex, message, Tag, Card, Progress } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { getInventory, deleteInventoryItem, type Inventory } from '../api';
 import { PlusOutlined, RedoOutlined, EditOutlined, DeleteOutlined, InboxOutlined, ThunderboltOutlined } from '@ant-design/icons';
@@ -59,42 +59,103 @@ const InventoryPage: React.FC = () => {
         return { color: 'green', text: '충분', percent: Math.min(percent, 100) };
     };
 
-    const columns = [
-        { title: '품목명', dataIndex: 'name', key: 'name' },
-        { title: '현재 수량', dataIndex: 'quantity', key: 'quantity' },
-        { title: '단위', dataIndex: 'unit', key: 'unit' },
-        { title: '품목 유형', dataIndex: 'itemType', key: 'itemType' },
-        {
-            title: '자동 발주',
-            dataIndex: 'autoOrderEnabled',
-            key: 'autoOrderEnabled',
-            render: (enabled: boolean) => (
-                <Tag color={enabled ? 'blue' : 'default'}>{enabled ? 'ON' : 'OFF'}</Tag>
-            ),
-        },
-        {
-            title: '발주 기준 재고',
-            dataIndex: 'minStockThreshold',
-            key: 'minStockThreshold',
-            render: (stock?: number | null) => (stock != null ? `${stock} 이하` : '-'),
-        },
-        {
-            title: '자동 발주 수량',
-            dataIndex: 'orderQuantity',
-            key: 'orderQuantity',
-            render: (quantity?: number | null) => (quantity != null ? `${quantity}` : '-'),
-        },
-        {
-            title: '관리',
-            key: 'action',
-            render: (_: any, record: Inventory) => (
-                <Space size="middle">
-                    <Button onClick={() => navigate(`/inventory/${record.id}`)}>수정</Button>
-                    <Button danger onClick={() => handleDelete(record.id)}>삭제</Button>
-                </Space>
-            ),
-        },
-    ];
+    // Desktop Card View
+    const renderDesktopCards = () => (
+        <div className="inventory-desktop-grid">
+            {inventory.map(item => {
+                const stockStatus = getStockStatus(item.quantity, item.minStockThreshold);
+                return (
+                    <Card
+                        key={item.id}
+                        className="inventory-card-desktop"
+                        hoverable
+                        onClick={() => navigate(`/inventory/${item.id}`)}
+                    >
+                        <div className="inventory-desktop-header">
+                            <div className="inventory-desktop-icon">
+                                <InboxOutlined />
+                            </div>
+                            <div className="inventory-desktop-info">
+                                <Text strong className="inventory-desktop-name">{item.name}</Text>
+                                <Tag color="default">{item.itemType}</Tag>
+                            </div>
+                        </div>
+
+                        <div className="inventory-desktop-body">
+                            <div className="inventory-desktop-quantity">
+                                <div className="quantity-label-desktop">
+                                    <Text type="secondary" style={{ fontSize: 13 }}>현재 재고</Text>
+                                </div>
+                                <div className="quantity-value-desktop">
+                                    <Text strong style={{ fontSize: 26, color: '#1677ff', lineHeight: 1 }}>
+                                        {item.quantity}
+                                    </Text>
+                                    <Text type="secondary" style={{ fontSize: 14, marginLeft: 6 }}>{item.unit}</Text>
+                                </div>
+                            </div>
+
+                            {item.minStockThreshold && (
+                                <div className="stock-status-desktop">
+                                    <Progress
+                                        percent={Math.round(stockStatus.percent)}
+                                        strokeColor={
+                                            stockStatus.color === 'red' ? '#ff4d4f' :
+                                                stockStatus.color === 'orange' ? '#faad14' : '#52c41a'
+                                        }
+                                        trailColor="#f0f0f0"
+                                        size="small"
+                                    />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                                        <Tag color={stockStatus.color}>{stockStatus.text}</Tag>
+                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                            기준: {item.minStockThreshold}{item.unit}
+                                        </Text>
+                                    </div>
+                                </div>
+                            )}
+
+                            {item.autoOrderEnabled && (
+                                <div className="auto-order-badge-desktop">
+                                    <div className="auto-order-header-desktop">
+                                        <ThunderboltOutlined style={{ marginRight: 6, fontSize: 14 }} />
+                                        <Text strong style={{ fontSize: 13 }}>자동 발주 활성화</Text>
+                                    </div>
+                                    {item.orderQuantity && (
+                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                            발주 수량: {item.orderQuantity}{item.unit}
+                                        </Text>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="inventory-desktop-footer">
+                            <Button
+                                type="primary"
+                                icon={<EditOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/inventory/${item.id}`);
+                                }}
+                            >
+                                수정
+                            </Button>
+                            <Button
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(item.id);
+                                }}
+                            >
+                                삭제
+                            </Button>
+                        </div>
+                    </Card>
+                );
+            })}
+        </div>
+    );
 
     // Mobile Card View
     const renderMobileCards = () => (
@@ -225,7 +286,20 @@ const InventoryPage: React.FC = () => {
                     />
                 </>
             ) : (
-                <Table columns={columns} dataSource={inventory} loading={loading} scroll={{ x: 'max-content' }} />
+                <>
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '40px' }}>
+                            <Text>로딩 중...</Text>
+                        </div>
+                    ) : inventory.length === 0 ? (
+                        <Card style={{ textAlign: 'center', padding: '40px' }}>
+                            <InboxOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
+                            <Text type="secondary">재고 품목이 없습니다.</Text>
+                        </Card>
+                    ) : (
+                        renderDesktopCards()
+                    )}
+                </>
             )}
         </div>
     );

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Typography, message, Button, Modal, Descriptions, DatePicker, Space, Card, Tag } from 'antd';
+import { Typography, message, Button, Modal, Descriptions, DatePicker, Space, Card, Tag, Statistic, Row, Col, Pagination } from 'antd';
 import api from '../api';
 import dayjs from 'dayjs';
-import { EyeOutlined, ShoppingCartOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
+import { EyeOutlined, ShoppingCartOutlined, CalendarOutlined, DollarOutlined, ClockCircleOutlined, FileTextOutlined } from '@ant-design/icons';
 import './OrderList.css';
 
 const { Title, Text } = Typography;
@@ -24,6 +24,8 @@ const OrderList: React.FC = () => {
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(15);
 
     useEffect(() => {
         const handleResize = () => {
@@ -64,23 +66,83 @@ const OrderList: React.FC = () => {
         }
     };
 
-    const columns = [
-        { title: '주문 번호', dataIndex: 'id', key: 'id' },
-        { title: '주문 일시', dataIndex: 'createdAt', key: 'createdAt', render: (date: string) => new Date(date).toLocaleString('ko-KR') },
-        { title: '총 주문 금액', dataIndex: 'totalAmount', key: 'totalAmount', render: (amount: number) => `${amount.toLocaleString()}원` },
-        {
-            title: '상세보기',
-            key: 'action',
-            render: (_: any, record: Order) => (
-                <Button onClick={() => showDetailModal(record.id)}>상세보기</Button>
-            ),
-        },
-    ];
+    // Reset to first page when orders change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [orders.length, dateRange]);
 
-    // Mobile Card View
+    // Calculate pagination
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedOrders = orders.slice(startIndex, endIndex);
+
+    // Calculate statistics
+    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+
+    // Desktop Card View
+    const renderDesktopCards = () => (
+        <div className="order-desktop-container">
+            <div className="order-timeline">
+                {paginatedOrders.map((order, index) => (
+                    <div key={order.id} className="order-timeline-item">
+                        <div className="order-timeline-marker">
+                            <div className="order-timeline-dot">
+                                <ShoppingCartOutlined />
+                            </div>
+                            {index !== paginatedOrders.length - 1 && <div className="order-timeline-line" />}
+                        </div>
+                        <Card
+                            className="order-card-desktop"
+                            hoverable
+                            onClick={() => showDetailModal(order.id)}
+                        >
+                            <div className="order-card-desktop-header">
+                                <div className="order-desktop-main">
+                                    <Text className="order-desktop-number">주문 #{order.id}</Text>
+                                    <div className="order-desktop-date">
+                                        <ClockCircleOutlined style={{ fontSize: 14, marginRight: 6 }} />
+                                        {new Date(order.createdAt).toLocaleString('ko-KR')}
+                                    </div>
+                                </div>
+                                <div className="order-desktop-amount-wrapper">
+                                    <Statistic
+                                        value={order.totalAmount}
+                                        precision={0}
+                                        valueStyle={{ fontSize: 24, fontWeight: 700, color: '#1677ff' }}
+                                        suffix="원"
+                                    />
+                                </div>
+                            </div>
+                            <div className="order-card-desktop-footer">
+                                <div className="order-items-preview">
+                                    <FileTextOutlined style={{ marginRight: 6 }} />
+                                    <Text type="secondary">
+                                        {order.orderItems?.length || 0}개 항목
+                                    </Text>
+                                </div>
+                                <Button
+                                    type="primary"
+                                    icon={<EyeOutlined />}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        showDetailModal(order.id);
+                                    }}
+                                >
+                                    상세보기
+                                </Button>
+                            </div>
+                        </Card>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    // Mobile Card View (Enhanced)
     const renderMobileCards = () => (
         <div className="order-cards-container">
-            {orders.map(order => (
+            {paginatedOrders.map(order => (
                 <Card
                     key={order.id}
                     className="order-card"
@@ -130,9 +192,60 @@ const OrderList: React.FC = () => {
 
     return (
         <div className="order-list-container">
-            <Title level={3} style={{ marginBottom: isMobile ? 16 : 24 }}>주문 내역</Title>
+            <div className="order-header">
+                <div>
+                    <Title level={isMobile ? 3 : 2} style={{ margin: 0, fontWeight: 800 }}>주문 내역</Title>
+                    {!isMobile && <Text type="secondary">매장의 모든 주문을 한눈에 확인하세요</Text>}
+                </div>
+            </div>
 
-            <Space style={{ marginBottom: 16 }} wrap direction={isMobile ? 'vertical' : 'horizontal'} className="order-filter-controls">
+            {/* Statistics Cards - Desktop Only */}
+            {!isMobile && orders.length > 0 && (
+                <Row gutter={16} style={{ marginBottom: 32 }}>
+                    <Col span={8}>
+                        <Card className="stat-card">
+                            <Statistic
+                                title="총 주문 수"
+                                value={orders.length}
+                                prefix={<ShoppingCartOutlined />}
+                                valueStyle={{ color: '#1677ff' }}
+                                suffix="건"
+                            />
+                        </Card>
+                    </Col>
+                    <Col span={8}>
+                        <Card className="stat-card">
+                            <Statistic
+                                title="총 매출액"
+                                value={totalRevenue}
+                                precision={0}
+                                prefix={<DollarOutlined />}
+                                valueStyle={{ color: '#52c41a' }}
+                                suffix="원"
+                            />
+                        </Card>
+                    </Col>
+                    <Col span={8}>
+                        <Card className="stat-card">
+                            <Statistic
+                                title="평균 주문 금액"
+                                value={averageOrderValue}
+                                precision={0}
+                                prefix={<FileTextOutlined />}
+                                valueStyle={{ color: '#faad14' }}
+                                suffix="원"
+                            />
+                        </Card>
+                    </Col>
+                </Row>
+            )}
+
+            <Space
+                style={{ marginBottom: 24, width: '100%' }}
+                wrap
+                direction={isMobile ? 'vertical' : 'horizontal'}
+                className="order-filter-controls"
+            >
                 <RangePicker
                     onChange={(dates) => setDateRange(dates as any)}
                     style={{ width: isMobile ? '100%' : 'auto' }}
@@ -143,21 +256,33 @@ const OrderList: React.FC = () => {
                 </Button>
             </Space>
 
-            {isMobile ? (
-                loading ? (
-                    <div style={{ textAlign: 'center', padding: '40px' }}>
-                        <Text>로딩 중...</Text>
-                    </div>
-                ) : orders.length === 0 ? (
-                    <Card style={{ textAlign: 'center', padding: '40px' }}>
-                        <ShoppingCartOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
-                        <Text type="secondary">주문 내역이 없습니다.</Text>
-                    </Card>
-                ) : (
-                    renderMobileCards()
-                )
+            {loading ? (
+                <div className="loading-state">
+                    <Text>로딩 중...</Text>
+                </div>
+            ) : orders.length === 0 ? (
+                <Card className="empty-state">
+                    <ShoppingCartOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
+                    <Text type="secondary">주문 내역이 없습니다.</Text>
+                </Card>
             ) : (
-                <Table columns={columns} dataSource={orders} loading={loading} scroll={{ x: 'max-content' }} />
+                <>
+                    {isMobile ? renderMobileCards() : renderDesktopCards()}
+
+                    {/* Pagination */}
+                    {orders.length > pageSize && (
+                        <div style={{ marginTop: 32, display: 'flex', justifyContent: 'center' }}>
+                            <Pagination
+                                current={currentPage}
+                                total={orders.length}
+                                pageSize={pageSize}
+                                onChange={(page) => setCurrentPage(page)}
+                                showSizeChanger={false}
+                                showTotal={(total, range) => `${range[0]}-${range[1]} / 총 ${total}건`}
+                            />
+                        </div>
+                    )}
+                </>
             )}
 
             <Modal

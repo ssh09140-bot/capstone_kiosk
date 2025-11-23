@@ -21,7 +21,7 @@ function calculateAvailableStock(product: any): number {
       return 0;
     }
     const availableUnits = usage.inventory.quantity;
-    
+
     // Convert usage amount to the inventory's base unit before calculation
     const requiredUnits = convertToBaseUnit(
       usage.usageAmount,
@@ -48,7 +48,7 @@ router.get('/analytics/reports', authenticateToken, async (req, res) => {
 
   let startDate = startDateQuery ? new Date(startDateQuery as string) : subDays(new Date(), 29);
   let endDate = endDateQuery ? new Date(endDateQuery as string) : new Date();
-  
+
   if (isNaN(startDate.getTime())) startDate = subDays(new Date(), 29);
   if (isNaN(endDate.getTime())) endDate = new Date();
 
@@ -56,7 +56,7 @@ router.get('/analytics/reports', authenticateToken, async (req, res) => {
   endDate = endOfDay(endDate);
 
   try {
-    const [summary, dailyTrends, topProductsData, salesByHourData] = await Promise.all([
+    const [summary, dailyTrends, topProductsData, bottomProductsData, salesByHourData] = await Promise.all([
       // 1. Sales Summary
       prisma.order.aggregate({
         _sum: { totalAmount: true },
@@ -89,7 +89,20 @@ router.get('/analytics/reports', authenticateToken, async (req, res) => {
         orderBy: { _sum: { quantity: 'desc' } },
         take: 5,
       }),
-      // 4. Sales by Hour
+      // 4. Bottom Products
+      prisma.orderItem.groupBy({
+        by: ['productId'],
+        _sum: { quantity: true },
+        where: {
+          order: {
+            storeId: req.user.storeId,
+            createdAt: { gte: startDate, lte: endDate },
+          },
+        },
+        orderBy: { _sum: { quantity: 'asc' } },
+        take: 5,
+      }),
+      // 5. Sales by Hour
       prisma.$queryRaw< { hour: number; sales: number }[]>`
         SELECT
           CAST(TO_CHAR("createdAt" AT TIME ZONE 'Asia/Seoul', 'HH24') AS INTEGER) as hour,
@@ -101,13 +114,25 @@ router.get('/analytics/reports', authenticateToken, async (req, res) => {
       `,
     ]);
 
-    // Fetch product names for top products
-    const topProductDetails = await prisma.product.findMany({
-      where: { id: { in: topProductsData.map(p => p.productId) } },
+    // Fetch product names for top and bottom products
+    const productIds = [
+      ...topProductsData.map(p => p.productId),
+      ...bottomProductsData.map(p => p.productId)
+    ];
+
+    const productDetails = await prisma.product.findMany({
+      where: { id: { in: productIds } },
       select: { id: true, name: true },
     });
-    const productMap = new Map(topProductDetails.map(p => [p.id, p.name]));
+
+    const productMap = new Map(productDetails.map(p => [p.id, p.name]));
+
     const topProducts = topProductsData.map(p => ({
+      name: productMap.get(p.productId) || '알 수 없는 상품',
+      quantity: p._sum.quantity || 0,
+    }));
+
+    const bottomProducts = bottomProductsData.map(p => ({
       name: productMap.get(p.productId) || '알 수 없는 상품',
       quantity: p._sum.quantity || 0,
     }));
@@ -120,6 +145,7 @@ router.get('/analytics/reports', authenticateToken, async (req, res) => {
       },
       dailyTrends,
       topProducts,
+      bottomProducts,
       salesByHour: salesByHourData,
     });
 
@@ -193,99 +219,130 @@ router.get('/analytics/top-products', authenticateToken, async (req, res) => {
   }
 });
 
+// [GET] /api/analytics/bottom-products
+router.get('/analytics/bottom-products', authenticateToken, async (req, res) => {
+  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+
+  try {
+    const bottomProductsData = await prisma.orderItem.groupBy({
+      by: ['productId'],
+      _sum: { quantity: true },
+      where: { order: { storeId: req.user.storeId } },
+      orderBy: { _sum: { quantity: 'asc' } },
+      take: 5,
+    });
+
+    const products = await prisma.product.findMany({
+      where: { id: { in: bottomProductsData.map((p) => p.productId) } },
+    });
+
+    const productMap = new Map(products.map((p) => [p.id, p.name]));
+
+    const result = bottomProductsData.map((p) => ({
+      name: productMap.get(p.productId) || '알 수 없는 상품',
+      quantity: p._sum.quantity || 0,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '비인기 상품 정보를 가져오는데 실패했습니다.' });
+  }
+});
+
 // [GET] /api/analytics/profit-summary
 router.get('/analytics/profit-summary', authenticateToken, async (req, res) => {
-    if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
-    const { startDate: startDateQuery, endDate: endDateQuery } = req.query;
+  const { startDate: startDateQuery, endDate: endDateQuery } = req.query;
 
-    let startDate = startDateQuery ? new Date(startDateQuery as string) : subDays(new Date(), 29);
-    let endDate = endDateQuery ? new Date(endDateQuery as string) : new Date();
+  let startDate = startDateQuery ? new Date(startDateQuery as string) : subDays(new Date(), 29);
+  let endDate = endDateQuery ? new Date(endDateQuery as string) : new Date();
 
-    if (isNaN(startDate.getTime())) startDate = subDays(new Date(), 29);
-    if (isNaN(endDate.getTime())) endDate = new Date();
+  if (isNaN(startDate.getTime())) startDate = subDays(new Date(), 29);
+  if (isNaN(endDate.getTime())) endDate = new Date();
 
-    startDate = startOfDay(startDate);
-    endDate = endOfDay(endDate);
+  startDate = startOfDay(startDate);
+  endDate = endOfDay(endDate);
 
-    try {
-        // 1. Overall Profit Summary
-        const overallSummary = await prisma.order.aggregate({
-            _sum: {
-                totalAmount: true,
-                totalCost: true,
-            },
-            where: {
-                storeId: req.user!.storeId,
-                createdAt: { gte: startDate, lte: endDate },
-            },
-        });
+  try {
+    // 1. Overall Profit Summary
+    const overallSummary = await prisma.order.aggregate({
+      _sum: {
+        totalAmount: true,
+        totalCost: true,
+      },
+      where: {
+        storeId: req.user!.storeId,
+        createdAt: { gte: startDate, lte: endDate },
+      },
+    });
 
-        const totalRevenue = overallSummary._sum.totalAmount || 0;
-        const totalCost = overallSummary._sum.totalCost || 0;
-        const totalProfit = totalRevenue - totalCost;
+    const totalRevenue = overallSummary._sum.totalAmount || 0;
+    const totalCost = overallSummary._sum.totalCost || 0;
+    const totalProfit = totalRevenue - totalCost;
 
-        // 2. Product-level Profitability
-        const productProfitData = await prisma.orderItem.groupBy({
-            by: ['productId'],
-            _sum: {
-                quantity: true,
-            },
-            where: {
-                order: {
-                    storeId: req.user!.storeId,
-                    createdAt: { gte: startDate, lte: endDate },
-                },
-            },
-        });
-        
-        const productProfits = await Promise.all(productProfitData.map(async (item) => {
-            const product = await prisma.product.findUnique({ where: { id: item.productId } });
-            
-            const orderItems = await prisma.orderItem.findMany({
-                where: {
-                    productId: item.productId,
-                    order: {
-                        storeId: req.user!.storeId,
-                        createdAt: { gte: startDate, lte: endDate },
-                    }
-                }
-            });
+    // 2. Product-level Profitability
+    const productProfitData = await prisma.orderItem.groupBy({
+      by: ['productId'],
+      _sum: {
+        quantity: true,
+      },
+      where: {
+        order: {
+          storeId: req.user!.storeId,
+          createdAt: { gte: startDate, lte: endDate },
+        },
+      },
+    });
 
-            const revenue = orderItems.reduce((acc, oi) => acc + (oi.pricePerItem * oi.quantity), 0);
-            const cost = orderItems.reduce((acc, oi) => acc + ((oi.costPerItem || 0) * oi.quantity), 0);
-            const profit = revenue - cost;
+    const productProfits = await Promise.all(productProfitData.map(async (item) => {
+      const product = await prisma.product.findUnique({ where: { id: item.productId } });
 
-            return {
-                productId: item.productId,
-                name: product?.name || 'Unknown Product',
-                totalQuantity: item._sum.quantity,
-                totalRevenue: revenue,
-                totalCost: cost,
-                totalProfit: profit,
-            };
-        }));
+      const orderItems = await prisma.orderItem.findMany({
+        where: {
+          productId: item.productId,
+          order: {
+            storeId: req.user!.storeId,
+            createdAt: { gte: startDate, lte: endDate },
+          }
+        }
+      });
 
-        productProfits.sort((a, b) => b.totalProfit - a.totalProfit);
+      const revenue = orderItems.reduce((acc, oi) => acc + (oi.pricePerItem * oi.quantity), 0);
+      const cost = orderItems.reduce((acc, oi) => acc + ((oi.costPerItem || 0) * oi.quantity), 0);
+      const profit = revenue - cost;
 
-        const mostProfitableProducts = productProfits.slice(0, 5);
-        const leastProfitableProducts = productProfits.slice(-5).reverse();
+      return {
+        productId: item.productId,
+        name: product?.name || 'Unknown Product',
+        totalQuantity: item._sum.quantity,
+        totalRevenue: revenue,
+        totalCost: cost,
+        totalProfit: profit,
+      };
+    }));
 
-        res.json({
-            overallSummary: {
-                totalRevenue,
-                totalCost,
-                totalProfit,
-                profitMargin: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
-            },
-            mostProfitableProducts,
-            leastProfitableProducts,
-        });
+    productProfits.sort((a, b) => b.totalProfit - a.totalProfit);
 
-    } catch (error) {
-        console.error('Error fetching profit summary:', error);
-        res.status(500).json({ message: '수익성 요약 정보를 가져오는데 실패했습니다.' });
-    }
+    const mostProfitableProducts = productProfits.slice(0, 5);
+    const leastProfitableProducts = productProfits.slice(-5).reverse();
+
+    res.json({
+      overallSummary: {
+        totalRevenue,
+        totalCost,
+        totalProfit,
+        profitMargin: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
+      },
+      mostProfitableProducts,
+      leastProfitableProducts,
+    });
+
+  } catch (error) {
+    console.error('Error fetching profit summary:', error);
+    res.status(500).json({ message: '수익성 요약 정보를 가져오는데 실패했습니다.' });
+  }
 });
 
 // [GET] /api/analytics/monthly-summary
@@ -308,7 +365,7 @@ router.get('/analytics/monthly-summary', authenticateToken, async (req, res) => 
     });
 
     if (salesData.length < 2) {
-      return res.status(404).json({ message: '분석을 위한 데이터가 충분하지 않습니다 (최소 2개 이상의 상품 판매 내역 필요).'});
+      return res.status(404).json({ message: '분석을 위한 데이터가 충분하지 않습니다 (최소 2개 이상의 상품 판매 내역 필요).' });
     }
 
     salesData.sort((a, b) => (b._sum.quantity || 0) - (a._sum.quantity || 0));

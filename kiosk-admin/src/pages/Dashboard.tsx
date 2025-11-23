@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Typography, List, Button, Space, Tag } from 'antd';
 import { ArrowUpOutlined, RobotOutlined, ShopOutlined, DollarOutlined, ShoppingOutlined } from '@ant-design/icons';
@@ -12,20 +13,23 @@ const Dashboard: React.FC = () => {
   const [currentMonthSales, setCurrentMonthSales] = useState(0);
   const [monthlySales, setMonthlySales] = useState<{ month: string; sales: number }[]>([]);
   const [topProducts, setTopProducts] = useState<{ name: string; quantity: number }[]>([]);
+  const [bottomProducts, setBottomProducts] = useState<{ name: string; quantity: number }[]>([]);
   const [profitSummary, setProfitSummary] = useState<{ totalRevenue: number; totalCost: number; totalProfit: number; } | null>(null);
   const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [salesRes, topProdRes, profitRes] = await Promise.all([
+        const [salesRes, topProdRes, bottomProdRes, profitRes] = await Promise.all([
           api.get('/sales/summary'),
           api.get('/analytics/top-products'),
+          api.get('/analytics/bottom-products'),
           api.get('/analytics/profit-summary'),
         ]);
         setCurrentMonthSales(salesRes.data.currentMonthSales);
         setMonthlySales(salesRes.data.monthlySalesData);
         setTopProducts(topProdRes.data);
+        setBottomProducts(bottomProdRes.data);
         setProfitSummary(profitRes.data.overallSummary);
       } catch (error) {
         console.error("Failed to refresh dashboard data:", error);
@@ -123,59 +127,97 @@ const Dashboard: React.FC = () => {
           </Col>
 
           <Col xs={24} lg={8}>
-            <Space direction="vertical" size="large" style={{ width: '100%', height: '100%' }}>
-              <Card title="AI 월간 분석" bordered={false} style={{ flex: 1, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 200, padding: '20px 0' }}>
-                  <div style={{ background: '#e6f7ff', padding: 20, borderRadius: '50%', marginBottom: 20 }}>
-                    <RobotOutlined style={{ fontSize: 40, color: '#1677ff' }} />
-                  </div>
-                  <Text style={{ marginBottom: 24, textAlign: 'center', color: '#666', fontSize: 15, lineHeight: 1.6 }}>
-                    지난 한 달간의 판매 데이터를 분석하여<br />
-                    <strong>매출 증대 전략</strong>을 제안합니다.
-                  </Text>
-                  <Button type="primary" size="large" icon={<RobotOutlined />} onClick={() => setAnalysisModalOpen(true)} block style={{ height: 48, borderRadius: 8 }}>
-                    분석 리포트 확인하기
-                  </Button>
+            <Card title="AI 월간 분석" bordered={false} style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 200, padding: '20px 0' }}>
+                <div style={{ background: '#e6f7ff', padding: 20, borderRadius: '50%', marginBottom: 20 }}>
+                  <RobotOutlined style={{ fontSize: 40, color: '#1677ff' }} />
                 </div>
-              </Card>
+                <Text style={{ marginBottom: 24, textAlign: 'center', color: '#666', fontSize: 15, lineHeight: 1.6 }}>
+                  지난 한 달간의 판매 데이터를 분석하여<br />
+                  <strong>매출 증대 전략</strong>을 제안합니다.
+                </Text>
+                <Button type="primary" size="large" icon={<RobotOutlined />} onClick={() => setAnalysisModalOpen(true)} block style={{ height: 48, borderRadius: 8 }}>
+                  분석 리포트 확인하기
+                </Button>
+              </div>
+            </Card>
+          </Col>
+        </Row>
 
-              <Card title="인기 상품 TOP 5" bordered={false} style={{ flex: 1, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                <List
-                  itemLayout="horizontal"
-                  dataSource={topProducts}
-                  renderItem={(item, index) => (
-                    <List.Item style={{ padding: '12px 0' }}>
-                      <List.Item.Meta
-                        avatar={
-                          <div style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: '50%',
-                            backgroundColor: index < 3 ? '#1677ff' : '#f5f5f5',
-                            color: index < 3 ? '#fff' : '#8c8c8c',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 'bold',
-                            fontSize: 14
-                          }}>
-                            {index + 1}
-                          </div>
-                        }
-                        title={<Text strong style={{ fontSize: 15 }}>{item.name}</Text>}
-                      />
-                      <Tag color="blue" style={{ borderRadius: 12, padding: '0 10px' }}>{item.quantity}개</Tag>
-                    </List.Item>
-                  )}
-                />
-              </Card>
-            </Space>
+        {/* Product Rankings Section */}
+        <Row gutter={[24, 24]}>
+          <Col xs={24} lg={12}>
+            <Card title="인기 상품 TOP 5" bordered={false} style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <List
+                itemLayout="horizontal"
+                dataSource={topProducts}
+                renderItem={(item, index) => (
+                  <List.Item style={{ padding: '12px 0' }}>
+                    <List.Item.Meta
+                      avatar={
+                        <div style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          backgroundColor: index < 3 ? '#1677ff' : '#f5f5f5',
+                          color: index < 3 ? '#fff' : '#8c8c8c',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 'bold',
+                          fontSize: 14
+                        }}>
+                          {index + 1}
+                        </div>
+                      }
+                      title={<Text strong style={{ fontSize: 15 }}>{item.name}</Text>}
+                    />
+                    <Tag color="blue" style={{ borderRadius: 12, padding: '0 10px' }}>{item.quantity}개</Tag>
+                  </List.Item>
+                )}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} lg={12}>
+            <Card title="비인기 상품 TOP 5" bordered={false} style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <List
+                itemLayout="horizontal"
+                dataSource={bottomProducts}
+                renderItem={(item, index) => (
+                  <List.Item style={{ padding: '12px 0' }}>
+                    <List.Item.Meta
+                      avatar={
+                        <div style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          backgroundColor: index < 3 ? '#ff4d4f' : '#f5f5f5',
+                          color: index < 3 ? '#fff' : '#8c8c8c',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 'bold',
+                          fontSize: 14
+                        }}>
+                          {index + 1}
+                        </div>
+                      }
+                      title={<Text strong style={{ fontSize: 15 }}>{item.name}</Text>}
+                    />
+                    <Tag color="red" style={{ borderRadius: 12, padding: '0 10px' }}>{item.quantity}개</Tag>
+                  </List.Item>
+                )}
+              />
+            </Card>
           </Col>
         </Row>
 
         <SalesAnalysisModal
           isOpen={isAnalysisModalOpen}
           onClose={() => setAnalysisModalOpen(false)}
+          topProducts={topProducts}
+          bottomProducts={bottomProducts}
         />
       </Space>
     </div>

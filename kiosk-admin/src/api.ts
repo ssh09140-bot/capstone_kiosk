@@ -214,6 +214,7 @@ export interface ReportResponse {
   summary: ReportSummary;
   dailyTrends: DailyTrend[];
   topProducts?: TopProduct[];
+  bottomProducts?: TopProduct[];
   salesByHour?: SalesByHour[];
 }
 

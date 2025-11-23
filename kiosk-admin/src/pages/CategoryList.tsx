@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Typography, message, Modal, Form, Input, Space, Card } from 'antd';
+import { Button, Typography, message, Modal, Form, Input, Card } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, AppstoreOutlined } from '@ant-design/icons';
 import api from '../api';
 import './CategoryList.css';
 
 const { Title, Text } = Typography;
 
-interface Category { key: string; id: number; name: string; }
+interface Category {
+    key: string;
+    id: number;
+    name: string;
+}
 
 const CategoryList: React.FC = () => {
     const [categories, setCategories] = useState<Category[]>([]);
@@ -29,11 +33,16 @@ const CategoryList: React.FC = () => {
         try {
             const response = await api.get('/categories');
             setCategories(response.data.map((cat: any) => ({ ...cat, key: cat.id.toString() })));
-        } catch (error) { message.error('카테고리를 불러오는데 실패했습니다.'); }
-        finally { setLoading(false); }
+        } catch (error) {
+            message.error('카테고리를 불러오는데 실패했습니다.');
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
-    useEffect(() => { fetchCategories(); }, [fetchCategories]);
+    useEffect(() => {
+        fetchCategories();
+    }, [fetchCategories]);
 
     const handleCancel = () => {
         setIsModalVisible(false);
@@ -53,7 +62,9 @@ const CategoryList: React.FC = () => {
             }
             handleCancel();
             fetchCategories();
-        } catch (error) { message.error('작업에 실패했습니다.'); }
+        } catch (error) {
+            message.error('작업에 실패했습니다.');
+        }
     };
 
     const handleDelete = async (id: number) => {
@@ -62,7 +73,9 @@ const CategoryList: React.FC = () => {
                 await api.delete(`/categories/${id}`);
                 message.success('카테고리가 삭제되었습니다.');
                 fetchCategories();
-            } catch (error: any) { message.error(error.response?.data?.message || '삭제에 실패했습니다.'); }
+            } catch (error: any) {
+                message.error(error.response?.data?.message || '삭제에 실패했습니다.');
+            }
         }
     };
 
@@ -72,21 +85,7 @@ const CategoryList: React.FC = () => {
         setIsModalVisible(true);
     };
 
-    const columns = [
-        { title: 'ID', dataIndex: 'id', key: 'id' },
-        { title: '카테고리 이름', dataIndex: 'name', key: 'name' },
-        {
-            title: '관리', key: 'action',
-            render: (_: any, record: Category) => (
-                <Space size="middle">
-                    <Button icon={<EditOutlined />} onClick={() => showEditModal(record)}>수정</Button>
-                    <Button icon={<DeleteOutlined />} danger onClick={() => handleDelete(record.id)}>삭제</Button>
-                </Space>
-            )
-        }
-    ];
-
-    // Mobile Card View
+    // Mobile Card View (Existing)
     const renderMobileCards = () => (
         <div className="category-cards-container">
             {categories.map((category) => (
@@ -135,19 +134,70 @@ const CategoryList: React.FC = () => {
         </div>
     );
 
+    // Desktop Grid View (New)
+    const renderCategoryGrid = () => (
+        <div className="category-grid-container">
+            {/* Add New Category Card */}
+            <div
+                className="category-card-desktop add-new-card"
+                onClick={() => {
+                    setEditingCategory(null);
+                    form.resetFields();
+                    setIsModalVisible(true);
+                }}
+            >
+                <div className="add-new-content">
+                    <div className="add-icon-wrapper">
+                        <PlusOutlined />
+                    </div>
+                    <Text strong className="add-text">새 카테고리 추가</Text>
+                </div>
+            </div>
+
+            {categories.map(category => (
+                <div
+                    key={category.id}
+                    className="category-card-desktop"
+                    onClick={() => showEditModal(category)}
+                >
+                    <div className="category-card-body">
+                        <div className="category-icon-wrapper-desktop">
+                            <AppstoreOutlined />
+                        </div>
+                        <div className="category-info-wrapper">
+                            <Text className="category-name-desktop">{category.name}</Text>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>ID: {category.id}</Text>
+                        </div>
+                    </div>
+                    <div className="category-card-actions">
+                        <Button
+                            type="text"
+                            icon={<EditOutlined />}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                showEditModal(category);
+                            }}
+                        />
+                        <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(category.id);
+                            }}
+                        />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+
     return (
         <div className="category-list-container">
-            <div style={{ marginBottom: isMobile ? 16 : 24 }}>
-                <Title level={3} style={{ marginBottom: 16 }}>카테고리 관리</Title>
-                {!isMobile && (
-                    <Button
-                        onClick={() => setIsModalVisible(true)}
-                        type="primary"
-                        icon={<PlusOutlined />}
-                    >
-                        새 카테고리 추가
-                    </Button>
-                )}
+            <div style={{ marginBottom: isMobile ? 16 : 32 }}>
+                <Title level={isMobile ? 3 : 2} style={{ margin: 0, fontWeight: 800 }}>카테고리 관리</Title>
+                {!isMobile && <Text type="secondary">매장의 메뉴 카테고리를 관리하세요</Text>}
             </div>
 
             {isMobile ? (
@@ -171,11 +221,15 @@ const CategoryList: React.FC = () => {
                         icon={<PlusOutlined />}
                         size="large"
                         className="mobile-fab"
-                        onClick={() => setIsModalVisible(true)}
+                        onClick={() => {
+                            setEditingCategory(null);
+                            form.resetFields();
+                            setIsModalVisible(true);
+                        }}
                     />
                 </>
             ) : (
-                <Table columns={columns} dataSource={categories} loading={loading} scroll={{ x: 'max-content' }} />
+                renderCategoryGrid()
             )}
 
             <Modal

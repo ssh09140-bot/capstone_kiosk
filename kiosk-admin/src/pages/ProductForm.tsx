@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, Divider, List } from 'antd';
-import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { UploadOutlined, DeleteOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import api, { type Inventory, getInventory } from '../api';
 import type { UploadFile } from 'antd/lib/upload/interface';
@@ -160,7 +160,18 @@ const ProductForm: React.FC = () => {
     }
 
     return (
-        <Card title={isEditMode ? '상품 수정' : '새 상품 등록'} style={{ maxWidth: '600px', margin: 'auto' }}>
+        <Card
+            title={isEditMode ? '상품 수정' : '새 상품 등록'}
+            style={{ maxWidth: '600px', margin: 'auto' }}
+            extra={
+                <Button
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => navigate('/products')}
+                >
+                    목록으로
+                </Button>
+            }
+        >
             <Form form={form} layout="vertical" onFinish={onFinish}>
                 <FormItem label="상품명" name="name" rules={[{ required: true, message: '상품명을 입력해주세요.' }]}>
                     <Input />
@@ -235,11 +246,11 @@ const ProductForm: React.FC = () => {
                         value={usageAmount}
                         onChange={(value) => setUsageAmount(value)}
                     />
-                    <Input 
-                        placeholder="단위 (g, ml)" 
-                        style={{ flex: 1 }} 
-                        value={usageUnit} 
-                        onChange={(e) => setUsageUnit(e.target.value)} 
+                    <Input
+                        placeholder="단위 (g, ml)"
+                        style={{ flex: 1 }}
+                        value={usageUnit}
+                        onChange={(e) => setUsageUnit(e.target.value)}
                     />
                     <Button type="primary" onClick={handleAddUsage}>추가</Button>
                 </div>
