@@ -1,0 +1,282 @@
+/* Container */
+.inventory-form-container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+/* Modern Card */
+.inventory-form-card {
+    border-radius: 20px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    border: none !important;
+    overflow: hidden;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.inventory-form-card .ant-card-head {
+    background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+    border-bottom: none;
+    padding: 24px 32px;
+}
+
+.inventory-form-card .ant-card-head-title {
+    color: white !important;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.inventory-form-card .ant-card-extra {
+    margin-top: 0;
+}
+
+.inventory-form-card .ant-card-body {
+    padding: 32px;
+}
+
+/* Back Button */
+.back-button {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: white !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease !important;
+    height: 40px !important;
+    padding: 0 20px !important;
+}
+
+.back-button:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    transform: translateX(-3px) !important;
+    color: white !important;
+}
+
+/* Form Sections */
+.form-section {
+    background: #f9fafb;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    border: 1px solid #e5e7eb;
+}
+
+.form-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-section-title .anticon {
+    font-size: 20px;
+    color: #10b981;
+}
+
+/* Form Items */
+.inventory-form-card .ant-form-item-label>label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+.inventory-form-card .ant-input,
+.inventory-form-card .ant-input-number,
+.inventory-form-card .ant-input-number-input {
+    border-radius: 10px !important;
+    border: 2px solid #e8eaf6 !important;
+    padding: 10px 16px !important;
+    font-size: 15px !important;
+    transition: all 0.3s ease !important;
+}
+
+.inventory-form-card .ant-input:hover,
+.inventory-form-card .ant-input-number:hover {
+    border-color: #43e97b !important;
+}
+
+.inventory-form-card .ant-input:focus,
+.inventory-form-card .ant-input-number:focus,
+.inventory-form-card .ant-input-number-focused {
+    border-color: #43e97b !important;
+    box-shadow: 0 0 0 3px rgba(67, 233, 123, 0.1) !important;
+}
+
+.inventory-form-card .ant-input-number {
+    width: 100%;
+}
+
+/* Switch */
+.inventory-form-card .ant-switch {
+    background: #d1d5db !important;
+}
+
+.inventory-form-card .ant-switch-checked {
+    background: #43e97b !important;
+}
+
+/* Divider */
+.auto-order-divider {
+    margin: 32px 0 24px 0 !important;
+    border-color: rgba(67, 233, 123, 0.2) !important;
+}
+
+.auto-order-divider .ant-divider-inner-text {
+    font-weight: 700;
+    color: #0d9488;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Auto Order Section */
+.auto-order-section {
+    background: #f0fdfa;
+    border: 2px solid #5eead4;
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 16px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Action Buttons */
+.form-actions {
+    gap: 12px !important;
+    margin-top: 32px !important;
+}
+
+.cancel-button {
+    height: 48px !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    border: 2px solid #e0e0e0 !important;
+    color: #666 !important;
+    transition: all 0.3s ease !important;
+}
+
+.cancel-button:hover {
+    border-color: #ff6b6b !important;
+    color: #ff6b6b !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2) !important;
+}
+
+.save-button {
+    height: 48px !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+    transition: all 0.3s ease !important;
+    color: white !important;
+}
+
+.save-button:hover {
+    background: linear-gradient(135deg, #059669 0%, #0d9488 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+}
+
+.save-button:active {
+    transform: translateY(0) !important;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+    .inventory-form-container {
+        padding: 0;
+    }
+
+    .inventory-form-card {
+        border-radius: 0 !important;
+    }
+
+    .inventory-form-card .ant-card-head {
+        padding: 20px 16px;
+    }
+
+    .inventory-form-card .ant-card-head-title {
+        font-size: 20px;
+    }
+
+    .inventory-form-card .ant-card-body {
+        padding: 20px 16px;
+    }
+
+    .form-section {
+        padding: 16px;
+    }
+
+    .auto-order-section {
+        padding: 16px;
+    }
+
+    .back-button {
+        padding: 0 12px !important;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .cancel-button,
+    .save-button {
+        width: 100% !important;
+    }
+}
+
+/* Loading Spinner */
+.form-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+/* Input Number Addon */
+.inventory-form-card .ant-input-number-group-addon {
+    border-radius: 0 10px 10px 0 !important;
+    border: 2px solid #e8eaf6 !important;
+    border-left: none !important;
+    background: #f8f9ff !important;
+    color: #666 !important;
+    font-weight: 500;
+}

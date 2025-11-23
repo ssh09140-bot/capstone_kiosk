@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, InputNumber, message, Card, Spin, Switch, Divider } from 'antd';
+import { Form, Input, Button, InputNumber, message, Card, Spin, Switch, Divider, Space } from 'antd';
+import { ArrowLeftOutlined, InboxOutlined, ThunderboltOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getInventoryItem, createInventoryItem, updateInventoryItem, type CreateInventoryItemDto, type UpdateInventoryItemDto } from '../api';
+import './InventoryForm.css';
 
 const FormItem = Form.Item;
 
@@ -9,7 +11,7 @@ interface InventoryFormValues {
     name: string;
     quantity: number;
     unit: string;
-    itemType: string; // Added new field
+    itemType: string;
     threshold: number | null;
     autoOrderEnabled: boolean;
     minStockThreshold?: number | null;
@@ -79,55 +81,112 @@ const InventoryForm: React.FC = () => {
     };
 
     if (loading && isEditMode) {
-        return <Spin size="large" style={{ display: 'block', marginTop: '50px' }} />;
+        return (
+            <div className="form-loading">
+                <Spin size="large" />
+            </div>
+        );
     }
 
     return (
-        <Card title={isEditMode ? '재고 품목 수정' : '새 재고 품목 등록'} style={{ maxWidth: '600px', margin: 'auto' }}>
-            <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ quantity: 0, autoOrderEnabled: false }}>
-                <FormItem label="품목명" name="name" rules={[{ required: true, message: '품목명을 입력해주세요.' }]}>
-                    <Input />
-                </FormItem>
-                <FormItem label="수량" name="quantity" rules={[{ required: true, message: '수량을 입력해주세요.' }]}>
-                    <InputNumber min={0} step={0.1} style={{ width: '100%' }} />
-                </FormItem>
-                <FormItem label="단위" name="unit" rules={[{ required: true, message: '단위(예: kg, L, 개)를 입력해주세요.' }]}>
-                    <Input placeholder="kg, L, 개 등" />
-                </FormItem>
-                <FormItem label="품목 유형" name="itemType" rules={[{ required: true, message: '품목 유형을 입력해주세요.' }]}>
-                    <Input placeholder="예: 원두, 우유, 시럽, 컵" />
-                </FormItem>
-                <FormItem label="재고 임계값" name="threshold">
-                    <InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="이 수량 이하일 때 알림 (선택 사항)" />
-                </FormItem>
-
-                <Divider>자동 발주 설정</Divider>
-
-                <FormItem label="자동 발주 사용" name="autoOrderEnabled" valuePropName="checked">
-                    <Switch />
-                </FormItem>
-
-                {autoOrderEnabled && (
+        <div className="inventory-form-container">
+            <Card
+                className="inventory-form-card"
+                title={
                     <>
-                        <FormItem label="발주 기준 재고" name="minStockThreshold" rules={[{ required: true, message: '자동 발주를 사용하려면 기준 재고를 입력해야 합니다.' }]}>
-                            <InputNumber min={0} style={{ width: '100%' }} addonAfter={`이하일 때`} />
-                        </FormItem>
-                        <FormItem label="자동 발주 수량" name="orderQuantity" rules={[{ required: true, message: '자동 발주를 사용하려면 발주 수량을 입력해야 합니다.' }]}>
-                            <InputNumber min={0.1} style={{ width: '100%' }} addonAfter="을(를) 주문" />
-                        </FormItem>
-                        <FormItem label="예상 배송 기간" name="estimatedDeliveryDays">
-                            <InputNumber min={1} style={{ width: '100%' }} addonAfter="일 소요" />
-                        </FormItem>
+                        <InboxOutlined />
+                        {isEditMode ? '재고 품목 수정' : '새 재고 품목 등록'}
                     </>
-                )}
-
-                <FormItem style={{ marginTop: '32px' }}>
-                    <Button type="primary" htmlType="submit" block loading={loading}>
-                        저장하기
+                }
+                extra={
+                    <Button
+                        className="back-button"
+                        icon={<ArrowLeftOutlined />}
+                        onClick={() => navigate('/inventory')}
+                    >
+                        목록으로
                     </Button>
-                </FormItem>
-            </Form>
-        </Card>
+                }
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={onFinish}
+                    initialValues={{ quantity: 0, autoOrderEnabled: false }}
+                >
+                    {/* Basic Information Section */}
+                    <div className="form-section">
+                        <div className="form-section-title">
+                            <SettingOutlined />
+                            기본 정보
+                        </div>
+                        <FormItem label="품목명" name="name" rules={[{ required: true, message: '품목명을 입력해주세요.' }]}>
+                            <Input placeholder="예: 콜롬비아 원두" />
+                        </FormItem>
+                        <FormItem label="품목 유형" name="itemType" rules={[{ required: true, message: '품목 유형을 입력해주세요.' }]}>
+                            <Input placeholder="예: 원두, 우유, 시럽, 컵" />
+                        </FormItem>
+                        <Space style={{ width: '100%' }} size="large">
+                            <FormItem label="수량" name="quantity" rules={[{ required: true, message: '수량을 입력해주세요.' }]} style={{ flex: 1 }}>
+                                <InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="0" />
+                            </FormItem>
+                            <FormItem label="단위" name="unit" rules={[{ required: true, message: '단위를 입력해주세요.' }]} style={{ flex: 1 }}>
+                                <Input placeholder="kg, L, 개" />
+                            </FormItem>
+                        </Space>
+                        <FormItem label="재고 임계값 (알림 기준)" name="threshold">
+                            <InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="이 수량 이하일 때 알림 (선택 사항)" />
+                        </FormItem>
+                    </div>
+
+                    {/* Auto Order Section */}
+                    <Divider className="auto-order-divider">
+                        <ThunderboltOutlined />
+                        자동 발주 설정
+                    </Divider>
+
+                    <FormItem label="자동 발주 사용" name="autoOrderEnabled" valuePropName="checked">
+                        <Switch />
+                    </FormItem>
+
+                    {autoOrderEnabled && (
+                        <div className="auto-order-section">
+                            <FormItem label="발주 기준 재고" name="minStockThreshold" rules={[{ required: true, message: '자동 발주를 사용하려면 기준 재고를 입력해야 합니다.' }]}>
+                                <InputNumber min={0} style={{ width: '100%' }} addonAfter="이하일 때" placeholder="예: 10" />
+                            </FormItem>
+                            <FormItem label="자동 발주 수량" name="orderQuantity" rules={[{ required: true, message: '자동 발주를 사용하려면 발주 수량을 입력해야 합니다.' }]}>
+                                <InputNumber min={0.1} style={{ width: '100%' }} addonAfter="을(를) 주문" placeholder="예: 50" />
+                            </FormItem>
+                            <FormItem label="예상 배송 기간" name="estimatedDeliveryDays">
+                                <InputNumber min={1} style={{ width: '100%' }} addonAfter="일 소요" placeholder="예: 3" />
+                            </FormItem>
+                        </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <FormItem>
+                        <Space className="form-actions" style={{ width: '100%', justifyContent: 'flex-end' }}>
+                            <Button
+                                className="cancel-button"
+                                onClick={() => navigate('/inventory')}
+                                size="large"
+                            >
+                                취소
+                            </Button>
+                            <Button
+                                className="save-button"
+                                type="primary"
+                                htmlType="submit"
+                                loading={loading}
+                                size="large"
+                            >
+                                {isEditMode ? '수정하기' : '저장하기'}
+                            </Button>
+                        </Space>
+                    </FormItem>
+                </Form>
+            </Card>
+        </div>
     );
 };
 

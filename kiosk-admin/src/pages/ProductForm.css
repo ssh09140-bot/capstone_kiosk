@@ -1,0 +1,370 @@
+/* Container */
+.product-form-container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+/* Modern Card */
+.product-form-card {
+    border-radius: 20px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    border: none !important;
+    overflow: hidden;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.product-form-card .ant-card-head {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-bottom: none;
+    padding: 24px 32px;
+}
+
+.product-form-card .ant-card-head-title {
+    color: white !important;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.product-form-card .ant-card-extra {
+    margin-top: 0;
+}
+
+.product-form-card .ant-card-body {
+    padding: 32px;
+}
+
+/* Back Button */
+.back-button {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: white !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease !important;
+    height: 40px !important;
+    padding: 0 20px !important;
+}
+
+.back-button:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    transform: translateX(-3px) !important;
+    color: white !important;
+}
+
+/* Form Sections */
+.form-section {
+    background: linear-gradient(135deg, #fff5f7 0%, #ffe9f0 100%);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    border: 1px solid #ffd6e0;
+}
+
+.form-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-section-title .anticon {
+    font-size: 20px;
+    color: #f5576c;
+}
+
+/* Form Items */
+.product-form-card .ant-form-item-label>label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+.product-form-card .ant-input,
+.product-form-card .ant-input-number,
+.product-form-card .ant-input-number-input,
+.product-form-card .ant-select-selector {
+    border-radius: 10px !important;
+    border: 2px solid #ffd6e0 !important;
+    padding: 10px 16px !important;
+    font-size: 15px !important;
+    transition: all 0.3s ease !important;
+}
+
+.product-form-card textarea.ant-input {
+    padding: 12px 16px !important;
+}
+
+.product-form-card .ant-input:hover,
+.product-form-card .ant-input-number:hover,
+.product-form-card .ant-select:hover .ant-select-selector {
+    border-color: #f5576c !important;
+}
+
+.product-form-card .ant-input:focus,
+.product-form-card .ant-input-number:focus,
+.product-form-card .ant-input-number-focused,
+.product-form-card .ant-select-focused .ant-select-selector {
+    border-color: #f5576c !important;
+    box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.1) !important;
+}
+
+.product-form-card .ant-input-number {
+    width: 100%;
+}
+
+/* Upload Section */
+.upload-section {
+    background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+    border: 2px dashed #c7d2fe;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.upload-section:hover {
+    border-color: #f5576c;
+    background: linear-gradient(135deg, #fff5f7 0%, #ffe9f0 100%);
+}
+
+.product-form-card .ant-upload-list {
+    margin-top: 16px;
+}
+
+.current-image {
+    margin-top: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: inline-block;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.current-image img {
+    border-radius: 12px;
+}
+
+/* Recipe Divider */
+.recipe-divider {
+    margin: 32px 0 24px 0 !important;
+    border-color: rgba(245, 87, 108, 0.2) !important;
+}
+
+.recipe-divider .ant-divider-inner-text {
+    font-weight: 700;
+    color: #f5576c;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Recipe List */
+.recipe-list {
+    border-radius: 12px !important;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-bottom: 16px;
+}
+
+.recipe-list .ant-list-header {
+    background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+    color: white;
+    font-weight: 600;
+    border-bottom: none !important;
+    padding: 12px 20px;
+}
+
+.recipe-list .ant-list-item {
+    transition: all 0.3s ease;
+    padding: 16px 20px;
+}
+
+.recipe-list .ant-list-item:hover {
+    background: #fff5f7;
+}
+
+.recipe-list .ant-list-empty-text {
+    padding: 32px;
+    color: #999;
+}
+
+/* Recipe Input Container */
+.recipe-input-container {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    border: 2px solid #bae6fd;
+}
+
+.recipe-input-container .ant-select,
+.recipe-input-container .ant-input-number,
+.recipe-input-container .ant-input {
+    border-radius: 10px !important;
+}
+
+.recipe-add-button {
+    height: 40px !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%) !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3) !important;
+}
+
+.recipe-add-button:hover {
+    background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4) !important;
+}
+
+/* Action Buttons */
+.form-actions {
+    gap: 12px !important;
+    margin-top: 32px !important;
+}
+
+.cancel-button {
+    height: 48px !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    border: 2px solid #e0e0e0 !important;
+    color: #666 !important;
+    transition: all 0.3s ease !important;
+}
+
+.cancel-button:hover {
+    border-color: #ff6b6b !important;
+    color: #ff6b6b !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2) !important;
+}
+
+.save-button {
+    height: 48px !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.save-button:hover {
+    background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(245, 87, 108, 0.4) !important;
+}
+
+.save-button:active {
+    transform: translateY(0) !important;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+    .product-form-container {
+        padding: 0;
+    }
+
+    .product-form-card {
+        border-radius: 0 !important;
+    }
+
+    .product-form-card .ant-card-head {
+        padding: 20px 16px;
+    }
+
+    .product-form-card .ant-card-head-title {
+        font-size: 20px;
+    }
+
+    .product-form-card .ant-card-body {
+        padding: 20px 16px;
+    }
+
+    .form-section {
+        padding: 16px;
+    }
+
+    .back-button {
+        padding: 0 12px !important;
+    }
+
+    .recipe-input-container {
+        flex-direction: column;
+    }
+
+    .recipe-input-container .ant-select,
+    .recipe-input-container .ant-input-number,
+    .recipe-input-container .ant-input,
+    .recipe-add-button {
+        width: 100% !important;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .cancel-button,
+    .save-button {
+        width: 100% !important;
+    }
+}
+
+/* Loading Spinner */
+.form-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+/* Input Number Addon */
+.product-form-card .ant-input-number-group-addon {
+    border-radius: 0 10px 10px 0 !important;
+    border: 2px solid #ffd6e0 !important;
+    border-left: none !important;
+    background: #fff5f7 !important;
+    color: #666 !important;
+    font-weight: 500;
+}
+
+/* Select Dropdown */
+.product-form-card .ant-select-dropdown {
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.product-form-card .ant-select-item-option-selected {
+    background: #fff5f7 !important;
+}
+
+.product-form-card .ant-select-item-option-active {
+    background: #ffe9f0 !important;
+}
