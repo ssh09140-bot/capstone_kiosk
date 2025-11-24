@@ -61,11 +61,15 @@ async function generateSalesAnalysis(bestSeller, worstSeller) {
 - Best-selling product: ${bestSeller.name} (Sold ${bestSeller.totalQuantity} units)
 - Worst-selling product: ${worstSeller.name} (Sold ${worstSeller.totalQuantity} units)
 
-Please generate a concise, data-driven, and actionable suggestion for our store manager in Korean. The suggestion should have two parts:
-1. A suggestion to enhance the best-selling product, for example, by adding a new option (e.g., '치즈 추가' or '사이즈 업').
-2. A suggestion to consider removing or replacing the worst-selling product.
+Please generate a concise, data-driven, and actionable suggestion for our store manager in Korean.
+IMPORTANT: Use the terms '인기 상품' instead of 'Best-selling product' and '비인기 상품' instead of 'Worst-selling product'.
 
-Keep the tone friendly and professional. Structure the output clearly.`;
+The suggestion should have two parts:
+1. A suggestion to enhance the '인기 상품' (Best-selling product), for example, by adding a new option (e.g., '치즈 추가' or '사이즈 업').
+2. A suggestion to consider removing or replacing the '비인기 상품' (Worst-selling product).
+
+Keep the tone friendly and professional.
+Structure the output clearly with bullet points or numbered lists and use line breaks for better readability.`;
     try {
         const response = await openai.chat.completions.create({
             model: AI_MODEL,
@@ -80,7 +84,7 @@ Keep the tone friendly and professional. Structure the output clearly.`;
                 },
             ],
             temperature: 0.8,
-            max_tokens: 400,
+            max_tokens: 1000,
         });
         return response.choices[0].message.content?.trim() ?? null;
     }

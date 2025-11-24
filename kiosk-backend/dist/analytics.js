@@ -45,7 +45,7 @@ router.get('/analytics/reports', auth_1.authenticateToken, async (req, res) => {
     startDate = (0, date_fns_1.startOfDay)(startDate);
     endDate = (0, date_fns_1.endOfDay)(endDate);
     try {
-        const [summary, dailyTrends, topProductsData, salesByHourData] = await Promise.all([
+        const [summary, dailyTrends, topProductsData, bottomProductsData, salesByHourData] = await Promise.all([
             // 1. Sales Summary
             db_1.default.order.aggregate({
                 _sum: { totalAmount: true },
@@ -78,7 +78,20 @@ router.get('/analytics/reports', auth_1.authenticateToken, async (req, res) => {
                 orderBy: { _sum: { quantity: 'desc' } },
                 take: 5,
             }),
-            // 4. Sales by Hour
+            // 4. Bottom Products
+            db_1.default.orderItem.groupBy({
+                by: ['productId'],
+                _sum: { quantity: true },
+                where: {
+                    order: {
+                        storeId: req.user.storeId,
+                        createdAt: { gte: startDate, lte: endDate },
+                    },
+                },
+                orderBy: { _sum: { quantity: 'asc' } },
+                take: 5,
+            }),
+            // 5. Sales by Hour
             db_1.default.$queryRaw `
         SELECT
           CAST(TO_CHAR("createdAt" AT TIME ZONE 'Asia/Seoul', 'HH24') AS INTEGER) as hour,
@@ -89,13 +102,21 @@ router.get('/analytics/reports', auth_1.authenticateToken, async (req, res) => {
         ORDER BY hour ASC;
       `,
         ]);
-        // Fetch product names for top products
-        const topProductDetails = await db_1.default.product.findMany({
-            where: { id: { in: topProductsData.map(p => p.productId) } },
+        // Fetch product names for top and bottom products
+        const productIds = [
+            ...topProductsData.map(p => p.productId),
+            ...bottomProductsData.map(p => p.productId)
+        ];
+        const productDetails = await db_1.default.product.findMany({
+            where: { id: { in: productIds } },
             select: { id: true, name: true },
         });
-        const productMap = new Map(topProductDetails.map(p => [p.id, p.name]));
+        const productMap = new Map(productDetails.map(p => [p.id, p.name]));
         const topProducts = topProductsData.map(p => ({
+            name: productMap.get(p.productId) || '알 수 없는 상품',
+            quantity: p._sum.quantity || 0,
+        }));
+        const bottomProducts = bottomProductsData.map(p => ({
             name: productMap.get(p.productId) || '알 수 없는 상품',
             quantity: p._sum.quantity || 0,
         }));
@@ -107,6 +128,7 @@ router.get('/analytics/reports', auth_1.authenticateToken, async (req, res) => {
             },
             dailyTrends,
             topProducts,
+            bottomProducts,
             salesByHour: salesByHourData,
         });
     }
@@ -168,6 +190,33 @@ router.get('/analytics/top-products', auth_1.authenticateToken, async (req, res)
     catch (error) {
         console.error(error);
         res.status(500).json({ message: '인기 상품 정보를 가져오는데 실패했습니다.' });
+    }
+});
+// [GET] /api/analytics/bottom-products
+router.get('/analytics/bottom-products', auth_1.authenticateToken, async (req, res) => {
+    if (!req.user)
+        return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    try {
+        const bottomProductsData = await db_1.default.orderItem.groupBy({
+            by: ['productId'],
+            _sum: { quantity: true },
+            where: { order: { storeId: req.user.storeId } },
+            orderBy: { _sum: { quantity: 'asc' } },
+            take: 5,
+        });
+        const products = await db_1.default.product.findMany({
+            where: { id: { in: bottomProductsData.map((p) => p.productId) } },
+        });
+        const productMap = new Map(products.map((p) => [p.id, p.name]));
+        const result = bottomProductsData.map((p) => ({
+            name: productMap.get(p.productId) || '알 수 없는 상품',
+            quantity: p._sum.quantity || 0,
+        }));
+        res.json(result);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: '비인기 상품 정보를 가져오는데 실패했습니다.' });
     }
 });
 // [GET] /api/analytics/profit-summary
