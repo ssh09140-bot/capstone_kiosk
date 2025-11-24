@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Space, Typography, Flex, message, Card, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { PlusOutlined, RedoOutlined, EditOutlined, DeleteOutlined, ShoppingOutlined } from '@ant-design/icons';
+import { PlusOutlined, RedoOutlined, EditOutlined, DeleteOutlined, ShoppingOutlined, FireOutlined } from '@ant-design/icons';
 import { useIsMobile } from '../hooks/useIsMobile';
+import ProductAnalysis from './ProductAnalysis';
 import './ProductList.css';
 
 const { Title, Text } = Typography;
@@ -21,6 +22,8 @@ const ProductList: React.FC = () => {
     const navigate = useNavigate();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
+    const [analysisVisible, setAnalysisVisible] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -52,6 +55,11 @@ const ProductList: React.FC = () => {
         }
     };
 
+    const handleAnalyze = (product: Product) => {
+        setSelectedProduct({ id: product.id.toString(), name: product.name });
+        setAnalysisVisible(true);
+    };
+
     const columns = [
         { title: '상품명', dataIndex: 'name', key: 'name' },
         { title: '가격', dataIndex: 'price', key: 'price', render: (price: number) => `${price.toLocaleString()}원` },
@@ -62,6 +70,7 @@ const ProductList: React.FC = () => {
             render: (_: any, record: Product) => (
                 <Space size="middle">
                     <Button onClick={() => navigate(`/products/${record.id}`)}>수정</Button>
+                    <Button icon={<FireOutlined />} onClick={() => handleAnalyze(record)}>분석</Button>
                     <Button danger onClick={() => handleDelete(record.id)}>삭제</Button>
                 </Space>
             ),
@@ -101,6 +110,16 @@ const ProductList: React.FC = () => {
                                 }}
                             >
                                 수정
+                            </Button>
+                            <Button
+                                size="small"
+                                icon={<FireOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAnalyze(product);
+                                }}
+                            >
+                                분석
                             </Button>
                             <Button
                                 size="small"
@@ -202,6 +221,12 @@ const ProductList: React.FC = () => {
                     pagination={isMobile ? { pageSize: 10, showSizeChanger: false } : { pageSize: 20 }}
                 />
             )}
+
+            <ProductAnalysis
+                visible={analysisVisible}
+                onClose={() => setAnalysisVisible(false)}
+                product={selectedProduct}
+            />
         </>
     );
 };

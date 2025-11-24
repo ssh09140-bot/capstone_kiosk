@@ -30,7 +30,6 @@ import NotificationPanel from './NotificationPanel';
 import MobileHome from '../pages/MobileHome';
 import MobilePageHeader from './MobilePageHeader';
 import type { Notification } from '@kiosk/shared-types';
-import BottomNav from './BottomNav';
 import { useIsMobile } from '../hooks/useIsMobile';
 import './AppLayout.css';
 
@@ -138,12 +137,62 @@ const AppLayout: React.FC = () => {
     />
   );
 
+  // Shared Drawer Component
+  const MobileDrawer = (
+    <Drawer
+      title={
+        <Space>
+          <ShopOutlined style={{ fontSize: 24, color: '#fff' }} />
+          <Text strong style={{ color: '#fff', fontSize: 18 }}>KIOSK ADMIN</Text>
+        </Space>
+      }
+      placement="left"
+      onClose={() => setMobileMenuVisible(false)}
+      open={mobileMenuVisible}
+      styles={{ body: { padding: 0, background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)' }, header: { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none' } }}
+      width={280}
+    >
+      <Menu
+        theme="dark"
+        mode="inline"
+        items={menuItems.map(item => {
+          if (item.type === 'group') {
+            return {
+              ...item,
+              children: item.children?.map(child => ({
+                ...child,
+                onClick: () => {
+                  child.onClick?.();
+                  setMobileMenuVisible(false);
+                }
+              }))
+            };
+          }
+          return {
+            ...item,
+            onClick: () => {
+              (item as any).onClick?.();
+              setMobileMenuVisible(false);
+            }
+          };
+        })}
+        selectedKeys={[location.pathname]}
+        style={{ background: 'transparent' }}
+      />
+    </Drawer>
+  );
+
   // Mobile Layout
   if (isMobile) {
     const isHomePage = location.pathname === '/';
 
     if (isHomePage) {
-      return <MobileHome unreadCount={unreadCount} />;
+      return (
+        <>
+          <MobileHome unreadCount={unreadCount} />
+          {MobileDrawer}
+        </>
+      );
     }
 
     return (
@@ -151,6 +200,7 @@ const AppLayout: React.FC = () => {
         <MobilePageHeader
           unreadCount={unreadCount}
           onNotificationClick={() => setPopoverVisible(true)}
+          onMenuClick={() => setMobileMenuVisible(true)}
         />
         <div className="mobile-content">
           <Outlet />
@@ -168,7 +218,7 @@ const AppLayout: React.FC = () => {
           <div style={{ display: 'none' }} />
         </Popover>
 
-        <BottomNav />
+        {MobileDrawer}
       </div>
     );
   }
@@ -204,49 +254,8 @@ const AppLayout: React.FC = () => {
         />
       </Sider>
 
-      {/* Mobile Drawer Menu */}
-      <Drawer
-        title={
-          <Space>
-            <ShopOutlined style={{ fontSize: 24, color: '#fff' }} />
-            <Text strong style={{ color: '#fff', fontSize: 18 }}>KIOSK ADMIN</Text>
-          </Space>
-        }
-        placement="left"
-        onClose={() => setMobileMenuVisible(false)}
-        open={mobileMenuVisible}
-        bodyStyle={{ padding: 0, background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)' }}
-        headerStyle={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none' }}
-        width={280}
-      >
-        <Menu
-          theme="dark"
-          mode="inline"
-          items={menuItems.map(item => {
-            if (item.type === 'group') {
-              return {
-                ...item,
-                children: item.children?.map(child => ({
-                  ...child,
-                  onClick: () => {
-                    child.onClick?.();
-                    setMobileMenuVisible(false);
-                  }
-                }))
-              };
-            }
-            return {
-              ...item,
-              onClick: () => {
-                (item as any).onClick?.();
-                setMobileMenuVisible(false);
-              }
-            };
-          })}
-          selectedKeys={[location.pathname]}
-          style={{ background: 'transparent' }}
-        />
-      </Drawer>
+      {/* Mobile Drawer Menu (Also rendered here for desktop responsive behavior if needed, though usually hidden) */}
+      {MobileDrawer}
 
       <Layout>
         <Header style={{
@@ -291,7 +300,6 @@ const AppLayout: React.FC = () => {
           margin: '24px',
           padding: 0,
         }}>
-          {/* MobileProductSubNav is handled in mobile view, but if needed for responsive desktop resizing: */}
           <div style={{ minHeight: 360 }}>
             <Outlet />
           </div>

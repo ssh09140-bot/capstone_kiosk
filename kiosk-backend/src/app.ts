@@ -24,6 +24,7 @@ import inventoryRoutes from './inventory';
 import supplierRoutes from './suppliers';
 import inventoryLogRoutes from './inventory-logs'; // Import the new inventory log router
 import recommendationRouter from './recommendations';
+import analysisRoutes from './analysis';
 import { apiRateLimiter, authRateLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './utils/errorHandler';
 
@@ -37,13 +38,13 @@ app.use('/api/auth', authRateLimiter);
 app.use('/api', apiRateLimiter);
 
 app.use((req, res, next) => {
-    res.setHeader('Permissions-Policy', 'local-network-access=*');
-    next();
+  res.setHeader('Permissions-Policy', 'local-network-access=*');
+  next();
 });
 
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
+  fs.mkdirSync(uploadsDir);
 }
 app.use('/uploads', express.static(uploadsDir));
 
@@ -65,6 +66,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/inventory-logs', inventoryLogRoutes); // Use the new inventory log router
 app.use('/api/recommendations', recommendationRouter);
+app.use('/api/analysis', analysisRoutes);
 
 // 404 handler
 app.use((req, res) => {
