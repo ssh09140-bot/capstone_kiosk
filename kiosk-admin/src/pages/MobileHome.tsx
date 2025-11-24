@@ -15,11 +15,9 @@ import './MobileHome.css';
 
 const { Title, Text } = Typography;
 
-interface MobileHomeProps {
-    unreadCount: number;
-}
+interface MobileHomeProps { }
 
-const MobileHome: React.FC<MobileHomeProps> = ({ unreadCount }) => {
+const MobileHome: React.FC<MobileHomeProps> = () => {
     const navigate = useNavigate();
 
     const navigationCards = [

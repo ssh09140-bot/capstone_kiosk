@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Typography, List, Button, Space, Tag } from 'antd';
-import { ArrowUpOutlined, RobotOutlined, ShopOutlined, DollarOutlined, ShoppingOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, RobotOutlined, ShopOutlined, DollarOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/charts';
 import api from '../api';
 import SalesAnalysisModal from '../components/SalesAnalysisModal';

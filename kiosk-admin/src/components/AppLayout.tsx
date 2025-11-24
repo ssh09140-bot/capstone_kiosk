@@ -140,7 +140,7 @@ const AppLayout: React.FC = () => {
     const isHomePage = location.pathname === '/';
 
     if (isHomePage) {
-      return <MobileHome unreadCount={unreadCount} />;
+      return <MobileHome />;
     }
 
     return (
