@@ -46,6 +46,11 @@ const Login: React.FC = () => {
               로그인
             </Button>
           </Form.Item>
+          <Form.Item style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <Button type="link" onClick={() => navigate('/reset-password')} className="auth-link-button">
+              비밀번호를 잊으셨나요?
+            </Button>
+          </Form.Item>
           <Form.Item style={{ textAlign: 'center', marginBottom: 0 }}>
             <Button type="link" onClick={() => navigate('/register')} className="auth-link-button">
               아직 계정이 없으신가요? <span style={{ fontWeight: 'bold' }}>회원가입</span>
