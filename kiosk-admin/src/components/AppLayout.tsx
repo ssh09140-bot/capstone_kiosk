@@ -68,8 +68,10 @@ const AppLayout: React.FC = () => {
     try {
       await api.post(`/notifications/${notification.id}/read`);
       setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
-      setUnreadCount(prev => prev - 1);
-
+      // 이미 읽은 알림을 다시 클릭한 경우 unreadCount를 감소시키지 않음
+      if (!notification.read) {
+        setUnreadCount(prev => prev - 1);
+      }
       if (notification.type === 'DELIVERY_PROMPT' || notification.type === 'LOW_STOCK_WARNING') {
         navigate('/purchase-orders');
       }
