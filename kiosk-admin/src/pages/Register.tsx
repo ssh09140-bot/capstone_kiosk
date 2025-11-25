@@ -15,9 +15,8 @@ const Register: React.FC = () => {
   const [verified, setVerified] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [verificationCode, setVerificationCode] = useState(''); // 인증 코드를 state에 저장
+  const [verificationCode, setVerificationCode] = useState('');
 
-  // 타이머 카운트다운
   useEffect(() => {
     if (timer > 0) {
       const interval = setInterval(() => {
@@ -27,7 +26,6 @@ const Register: React.FC = () => {
     }
   }, [timer]);
 
-  // 인증 코드 발송
   const handleSendCode = async () => {
     const email = form.getFieldValue('email');
 
@@ -36,7 +34,6 @@ const Register: React.FC = () => {
       return;
     }
 
-    // 이메일 형식 검증
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       message.error('올바른 이메일 형식을 입력해주세요!');
@@ -48,7 +45,7 @@ const Register: React.FC = () => {
       await api.post('/auth/send-code', { email });
       message.success('인증 코드가 이메일로 발송되었습니다!');
       setCodeSent(true);
-      setTimer(300); // 5분 (300초)
+      setTimer(300);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || '인증 코드 발송에 실패했습니다.';
       message.error(errorMessage);
@@ -57,7 +54,6 @@ const Register: React.FC = () => {
     }
   };
 
-  // 인증 코드 검증
   const handleVerifyCode = async () => {
     const email = form.getFieldValue('email');
     const code = form.getFieldValue('verificationCode');
@@ -71,7 +67,7 @@ const Register: React.FC = () => {
     try {
       await api.post('/auth/verify-code', { email, code });
       message.success('이메일 인증이 완료되었습니다! ✅');
-      setVerificationCode(code); // ✅ 인증 코드를 state에 저장
+      setVerificationCode(code);
       setVerified(true);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || '인증 코드가 일치하지 않습니다.';
@@ -81,7 +77,6 @@ const Register: React.FC = () => {
     }
   };
 
-  // 회원가입
   const onFinish = async (values: any) => {
     if (!verified) {
       message.error('이메일 인증을 먼저 완료해주세요!');
@@ -93,7 +88,7 @@ const Register: React.FC = () => {
         email: values.email,
         password: values.password,
         storeName: values.storeName,
-        verificationCode: verificationCode, // ✅ state에 저장된 인증 코드 사용
+        verificationCode: verificationCode,
       });
 
       message.success('회원가입 성공! 로그인 페이지로 이동합니다.');
@@ -104,7 +99,6 @@ const Register: React.FC = () => {
     }
   };
 
-  // 타이머 포맷팅 (mm:ss)
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -121,7 +115,6 @@ const Register: React.FC = () => {
         </div>
 
         <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="large">
-          {/* 이메일 입력 + 인증 코드 발송 */}
           <Form.Item
             name="email"
             rules={[{ required: true, message: '이메일을 입력해주세요!', type: 'email' }]}
@@ -145,7 +138,6 @@ const Register: React.FC = () => {
             </Space.Compact>
           </Form.Item>
 
-          {/* 인증 코드 입력 + 검증 */}
           {codeSent && !verified && (
             <Form.Item
               name="verificationCode"
@@ -184,8 +176,18 @@ const Register: React.FC = () => {
             </div>
           )}
 
-          <Form.Item name="password" rules={[{ required: true, message: '비밀번호를 입력해주세요!' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="비밀번호" />
+          <Form.Item
+            name="password"
+            rules={[
+              { required: true, message: '비밀번호를 입력해주세요!' },
+              { min: 7, message: '비밀번호는 최소 7자 이상이어야 합니다!' },
+              {
+                pattern: /^(?=(?:.*[0-9]){6})(?=.*[!@#$%^&*(),.?":{}|<>])/,
+                message: '비밀번호는 숫자 최소 6개와 특수문자 최소 1개를 포함해야 합니다!',
+              },
+            ]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder="비밀번호 (최소 7자, 숫자 6개 이상, 특수문자 포함)" />
           </Form.Item>
 
           <Form.Item
