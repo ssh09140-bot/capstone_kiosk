@@ -8,9 +8,11 @@
     "kiosk-backend",
     "packages/*"
   ],
-  "scripts": {
-  },
+  "scripts": {},
   "devDependencies": {
     "copyfiles": "^2.4.1"
+  },
+  "dependencies": {
+    "react-native-worklets-core": "^1.6.2"
   }
 }

@@ -1,13 +1,8 @@
-// app/setup.tsx
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../src/api'; // Import the configured axios instance
+import api, { BACKEND_URL } from '../src/api';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
-
-// 이 주소는 사장님의 PC IP 주소여야 합니다!
-// const BACKEND_URL = 'https://capstone-kiosk.onrender.com'; // 예시: 'http://192.168.0.5:3000' // Removed hardcoded URL
 
 export default function SetupScreen() {
   const [storeId, setStoreId] = useState('');
@@ -19,14 +14,12 @@ export default function SetupScreen() {
       return;
     }
     try {
-      const response = await api.get(`/store/${storeId}`); // Use the imported api instance
-      
+      const response = await api.get(`/store/${storeId}`);
+
       await AsyncStorage.setItem('storeId', storeId);
 
-      // ### --- 이 부분이 수정되었습니다 --- ###
-      // 알림창의 '확인' 버튼을 누르면, 그 다음에 화면을 이동시킵니다.
       Alert.alert(
-        '설정 완료', 
+        '설정 완료',
         `${response.data.storeName}으로 설정되었습니다.`,
         [{ text: '확인', onPress: () => router.replace('/product') }]
       );
@@ -49,6 +42,7 @@ export default function SetupScreen() {
         autoCapitalize="none"
       />
       <Button title="저장하고 시작하기" onPress={handleSave} />
+      <Text style={styles.debugText}>Connected to: {BACKEND_URL}</Text>
     </View>
   );
 }
@@ -66,4 +60,5 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 16,
   },
+  debugText: { marginTop: 20, textAlign: 'center', color: '#999', fontSize: 12 },
 });

@@ -45,15 +45,14 @@ export default function RootLayout() {
     <CartProvider>
       <Stack screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <Stack.Group>
+          <>
             <Stack.Screen name="index" />
             <Stack.Screen name="setup" options={{ title: '최초 설정', headerShown: true }} />
             <Stack.Screen name="product/index" />
             <Stack.Screen name="product/[id]" options={{ title: '상품 상세', headerShown: true }} />
             <Stack.Screen name="cart" options={{ title: '장바구니', headerShown: true }} />
             <Stack.Screen name="payment" options={{ title: '결제', headerShown: true }} />
-            {/* Add other authenticated screens here */}
-          </Stack.Group>
+          </>
         ) : (
           <Stack.Screen name="login" options={{ headerShown: false }} />
         )}

@@ -11,54 +11,54 @@ const router = express.Router();
 
 // GET /api/orders
 router.get('/', authenticateToken, async (req, res) => {
-  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
-  const { startDate, endDate } = req.query;
+    const { startDate, endDate } = req.query;
 
-  const where: any = { storeId: req.user.storeId };
-  if (startDate && endDate) {
-    where.createdAt = {
-      gte: new Date(startDate as string),
-      lte: new Date(endDate as string),
-    };
-  }
+    const where: any = { storeId: req.user.storeId };
+    if (startDate && endDate) {
+        where.createdAt = {
+            gte: new Date(startDate as string),
+            lte: new Date(endDate as string),
+        };
+    }
 
-  const orders = await prisma.order.findMany({
-    where,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      orderItems: {
+    const orders = await prisma.order.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
         include: {
-          product: true,
+            orderItems: {
+                include: {
+                    product: true,
+                },
+            },
         },
-      },
-    },
-  });
-  res.json(orders);
+    });
+    res.json(orders);
 });
 
 // GET /api/orders/:id
 router.get('/:id', authenticateToken, async (req, res) => {
-  if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
-  const order = await prisma.order.findUnique({
-    where: { id: parseInt(req.params.id), storeId: req.user.storeId },
-    include: {
-      orderItems: {
+    if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    const order = await prisma.order.findUnique({
+        where: { id: parseInt(req.params.id), storeId: req.user.storeId },
         include: {
-          product: true,
+            orderItems: {
+                include: {
+                    product: true,
+                },
+            },
         },
-      },
-    },
-  });
-  if (!order) {
-    return res.status(404).json({ message: '주문을 찾을 수 없습니다.' });
-  }
-  res.json(order);
+    });
+    if (!order) {
+        return res.status(404).json({ message: '주문을 찾을 수 없습니다.' });
+    }
+    res.json(order);
 });
 
 // POST /api/orders
 router.post('/', authenticateBoth, async (req, res) => {
-    if (!req.user) { 
+    if (!req.user) {
         return res.status(401).json({ message: 'User not authenticated' });
     }
     const { items } = req.body;
@@ -68,9 +68,20 @@ router.post('/', authenticateBoth, async (req, res) => {
     }
 
     try {
-        const weatherData = await getCurrentWeather();
+        console.log('Processing order for user:', req.user);
+        console.log('Order items (raw):', items);
 
-        const productIds = items.map((item: { productId: number }) => item.productId);
+        // Sanitize items: ensure numbers for IDs and quantities
+        const sanitizedItems = items.map((item: any) => ({
+            productId: parseInt(String(item.productId), 10),
+            quantity: parseInt(String(item.quantity), 10),
+            pricePerItem: Number(item.pricePerItem)
+        }));
+
+        const weatherData = await getCurrentWeather();
+        console.log('Weather data fetched:', weatherData);
+
+        const productIds = sanitizedItems.map((item: { productId: number }) => item.productId);
         const products = await prisma.product.findMany({
             where: { id: { in: productIds } },
             include: {
@@ -81,6 +92,7 @@ router.post('/', authenticateBoth, async (req, res) => {
                 },
             },
         });
+        console.log('Products fetched:', products.length);
         const productMap = new Map(products.map(p => [p.id, p]));
 
         const inventoryIds = products.flatMap(p => p.inventoryUsages.map(u => u.inventoryId));
@@ -90,6 +102,7 @@ router.post('/', authenticateBoth, async (req, res) => {
             where: { inventoryId: { in: uniqueInventoryIds } },
             distinct: ['inventoryId'],
         });
+        console.log('Inventory costs fetched');
         const inventoryCostMap = new Map(inventoryCosts.map(ic => [ic.inventoryId, ic.price || 0]));
 
         const productCostMap = new Map<number, number>();
@@ -109,9 +122,10 @@ router.post('/', authenticateBoth, async (req, res) => {
             productCostMap.set(product.id, productCost);
         }
 
-        for (const item of items) {
+        for (const item of sanitizedItems) {
             const product = productMap.get(item.productId);
             if (!product) {
+                console.error(`Product not found: ${item.productId}`);
                 return res.status(400).json({ message: `Product with ID ${item.productId} not found.` });
             }
             const costPerItem = productCostMap.get(item.productId) || 0;
@@ -119,6 +133,7 @@ router.post('/', authenticateBoth, async (req, res) => {
             calculatedTotalAmount += item.pricePerItem * item.quantity;
         }
 
+        console.log('Starting transaction...');
         const inventoryUpdates: { id: number; newQuantity: number; }[] = [];
         const newOrder = await prisma.$transaction(async (tx) => {
             const order = await tx.order.create({
@@ -129,7 +144,7 @@ router.post('/', authenticateBoth, async (req, res) => {
                     weather: weatherData?.weather,
                     temperature: weatherData?.temperature,
                     orderItems: {
-                        create: items.map((item: { productId: number, quantity: number, pricePerItem: number }) => ({
+                        create: sanitizedItems.map((item: { productId: number, quantity: number, pricePerItem: number }) => ({
                             productId: item.productId,
                             quantity: item.quantity,
                             pricePerItem: item.pricePerItem,
@@ -138,8 +153,9 @@ router.post('/', authenticateBoth, async (req, res) => {
                     },
                 },
             });
+            console.log('Order created:', order.id);
 
-            for (const item of items) {
+            for (const item of sanitizedItems) {
                 const product = productMap.get(item.productId)!;
                 if (product.inventoryUsages) {
                     for (const usage of product.inventoryUsages) {
@@ -166,15 +182,16 @@ router.post('/', authenticateBoth, async (req, res) => {
                     }
                 }
             }
-            
+
             return order;
         });
+        console.log('Transaction completed');
 
         for (const invUpdate of inventoryUpdates) {
             const inventoryItem = await prisma.inventory.findUnique({ where: { id: invUpdate.id } });
             if (inventoryItem && inventoryItem.threshold && invUpdate.newQuantity < inventoryItem.threshold) {
                 const message = await generateLowStockNotification(inventoryItem.name, invUpdate.newQuantity);
-                 if (message) {
+                if (message) {
                     await prisma.notification.create({
                         data: { storeId: req.user!.storeId, message, type: NotificationType.LOW_STOCK_WARNING },
                     });
@@ -188,10 +205,10 @@ router.post('/', authenticateBoth, async (req, res) => {
         console.error("Failed to create order:", error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             if (error.code === 'P2025' || error.code === 'P2034') {
-                 return res.status(400).json({ message: '재고가 부족하여 주문을 처리할 수 없습니다.' });
+                return res.status(400).json({ message: '재고가 부족하여 주문을 처리할 수 없습니다.' });
             }
         }
-        res.status(500).json({ message: 'Failed to create order.' });
+        res.status(500).json({ message: 'Failed to create order.', error: String(error) });
     }
 });
 

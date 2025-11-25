@@ -1,4 +1,4 @@
-import 'dotenv/config'; // Import dotenv to load environment variables
+import 'dotenv/config';
 
 export default {
   "expo": {
@@ -36,17 +36,15 @@ export default {
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-font",
-      "expo-web-browser"
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
     },
-    // Add the extra field to expose environment variables
     "extra": {
       "EXPO_PUBLIC_API_URL": process.env.EXPO_PUBLIC_API_URL,
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID" // Placeholder, user might need to fill this
+        "projectId": "YOUR_EAS_PROJECT_ID"
       }
     }
   }

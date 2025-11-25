@@ -1,15 +1,28 @@
 import { Request, Response, NextFunction } from 'express';
-import { authenticateToken } from './auth';
+import { JwtPayload } from './auth';
 import { authenticateStore } from './authenticateStore';
+import jwt from 'jsonwebtoken';
 
 export const authenticateBoth = (req: Request, res: Response, next: NextFunction) => {
-  // Try authenticateToken first
-  authenticateToken(req, res, (err?: any) => {
-    if (req.user) {
-      // If authenticateToken succeeded, proceed
-      return next();
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token) {
+    try {
+      jwt.verify(token, process.env.JWT_SECRET!, (err: any, user: any) => {
+        if (err) {
+          // Token is invalid or expired. Fallback to authenticateStore.
+          return authenticateStore(req, res, next);
+        }
+        req.user = user as JwtPayload;
+        next();
+      });
+    } catch (error) {
+      // In case verify throws synchronously
+      authenticateStore(req, res, next);
     }
-    // If authenticateToken failed or didn't set a user, try authenticateStore
+  } else {
+    // No token provided. Fallback to authenticateStore.
     authenticateStore(req, res, next);
-  });
+  }
 };

@@ -46,6 +46,11 @@ app.use('/uploads', express.static(uploadsDir));
 
 
 
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api', analyticsRoutes);
 app.use('/api/products', productRoutes);
@@ -60,6 +65,11 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/inventory-logs', inventoryLogRoutes); // Use the new inventory log router
 app.use('/api/recommendations', recommendationRouter);
+
+// Global 404 Handler
+app.use((req, res, next) => {
+    res.status(404).json({ message: `Route not found: ${req.method} ${req.url}` });
+});
 
 
 export default app;
