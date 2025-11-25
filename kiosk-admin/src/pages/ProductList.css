@@ -14,8 +14,8 @@
 /* Desktop Grid Layout */
 .product-grid-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
     padding-bottom: 40px;
 }
 
@@ -23,8 +23,8 @@
 .product-card {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 20px;
+    border-radius: 16px;
+    padding: 16px;
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -35,7 +35,7 @@
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
-    min-height: 280px;
+    min-height: 220px;
 }
 
 .product-card:hover {
@@ -62,18 +62,18 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 }
 
 .add-icon-wrapper {
-    width: 64px;
-    height: 64px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     background: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 20px;
     color: #1677ff;
     box-shadow: 0 4px 12px rgba(22, 119, 255, 0.1);
     transition: all 0.3s ease;
@@ -86,7 +86,8 @@
 }
 
 .add-text {
-    font-size: 16px;
+    font-size: 17px;
+    font-weight: 700;
     color: #1677ff;
 }
 
@@ -96,21 +97,21 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 16px;
+    gap: 12px;
     flex: 1;
 }
 
 .product-icon-wrapper {
-    width: 80px;
-    height: 80px;
-    border-radius: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
     background: linear-gradient(135deg, #e0eaff 0%, #f0f5ff 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 24px;
     color: #1677ff;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     transition: all 0.3s ease;
 }
 
@@ -122,17 +123,39 @@
 }
 
 .product-info-wrapper {
-    font-weight: 600;
-    border: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.product-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.product-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1677ff;
+}
+
+.stock-tag {
+    font-size: 13px;
+    margin-top: 4px;
 }
 
 /* Actions (Desktop) */
 .product-card-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 16px;
-    padding-top: 16px;
+    gap: 4px;
+    margin-top: 12px;
+    padding-top: 12px;
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     opacity: 0;
     transform: translateY(10px);

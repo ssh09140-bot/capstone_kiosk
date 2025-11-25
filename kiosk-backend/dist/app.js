@@ -35,6 +35,10 @@ if (!fs_1.default.existsSync(uploadsDir)) {
     fs_1.default.mkdirSync(uploadsDir);
 }
 app.use('/uploads', express_1.default.static(uploadsDir));
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
 app.use('/api/auth', auth_1.default);
 app.use('/api', analytics_1.default);
 app.use('/api/products', products_1.default);
@@ -49,4 +53,8 @@ app.use('/api/inventory', inventory_1.default);
 app.use('/api/suppliers', suppliers_1.default);
 app.use('/api/inventory-logs', inventory_logs_1.default); // Use the new inventory log router
 app.use('/api/recommendations', recommendations_1.default);
+// Global 404 Handler
+app.use((req, res, next) => {
+    res.status(404).json({ message: `Route not found: ${req.method} ${req.url}` });
+});
 exports.default = app;

@@ -228,3 +228,11 @@ enum NotificationType {
   DELIVERY_PROMPT
   DELIVERY_REMINDER
 }
+
+model EmailVerification {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

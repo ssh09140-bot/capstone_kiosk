@@ -66,8 +66,17 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
         return res.status(400).json({ message: 'Order must contain an array of items.' });
     }
     try {
+        console.log('Processing order for user:', req.user);
+        console.log('Order items (raw):', items);
+        // Sanitize items: ensure numbers for IDs and quantities
+        const sanitizedItems = items.map((item) => ({
+            productId: parseInt(String(item.productId), 10),
+            quantity: parseInt(String(item.quantity), 10),
+            pricePerItem: Number(item.pricePerItem)
+        }));
         const weatherData = await (0, weatherService_1.getCurrentWeather)();
-        const productIds = items.map((item) => item.productId);
+        console.log('Weather data fetched:', weatherData);
+        const productIds = sanitizedItems.map((item) => item.productId);
         const products = await db_1.default.product.findMany({
             where: { id: { in: productIds } },
             include: {
@@ -78,6 +87,7 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
                 },
             },
         });
+        console.log('Products fetched:', products.length);
         const productMap = new Map(products.map(p => [p.id, p]));
         const inventoryIds = products.flatMap(p => p.inventoryUsages.map(u => u.inventoryId));
         const uniqueInventoryIds = [...new Set(inventoryIds)];
@@ -85,6 +95,7 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
             where: { inventoryId: { in: uniqueInventoryIds } },
             distinct: ['inventoryId'],
         });
+        console.log('Inventory costs fetched');
         const inventoryCostMap = new Map(inventoryCosts.map(ic => [ic.inventoryId, ic.price || 0]));
         const productCostMap = new Map();
         let calculatedTotalCost = 0;
@@ -97,15 +108,17 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
             }, 0);
             productCostMap.set(product.id, productCost);
         }
-        for (const item of items) {
+        for (const item of sanitizedItems) {
             const product = productMap.get(item.productId);
             if (!product) {
+                console.error(`Product not found: ${item.productId}`);
                 return res.status(400).json({ message: `Product with ID ${item.productId} not found.` });
             }
             const costPerItem = productCostMap.get(item.productId) || 0;
             calculatedTotalCost += costPerItem * item.quantity;
             calculatedTotalAmount += item.pricePerItem * item.quantity;
         }
+        console.log('Starting transaction...');
         const inventoryUpdates = [];
         const newOrder = await db_1.default.$transaction(async (tx) => {
             const order = await tx.order.create({
@@ -116,7 +129,7 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
                     weather: weatherData?.weather,
                     temperature: weatherData?.temperature,
                     orderItems: {
-                        create: items.map((item) => ({
+                        create: sanitizedItems.map((item) => ({
                             productId: item.productId,
                             quantity: item.quantity,
                             pricePerItem: item.pricePerItem,
@@ -125,7 +138,8 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
                     },
                 },
             });
-            for (const item of items) {
+            console.log('Order created:', order.id);
+            for (const item of sanitizedItems) {
                 const product = productMap.get(item.productId);
                 if (product.inventoryUsages) {
                     for (const usage of product.inventoryUsages) {
@@ -148,6 +162,7 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
             }
             return order;
         });
+        console.log('Transaction completed');
         for (const invUpdate of inventoryUpdates) {
             const inventoryItem = await db_1.default.inventory.findUnique({ where: { id: invUpdate.id } });
             if (inventoryItem && inventoryItem.threshold && invUpdate.newQuantity < inventoryItem.threshold) {
@@ -168,7 +183,7 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
                 return res.status(400).json({ message: '재고가 부족하여 주문을 처리할 수 없습니다.' });
             }
         }
-        res.status(500).json({ message: 'Failed to create order.' });
+        res.status(500).json({ message: 'Failed to create order.', error: String(error) });
     }
 });
 exports.default = router;

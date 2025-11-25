@@ -5,9 +5,11 @@ import ProductList from './pages/ProductList';
 import ProductForm from './pages/ProductForm';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import MyInfo from './pages/MyInfo';
 import AppLayout from './components/AppLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 import OptionGroupList from './pages/OptionGroupList';
 import PurchaseOrderList from './pages/PurchaseOrderList';
 import InventoryPage from './pages/Inventory';
@@ -22,8 +24,16 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
-      <Route path="/" element={<AppLayout />}>
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="reports" element={<Reports />} />
