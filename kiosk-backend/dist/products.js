@@ -5,62 +5,41 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const db_1 = __importDefault(require("./db"));
-const authenticateBoth_1 = require("./middleware/authenticateBoth"); // Import authenticateBoth middleware
+const authenticateBoth_1 = require("./middleware/authenticateBoth");
 const multer_1 = __importDefault(require("multer"));
-const cloudinaryService_1 = require("./services/cloudinaryService"); // Import Cloudinary upload service
-const unitConversionService_1 = require("./services/unitConversionService"); // Import unit conversion service
-// Helper function to calculate available stock based on inventory usages
-function calculateAvailableStock(product) {
-    if (!product.inventoryUsages || product.inventoryUsages.length === 0) {
-        return 999999; // Assume virtually infinite stock if no ingredients are defined
-    }
-    let maxPossibleProducts = Infinity;
-    for (const usage of product.inventoryUsages) {
-        if (!usage.inventory) {
-            return 0;
-        }
-        const availableUnits = usage.inventory.quantity;
-        // Convert usage amount to the inventory's base unit before calculation
-        const requiredUnits = (0, unitConversionService_1.convertToBaseUnit)(usage.usageAmount, usage.usageUnit, usage.inventory.unit);
-        if (requiredUnits <= 0) {
-            continue; // Avoid division by zero or infinite stock from zero requirement
-        }
-        const possibleProducts = Math.floor(availableUnits / requiredUnits);
-        maxPossibleProducts = Math.min(maxPossibleProducts, possibleProducts);
-    }
-    return maxPossibleProducts;
-}
+const cloudinaryService_1 = require("./services/cloudinaryService");
+const inventoryService_1 = require("./services/inventoryService");
 const router = express_1.default.Router();
 // Configure Multer to store files in memory
 const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
 // GET /api/products
 router.get('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
-        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
+        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
     const products = await db_1.default.product.findMany({
         where: { storeId: req.user.storeId },
         include: {
             category: true,
             optionGroups: { include: { options: true } },
-            inventoryUsages: { include: { inventory: true } }, // Include recipe info
+            inventoryUsages: { include: { inventory: true } },
         },
     });
     const productsWithAvailableStock = products.map(product => ({
         ...product,
-        availableStock: calculateAvailableStock(product),
+        availableStock: (0, inventoryService_1.calculateAvailableStock)(product),
     }));
     res.json(productsWithAvailableStock);
 });
 // GET /api/products/:id
 router.get('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
     if (!req.user)
-        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
+        return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
     const product = await db_1.default.product.findUnique({
         where: { id: parseInt(req.params.id), storeId: req.user.storeId },
         include: {
             category: true,
             optionGroups: { include: { options: true } },
-            inventoryUsages: { include: { inventory: true } }, // Include recipe info
+            inventoryUsages: { include: { inventory: true } },
         },
     });
     if (!product) {
@@ -68,7 +47,7 @@ router.get('/:id', authenticateBoth_1.authenticateBoth, async (req, res) => {
     }
     const productWithAvailableStock = {
         ...product,
-        availableStock: calculateAvailableStock(product),
+        availableStock: (0, inventoryService_1.calculateAvailableStock)(product),
     };
     res.json(productWithAvailableStock);
 });
@@ -129,7 +108,7 @@ router.put('/:id', authenticateBoth_1.authenticateBoth, upload.single('image'), 
                 set: optionGroupIds.map((id) => ({ id: parseInt(id) }))
             } : { set: [] },
             inventoryUsages: {
-                deleteMany: {}, // Delete all existing usages
+                deleteMany: {},
                 create: usages.map((usage) => ({
                     inventoryId: usage.inventoryId,
                     usageAmount: usage.usageAmount,

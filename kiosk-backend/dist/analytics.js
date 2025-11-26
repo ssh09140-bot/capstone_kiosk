@@ -8,29 +8,7 @@ const db_1 = __importDefault(require("./db"));
 const auth_1 = require("./middleware/auth");
 const openaiService_1 = require("./services/openaiService");
 const date_fns_1 = require("date-fns");
-const unitConversionService_1 = require("./services/unitConversionService");
 const router = express_1.default.Router();
-// Helper function to calculate available stock based on inventory usages
-function calculateAvailableStock(product) {
-    if (!product.inventoryUsages || product.inventoryUsages.length === 0) {
-        return 999999; // Assume virtually infinite stock if no ingredients are defined
-    }
-    let maxPossibleProducts = Infinity;
-    for (const usage of product.inventoryUsages) {
-        if (!usage.inventory) {
-            return 0;
-        }
-        const availableUnits = usage.inventory.quantity;
-        // Convert usage amount to the inventory's base unit before calculation
-        const requiredUnits = (0, unitConversionService_1.convertToBaseUnit)(usage.usageAmount, usage.usageUnit, usage.inventory.unit);
-        if (requiredUnits <= 0) {
-            continue;
-        }
-        const possibleProducts = Math.floor(availableUnits / requiredUnits);
-        maxPossibleProducts = Math.min(maxPossibleProducts, possibleProducts);
-    }
-    return maxPossibleProducts;
-}
 // [GET] /api/analytics/reports
 router.get('/analytics/reports', auth_1.authenticateToken, async (req, res) => {
     if (!req.user)

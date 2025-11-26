@@ -1,16 +1,38 @@
 // src/api.ts
-id: number;
-name: string;
-quantity: number;
-unit: string;
-itemType: string;
-threshold: number | null;
-createdAt: string;
-updatedAt: string;
-storeId: string;
-autoOrderEnabled ?: boolean;
-minStockThreshold ?: number | null;
-orderQuantity ?: number | null;
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+});
+
+// 요청을 보내기 전에 가로채서 토큰을 헤더에 추가하는 로직
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
+
+export default api;
+
+// --- Inventory API ---
+
+export interface Inventory {
+  id: number;
+  name: string;
+  quantity: number;
+  unit: string;
+  itemType: string;
+  threshold: number | null;
+  createdAt: string;
+  updatedAt: string;
+  storeId: string;
+  autoOrderEnabled?: boolean;
+  minStockThreshold?: number | null;
+  orderQuantity?: number | null;
 }
 
 export interface CreateInventoryItemDto {

@@ -1,5 +1,4 @@
 import { message } from 'antd';
-import type { AxiosError } from 'axios';
 
 /**
  * 백엔드 표준 에러 응답 타입
@@ -17,7 +16,7 @@ export interface StandardErrorResponse {
 /**
  * 백엔드 표준 성공 응답 타입
  */
-export interface Standard SuccessResponse < T = any > {
+export interface StandardSuccessResponse<T = any> {
     success: true;
     data: T;
     timestamp: string;

@@ -1,11 +1,12 @@
 import express from 'express';
 import prisma from './db';
-import { Prisma, NotificationType } from '@prisma/client';
+import { Prisma, NotificationType, OrderStatus } from '@prisma/client';
 import { authenticateToken } from './middleware/auth';
 import { authenticateBoth } from './middleware/authenticateBoth';
 import { generateLowStockNotification } from './services/openaiService';
 import { getCurrentWeather } from './services/weatherService';
 import { convertToBaseUnit } from './services/unitConversionService';
+import { sendNotificationToStore } from './services/notificationService';
 
 const router = express.Router();
 
@@ -54,6 +55,32 @@ router.get('/:id', authenticateToken, async (req, res) => {
         return res.status(404).json({ message: '주문을 찾을 수 없습니다.' });
     }
     res.json(order);
+});
+
+// PATCH /api/orders/:id/status
+router.patch('/:id/status', authenticateToken, async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!Object.values(OrderStatus).includes(status)) {
+        return res.status(400).json({ message: '유효하지 않은 주문 상태입니다.' });
+    }
+
+    try {
+        const updatedOrder = await prisma.order.update({
+            where: { id: parseInt(id), storeId: req.user.storeId },
+            data: { status },
+        });
+        res.json(updatedOrder);
+    } catch (error) {
+        console.error('Failed to update order status:', error);
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            return res.status(404).json({ message: '주문을 찾을 수 없습니다.' });
+        }
+        res.status(500).json({ message: '주문 상태 변경에 실패했습니다.' });
+    }
 });
 
 // POST /api/orders
@@ -198,6 +225,13 @@ router.post('/', authenticateBoth, async (req, res) => {
                 }
             }
         }
+
+        // Send Push Notification
+        sendNotificationToStore(req.user!.storeId, {
+            title: '새 주문 알림',
+            body: `주문 #${newOrder.id}이(가) 접수되었습니다. 금액: ${newOrder.totalAmount.toLocaleString()}원`,
+            url: '/orders'
+        }).catch(err => console.error('Push notification failed:', err));
 
         res.status(201).json(newOrder);
 
