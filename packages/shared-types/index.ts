@@ -1,5 +1,5 @@
 export * from '@prisma/client';
-import { Product as PrismaProduct, OptionGroup as PrismaOptionGroup, Option as PrismaOption, Category as PrismaCategory } from '@prisma/client';
+import type { Product as PrismaProduct, OptionGroup as PrismaOptionGroup, Option as PrismaOption, Category as PrismaCategory } from '@prisma/client';
 
 export interface OptionGroup extends PrismaOptionGroup {
     options: PrismaOption[];

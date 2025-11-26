@@ -12,7 +12,7 @@ COPY kiosk-app/package*.json ./kiosk-app/
 COPY packages/shared-types/package*.json ./packages/shared-types/
 
 # Install dependencies
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy the rest of the source code
 COPY . .
