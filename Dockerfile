@@ -20,10 +20,13 @@ COPY . .
 # Generate Prisma client (which now outputs to packages/shared-types)
 RUN npm run generate --workspace=kiosk-backend
 
-# --- WORKAROUND for Render Docker build environment variables ---
-# Hardcode the build-time variables directly. These are not secrets.
-ENV VITE_API_URL=https://capstone-kiosk.onrender.com/api
-ENV VITE_TOSS_CLIENT_KEY=test_ck_ZLKGPx4M3M1MZzdk5RQ23BaWypv1
+# Use build arguments for environment variables (set in Render dashboard)
+ARG VITE_API_URL
+ARG VITE_TOSS_CLIENT_KEY
+
+# Set environment variables from build arguments
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_TOSS_CLIENT_KEY=${VITE_TOSS_CLIENT_KEY}
 
 # Build the kiosk-admin frontend
 RUN npm run build --workspace=kiosk-admin

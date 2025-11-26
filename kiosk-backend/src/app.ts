@@ -22,8 +22,9 @@ import notificationRoutes from './notifications';
 import purchaseOrderRoutes from './purchase-orders';
 import inventoryRoutes from './inventory';
 import supplierRoutes from './suppliers';
-import inventoryLogRoutes from './inventory-logs'; // Import the new inventory log router
+import inventoryLogRoutes from './inventory-logs';
 import recommendationRouter from './recommendations';
+import { errorHandler } from './middleware/errorHandler';
 
 
 const app = express();
@@ -41,7 +42,6 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
 app.use('/uploads', express.static(uploadsDir));
-
 
 
 
@@ -70,6 +70,9 @@ app.use('/api/recommendations', recommendationRouter);
 app.use((req, res, next) => {
     res.status(404).json({ message: `Route not found: ${req.method} ${req.url}` });
 });
+
+// Global Error Handler (must be last)
+app.use(errorHandler);
 
 
 export default app;
