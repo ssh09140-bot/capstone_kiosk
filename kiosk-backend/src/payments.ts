@@ -2,14 +2,43 @@ import { Router } from 'express';
 import prisma from './db';
 import { authenticateToken } from './middleware/auth';
 import fetch from 'node-fetch';
-import { JwtPayload } from './custom.d'; // JwtPayload 인터페이스 임포트
+import { JwtPayload } from './custom.d';
+import os from 'os'; // IP 감지를 위한 모듈 추가
 
 console.log('payments.ts file loaded');
 
 const router = Router();
 
-// Toss Payments Secret Key - This should be in your .env file
+// Toss Payments Secret Key
 const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY;
+
+// === [유틸리티 함수] 로컬 네트워크 IP 주소 자동 감지 ===
+function getLocalExternalIp() {
+  const interfaces = os.networkInterfaces();
+  const candidates: string[] = [];
+
+  for (const devName in interfaces) {
+    const iface = interfaces[devName];
+    if (!iface) continue;
+    for (const alias of iface) {
+      // IPv4이고 내부 주소(127.0.0.1)가 아닌 것을 찾음
+      if (alias.family === 'IPv4' && !alias.internal) {
+        candidates.push(alias.address);
+      }
+    }
+  }
+
+  // 1순위: 192.168.x.x (일반적인 홈/사무실 공유기 네트워크)
+  const preferred = candidates.find(ip => ip.startsWith('192.168.'));
+  if (preferred) return preferred;
+
+  // 2순위: 10.x.x.x (사설 네트워크)
+  const secondary = candidates.find(ip => ip.startsWith('10.'));
+  if (secondary) return secondary;
+
+  // 3순위: 그 외 (172.x.x.x 등은 가상 머신일 확률이 높음, 하지만 다른게 없으면 이거라도 반환)
+  return candidates.length > 0 ? candidates[0] : 'localhost';
+}
 
 interface TossBillingAuthResponse {
   billingKey: string;
@@ -26,14 +55,13 @@ interface TossBillingAuthResponse {
 router.post('/billing/issue-billing-key', authenticateToken, async (req, res) => {
   console.log('Reached /billing/issue-billing-key route');
   const { customerKey, authKey } = req.body;
-  const userId = (req.user as JwtPayload).id; // from authenticateToken middleware
+  const userId = (req.user as JwtPayload).id;
 
   if (!customerKey || !authKey) {
     return res.status(400).json({ error: 'customerKey and authKey are required' });
   }
 
   try {
-    // Call Toss Payments API to issue the billing key
     const response = await fetch('https://api.tosspayments.com/v1/billing/authorizations/issue', {
       method: 'POST',
       headers: {
@@ -54,14 +82,13 @@ router.post('/billing/issue-billing-key', authenticateToken, async (req, res) =>
 
     const { billingKey, card } = tossResponse;
 
-    // Save the billingKey, customerKey, and card info to the user
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         billingKey,
         customerKey,
-        cardCompany: card.cardType, // Use card.cardType instead of card.company
-        cardNumber: card.number, // This contains masked number e.g., 433012******1234
+        cardCompany: card.cardType,
+        cardNumber: card.number,
       },
     });
 
@@ -101,14 +128,8 @@ router.post('/payment/toss/prepare', async (req, res) => {
   }
 
   try {
-    // 고유한 주문 ID 생성
     const tossOrderId = `ORDER_${Date.now()}`;
     console.log('Generated tossOrderId:', tossOrderId);
-
-    // DB에 주문 생성 (PENDING 상태)
-    console.log('Creating order with storeId:', storeId);
-    console.log('totalAmount:', amount);
-    console.log('items:', items);
 
     const order = await prisma.order.create({
       data: {
@@ -130,19 +151,21 @@ router.post('/payment/toss/prepare', async (req, res) => {
 
     console.log('Order created successfully:', order.id);
 
-    // 테스트용 결제 URL 생성
-    // 실제 운영 시에는 Toss Payments Widget API를 사용해야 합니다
-    // const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
-    const backendUrl = 'http://192.168.197.191:3000'; // 강제 적용
-    console.log('Using BACKEND_URL:', backendUrl); // 로그 추가
+    // === [자동 IP 감지 적용] ===
+    // .env에 설정된 URL이 있으면 그걸 쓰고, 없으면 자동으로 IP를 찾아서 사용
+    const ip = getLocalExternalIp();
+    const port = process.env.PORT || 3000;
+    const backendUrl = process.env.BACKEND_URL || `http://${ip}:${port}`;
+
+    console.log('Using BACKEND_URL:', backendUrl);
+
     const paymentUrl = `${backendUrl}/api/payment/toss/checkout?orderId=${order.id}&amount=${amount}&orderName=${encodeURIComponent(orderName)}`;
 
     console.log('Payment URL generated:', paymentUrl);
 
-    // 결제 URL 반환 (QR 코드로 변환될 예정)
     res.status(200).json({
-      orderId: order.id, // DB의 실제 ID
-      tossOrderId: tossOrderId, // Toss용 주문 ID
+      orderId: order.id,
+      tossOrderId: tossOrderId,
       paymentUrl: paymentUrl,
       order,
     });
@@ -166,7 +189,6 @@ router.post('/payment/toss/confirm', async (req, res) => {
   }
 
   try {
-    // Toss Payments API로 결제 승인 요청
     const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
       method: 'POST',
       headers: {
@@ -186,36 +208,20 @@ router.post('/payment/toss/confirm', async (req, res) => {
       return res.status(response.status).json(tossResponse);
     }
 
-    // orderId는 ORDER_timestamp 형식이므로 DB에서 해당 주문 찾기
     const order = await prisma.order.findFirst({
-      orderBy: {
-        createdAt: 'desc',
-      },
-      where: {
-        totalAmount: amount,
-      },
-      include: {
-        orderItems: {
-          include: {
-            product: true,
-          },
-        },
-      },
+      orderBy: { createdAt: 'desc' },
+      where: { totalAmount: amount },
+      include: { orderItems: { include: { product: true } } },
     });
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // 재고 차감
     for (const item of order.orderItems) {
       await prisma.product.update({
         where: { id: item.productId },
-        data: {
-          stock: {
-            decrement: item.quantity,
-          },
-        },
+        data: { stock: { decrement: item.quantity } },
       });
     }
 
@@ -233,7 +239,11 @@ router.post('/payment/toss/confirm', async (req, res) => {
 router.get('/payment/toss/checkout', async (req, res) => {
   const { orderId, amount, orderName } = req.query;
   const clientKey = process.env.TOSS_CLIENT_KEY || 'test_ck_ZLKGPx4M3M1MZzdk5RQ23BaWypv1';
-  const backendUrl = 'http://192.168.197.191:3000'; // 강제 적용
+
+  // === [자동 IP 감지 적용] ===
+  const ip = getLocalExternalIp();
+  const port = process.env.PORT || 3000;
+  const backendUrl = process.env.BACKEND_URL || `http://${ip}:${port}`;
 
   res.send(`
     <!DOCTYPE html>
@@ -284,7 +294,7 @@ router.get('/payment/toss/checkout', async (req, res) => {
 // 결제 성공 처리 (Redirect URL)
 router.get('/payment/toss/success', async (req, res) => {
   const { paymentKey, orderId, amount, dbOrderId } = req.query;
-  
+
   console.log('Payment success callback:', req.query);
 
   try {
@@ -371,7 +381,6 @@ router.get('/payment/toss/status/:orderId', async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // 주문의 실제 status 반환
     res.status(200).json({
       orderId: order.id,
       status: order.status,
