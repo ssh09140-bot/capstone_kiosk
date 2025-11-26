@@ -33,30 +33,34 @@ export interface Inventory {
   autoOrderEnabled?: boolean;
   minStockThreshold?: number | null;
   orderQuantity?: number | null;
+  estimatedDeliveryDays?: number | null;
+  packAmount?: number;
 }
 
 export interface CreateInventoryItemDto {
   name: string;
   quantity: number;
   unit: string;
-  itemType: string; // Added
+  itemType: string;
   threshold?: number | null;
   autoOrderEnabled?: boolean;
   minStockThreshold?: number | null;
   orderQuantity?: number | null;
   estimatedDeliveryDays?: number | null;
+  packAmount?: number;
 }
 
 export interface UpdateInventoryItemDto {
   name?: string;
   quantity?: number;
   unit?: string;
-  itemType?: string; // Added as optional
+  itemType?: string;
   threshold?: number | null;
   autoOrderEnabled?: boolean;
   minStockThreshold?: number | null;
   orderQuantity?: number | null;
   estimatedDeliveryDays?: number | null;
+  packAmount?: number;
 }
 
 export const getInventory = async (): Promise<Inventory[]> => {
@@ -175,6 +179,8 @@ export interface Recommendation {
   supplierName: string;
   leadTimeDays: number;
   recommendedOrderAmount: number;
+  packAmount: number;
+  recommendedPackCount: number;
 }
 
 export interface RecommendationResponse {

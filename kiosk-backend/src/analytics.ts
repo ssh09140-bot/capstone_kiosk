@@ -366,4 +366,55 @@ router.get('/analytics/monthly-summary', authenticateToken, async (req, res) => 
     }
 });
 
+// [GET] /api/analytics/hygiene-check
+router.get('/analytics/hygiene-check', authenticateToken, async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+
+    try {
+        // 최근 3시간 주문 조회
+        const threeHoursAgo = new Date();
+        threeHoursAgo.setHours(threeHoursAgo.getHours() - 3);
+
+        const recentOrders = await prisma.orderItem.findMany({
+            where: {
+                order: {
+                    storeId: req.user.storeId,
+                    createdAt: { gte: threeHoursAgo },
+                },
+            },
+            include: {
+                product: true,
+            },
+        });
+
+        if (recentOrders.length === 0) {
+            return res.json({
+                status: '양호',
+                reason: '최근 3시간 동안 주문이 없습니다.',
+                message: '매장 상태가 깨끗할 것으로 예상됩니다.',
+            });
+        }
+
+        // AI 분석을 위한 데이터 가공
+        const ordersForAnalysis = recentOrders.map(item => ({
+            productName: item.product.name,
+            quantity: item.quantity,
+            options: item.selectedOptions ? JSON.stringify(item.selectedOptions) : '',
+        }));
+
+        // OpenAI 분석 호출
+        const hygieneCheckResult = await import('./services/openaiService').then(m => m.generateHygieneCheck(ordersForAnalysis));
+
+        if (!hygieneCheckResult) {
+            throw new Error('AI 분석 실패');
+        }
+
+        res.json(JSON.parse(hygieneCheckResult));
+
+    } catch (error) {
+        console.error('Error generating hygiene check:', error);
+        res.status(500).json({ message: '위생 점검 분석에 실패했습니다.' });
+    }
+});
+
 export default router;

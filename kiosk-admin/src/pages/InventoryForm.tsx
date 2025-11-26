@@ -17,6 +17,7 @@ interface InventoryFormValues {
     minStockThreshold?: number | null;
     orderQuantity?: number | null;
     estimatedDeliveryDays?: number | null;
+    packAmount: number;
 }
 
 const InventoryForm: React.FC = () => {
@@ -40,6 +41,7 @@ const InventoryForm: React.FC = () => {
                         threshold: item.threshold ?? null,
                         minStockThreshold: item.minStockThreshold ?? undefined,
                         orderQuantity: item.orderQuantity ?? undefined,
+                        packAmount: item.packAmount || 1.0,
                     });
                 } catch (error) {
                     message.error("재고 정보를 불러오는데 실패했습니다.");
@@ -60,6 +62,7 @@ const InventoryForm: React.FC = () => {
                 minStockThreshold: values.minStockThreshold || null,
                 orderQuantity: values.orderQuantity || null,
                 estimatedDeliveryDays: values.estimatedDeliveryDays || null,
+                packAmount: values.packAmount || 1.0,
             };
 
             if (isEditMode) {
@@ -112,7 +115,7 @@ const InventoryForm: React.FC = () => {
                     form={form}
                     layout="vertical"
                     onFinish={onFinish}
-                    initialValues={{ quantity: 0, autoOrderEnabled: false }}
+                    initialValues={{ quantity: 0, autoOrderEnabled: false, packAmount: 1.0 }}
                 >
                     {/* Basic Information Section */}
                     <div className="form-section">
@@ -136,6 +139,9 @@ const InventoryForm: React.FC = () => {
                         </Space>
                         <FormItem label="재고 임계값 (알림 기준)" name="threshold">
                             <InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="이 수량 이하일 때 알림 (선택 사항)" />
+                        </FormItem>
+                        <FormItem label="기본 발주 단위 (Pack Amount)" name="packAmount" rules={[{ required: true, message: '발주 단위를 입력해주세요.' }]}>
+                            <InputNumber min={0.1} step={0.1} style={{ width: '100%' }} placeholder="예: 1.0 (1kg 팩)" />
                         </FormItem>
                     </div>
 
