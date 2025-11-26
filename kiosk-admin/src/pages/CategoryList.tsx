@@ -233,20 +233,28 @@ const CategoryList: React.FC = () => {
             )}
 
             <Modal
-                title={editingCategory ? "카테고리 수정" : "새 카테고리 추가"}
+                title={
+                    <div className="modal-title-wrapper">
+                        <AppstoreOutlined />
+                        <span>{editingCategory ? "카테고리 수정" : "새 카테고리 추가"}</span>
+                    </div>
+                }
                 open={isModalVisible}
                 onOk={handleOk}
                 onCancel={handleCancel}
                 okText="저장"
                 cancelText="취소"
+                className="category-modal"
+                width={500}
+                centered
             >
-                <Form form={form} layout="vertical">
+                <Form form={form} layout="vertical" className="category-form">
                     <Form.Item
                         name="name"
                         label="카테고리 이름"
                         rules={[{ required: true, message: '카테고리 이름을 입력해주세요.' }]}
                     >
-                        <Input placeholder="예: 음료, 디저트, 메인 메뉴" />
+                        <Input placeholder="예: 음료, 디저트, 메인 메뉴" size="large" />
                     </Form.Item>
                 </Form>
             </Modal>

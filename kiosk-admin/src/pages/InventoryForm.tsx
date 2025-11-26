@@ -127,10 +127,10 @@ const InventoryForm: React.FC = () => {
                             <Input placeholder="예: 원두, 우유, 시럽, 컵" />
                         </FormItem>
                         <Space style={{ width: '100%' }} size="large">
-                            <FormItem label="수량" name="quantity" rules={[{ required: true, message: '수량을 입력해주세요.' }]} style={{ flex: 1 }}>
+                            <FormItem label="수량" name="quantity" rules={[{ required: true, message: '수량을 입력해주세요.' }]} style={{ flex: 0.7 }}>
                                 <InputNumber min={0} step={0.1} style={{ width: '100%' }} placeholder="0" />
                             </FormItem>
-                            <FormItem label="단위" name="unit" rules={[{ required: true, message: '단위를 입력해주세요.' }]} style={{ flex: 1 }}>
+                            <FormItem label="단위" name="unit" rules={[{ required: true, message: '단위를 입력해주세요.' }]} style={{ flex: 0.7 }}>
                                 <Input placeholder="kg, L, 개" />
                             </FormItem>
                         </Space>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, message, Card, Spin, Select, InputNumber, Space, Row, Col } from 'antd';
+import { Form, Input, Button, message, Card, Spin, Select, InputNumber, Space, Row, Col, Divider } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSupplier, createSupplier, updateSupplier, type SupplierDto, getInventory, type Inventory } from '../api';
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { MinusCircleOutlined, PlusOutlined, ShopOutlined, ContactsOutlined, TeamOutlined, LeftOutlined } from '@ant-design/icons';
+import './SupplierForm.css';
 
 const { Option } = Select;
 const FormItem = Form.Item;
@@ -46,7 +47,6 @@ const SupplierForm: React.FC = () => {
                 try {
                     const numericId = parseInt(id!, 10);
                     const item = await getSupplier(numericId);
-                    // Transform supplies for the form
                     const formData = {
                         ...item,
                         supplies: item.supplies.map(s => ({
@@ -99,87 +99,158 @@ const SupplierForm: React.FC = () => {
     };
 
     if (loading && isEditMode) {
-        return <Spin size="large" style={{ display: 'block', marginTop: '50px' }} />;
+        return (
+            <div className="form-loading">
+                <Spin size="large" />
+            </div>
+        );
     }
 
     return (
-        <Card title={isEditMode ? '공급업체 수정' : '새 공급업체 등록'} style={{ maxWidth: '800px', margin: 'auto' }}>
-            <Form form={form} layout="vertical" onFinish={onFinish} autoComplete="off">
-                <Row gutter={16}>
-                    <Col span={12}>
-                        <FormItem label="공급업체명" name="name" rules={[{ required: true, message: '공급업체명을 입력해주세요.' }]}>
-                            <Input />
-                        </FormItem>
-                    </Col>
-                    <Col span={12}>
-                        <FormItem label="연락처" name="contact">
-                            <Input />
-                        </FormItem>
-                    </Col>
-                </Row>
-                <Row gutter={16}>
-                    <Col span={12}>
-                        <FormItem label="이메일" name="email" rules={[{ type: 'email', message: '유효한 이메일 주소를 입력해주세요.' }]}>
-                            <Input />
-                        </FormItem>
-                    </Col>
-                    <Col span={12}>
-                        <FormItem label="주소" name="address">
-                            <Input />
-                        </FormItem>
-                    </Col>
-                </Row>
+        <div className="product-form-container">
+            <Card
+                className="product-form-card"
+                title={
+                    <>
+                        <ShopOutlined /> {isEditMode ? '공급업체 수정' : '새 공급업체 등록'}
+                    </>
+                }
+                extra={
+                    <Button className="back-button" icon={<LeftOutlined />} onClick={() => navigate('/suppliers')}>
+                        목록으로
+                    </Button>
+                }
+            >
+                <Form form={form} layout="vertical" onFinish={onFinish} autoComplete="off">
+                    {/* 기본 정보 섹션 */}
+                    <div className="form-section">
+                        <div className="form-section-title">
+                            <ContactsOutlined /> 기본 정보
+                        </div>
+                        <Row gutter={16}>
+                            <Col span={12}>
+                                <FormItem
+                                    label="공급업체명"
+                                    name="name"
+                                    rules={[{ required: true, message: '공급업체명을 입력해주세요.' }]}
+                                >
+                                    <Input placeholder="공급업체명 입력" />
+                                </FormItem>
+                            </Col>
+                            <Col span={12}>
+                                <FormItem label="연락처" name="contact">
+                                    <Input placeholder="연락처 입력" />
+                                </FormItem>
+                            </Col>
+                        </Row>
+                        <Row gutter={16}>
+                            <Col span={12}>
+                                <FormItem
+                                    label="이메일"
+                                    name="email"
+                                    rules={[{ type: 'email', message: '유효한 이메일 주소를 입력해주세요.' }]}
+                                >
+                                    <Input placeholder="이메일 입력" />
+                                </FormItem>
+                            </Col>
+                            <Col span={12}>
+                                <FormItem label="주소" name="address">
+                                    <Input placeholder="주소 입력" />
+                                </FormItem>
+                            </Col>
+                        </Row>
+                    </div>
 
-                <Card title="공급 품목" type="inner" style={{ marginTop: 24 }}>
+                    {/* 공급 품목 섹션 */}
+                    <Divider className="recipe-divider">
+                        <TeamOutlined /> 공급 품목
+                    </Divider>
+
                     <Form.List name="supplies">
                         {(fields, { add, remove }) => (
                             <>
-                                {fields.map(({ key, name, ...restField }) => (
-                                    <Space key={key} style={{ display: 'flex', marginBottom: 8, alignItems: 'baseline' }} align="baseline">
-                                        <Form.Item
-                                            {...restField}
-                                            name={[name, 'inventoryId']}
-                                            rules={[{ required: true, message: '품목을 선택하세요' }]}
-                                            style={{ minWidth: '200px' }}
-                                        >
-                                            <Select placeholder="품목 선택">
-                                                {inventoryItems.map(item => (
-                                                    <Option key={item.id} value={item.id}>{item.name} ({item.unit})</Option>
-                                                ))}
-                                            </Select>
-                                        </Form.Item>
-                                        <Form.Item
-                                            {...restField}
-                                            name={[name, 'price']}
-                                        >
-                                            <InputNumber placeholder="단가 (원)" style={{ width: '100%' }} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value!.replace(/\$\s?|(,*)/g, '')} />
-                                        </Form.Item>
-                                        <Form.Item
-                                            {...restField}
-                                            name={[name, 'leadTimeDays']}
-                                        >
-                                            <InputNumber placeholder="리드타임 (일)" min={0} style={{ width: '100%' }} />
-                                        </Form.Item>
-                                        <MinusCircleOutlined onClick={() => remove(name)} />
-                                    </Space>
-                                ))}
-                                <Form.Item>
-                                    <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                                {fields.length > 0 && (
+                                    <div className="recipe-list">
+                                        {fields.map(({ key, name, ...restField }) => (
+                                            <Space key={key} className="recipe-input-container" style={{ width: '100%' }}>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'inventoryId']}
+                                                    rules={[{ required: true, message: '품목 선택' }]}
+                                                    style={{ flex: 1 }}
+                                                >
+                                                    <Select placeholder="품목 선택">
+                                                        {inventoryItems.map(item => (
+                                                            <Option key={item.id} value={item.id}>
+                                                                {item.name} ({item.unit})
+                                                            </Option>
+                                                        ))}
+                                                    </Select>
+                                                </Form.Item>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'price']}
+                                                    style={{ flex: 1 }}
+                                                >
+                                                    <InputNumber
+                                                        placeholder="단가 (원)"
+                                                        style={{ width: '100%' }}
+                                                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                                        parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                                                    />
+                                                </Form.Item>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'leadTimeDays']}
+                                                    style={{ flex: 1 }}
+                                                >
+                                                    <InputNumber placeholder="리드타임 (일)" min={0} style={{ width: '100%' }} />
+                                                </Form.Item>
+                                                <MinusCircleOutlined
+                                                    onClick={() => remove(name)}
+                                                    style={{ fontSize: '18px', color: '#ff4d4f', cursor: 'pointer' }}
+                                                />
+                                            </Space>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div style={{ marginTop: fields.length > 0 ? 16 : 0 }}>
+                                    <Button
+                                        type="dashed"
+                                        onClick={() => add()}
+                                        block
+                                        icon={<PlusOutlined />}
+                                        className="recipe-add-button"
+                                    >
                                         공급 품목 추가
                                     </Button>
-                                </Form.Item>
+                                </div>
                             </>
                         )}
                     </Form.List>
-                </Card>
 
-                <FormItem style={{ marginTop: '32px' }}>
-                    <Button type="primary" htmlType="submit" block loading={loading}>
-                        저장하기
-                    </Button>
-                </FormItem>
-            </Form>
-        </Card>
+                    {/* 버튼 그룹 */}
+                    <div className="form-actions" style={{ display: 'flex', gap: '12px', marginTop: 32 }}>
+                        <Button
+                            className="cancel-button"
+                            onClick={() => navigate('/suppliers')}
+                            disabled={loading}
+                        >
+                            취소
+                        </Button>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            loading={loading}
+                            className="save-button"
+                        >
+                            저장
+                        </Button>
+                    </div>
+                </Form>
+            </Card>
+        </div>
     );
 };
 

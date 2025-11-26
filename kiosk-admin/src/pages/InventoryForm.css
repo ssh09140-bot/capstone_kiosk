@@ -15,7 +15,7 @@
 }
 
 .inventory-form-card .ant-card-head {
-    background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+    background: linear-gradient(135deg, #00509d 0%, #00296b 100%);
     border-bottom: none;
     padding: 24px 32px;
 }
@@ -79,7 +79,7 @@
 
 .form-section-title .anticon {
     font-size: 20px;
-    color: #10b981;
+    color: #00509d;
 }
 
 /* Form Items */
@@ -101,14 +101,14 @@
 
 .inventory-form-card .ant-input:hover,
 .inventory-form-card .ant-input-number:hover {
-    border-color: #43e97b !important;
+    border-color: #00509d !important;
 }
 
 .inventory-form-card .ant-input:focus,
 .inventory-form-card .ant-input-number:focus,
 .inventory-form-card .ant-input-number-focused {
-    border-color: #43e97b !important;
-    box-shadow: 0 0 0 3px rgba(67, 233, 123, 0.1) !important;
+    border-color: #00509d !important;
+    box-shadow: 0 0 0 3px rgba(0, 80, 157, 0.1) !important;
 }
 
 .inventory-form-card .ant-input-number {
@@ -121,18 +121,18 @@
 }
 
 .inventory-form-card .ant-switch-checked {
-    background: #43e97b !important;
+    background: #00509d !important;
 }
 
 /* Divider */
 .auto-order-divider {
     margin: 32px 0 24px 0 !important;
-    border-color: rgba(67, 233, 123, 0.2) !important;
+    border-color: rgba(0, 80, 157, 0.2) !important;
 }
 
 .auto-order-divider .ant-divider-inner-text {
     font-weight: 700;
-    color: #0d9488;
+    color: #00509d;
     font-size: 16px;
     display: flex;
     align-items: center;
@@ -141,8 +141,8 @@
 
 /* Auto Order Section */
 .auto-order-section {
-    background: #f0fdfa;
-    border: 2px solid #5eead4;
+    background: #e6f0ff;
+    border: 2px solid #00509d;
     border-radius: 16px;
     padding: 24px;
     margin-top: 16px;
@@ -189,17 +189,17 @@
     border-radius: 12px !important;
     font-size: 16px !important;
     font-weight: 600 !important;
-    background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%) !important;
+    background: linear-gradient(135deg, #00509d 0%, #00296b 100%) !important;
     border: none !important;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(0, 80, 157, 0.3) !important;
     transition: all 0.3s ease !important;
     color: white !important;
 }
 
 .save-button:hover {
-    background: linear-gradient(135deg, #059669 0%, #0d9488 100%) !important;
+    background: linear-gradient(135deg, #003d7a 0%, #001f52 100%) !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+    box-shadow: 0 6px 16px rgba(0, 80, 157, 0.4) !important;
 }
 
 .save-button:active {

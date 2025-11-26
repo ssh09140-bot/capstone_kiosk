@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Typography, message, Modal, Form, Input, InputNumber, Space } from 'antd';
-import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, EditOutlined, SettingOutlined } from '@ant-design/icons';
 import api from '../api';
+import './OptionGroupList.css'; // Import the new CSS file
 
 const { Title, Text } = Typography;
 
@@ -118,37 +119,72 @@ const OptionGroupList: React.FC = () => {
                 새 옵션 그룹 추가
             </Button>
             <Table columns={columns} dataSource={groups} loading={loading} scroll={{ x: 'max-content' }} />
-            <Modal title={editingGroup ? "옵션 그룹 수정" : "새 옵션 그룹"} open={isModalVisible} onOk={handleOk} onCancel={handleCancel} okText="저장" cancelText="취소">
-                <Form form={form} layout="vertical" initialValues={editingGroup ? undefined : { options: [{ name: '', price: 0 }]}}>
-                    <Form.Item name="name" label="옵션 그룹 이름 (예: 사이즈)" rules={[{ required: true, message: '그룹 이름을 입력해주세요.' }]}>
-                        <Input />
-                    </Form.Item>
-                    <Title level={5}>옵션 목록</Title>
-                    {editingGroup ? (
-                        <Text type="secondary">옵션 목록 수정은 현재 지원되지 않습니다. 그룹을 삭제하고 새로 만들어주세요.</Text>
-                    ) : (
-                        <Form.List name="options">
-                            {(fields, { add, remove }) => (
-                                <>
-                                    {fields.map(({ key, name, ...restField }) => (
-                                        <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                                            <Form.Item {...restField} name={[name, 'name']} rules={[{ required: true, message: '옵션 이름을 입력해주세요.' }]}>
-                                                <Input placeholder="옵션 이름 (예: L 사이즈)" />
-                                            </Form.Item>
-                                            <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: '추가 가격을 입력해주세요.' }]}>
-                                                <InputNumber placeholder="추가 가격 (예: 500)" style={{ width: '100%' }} />
-                                            </Form.Item>
-                                            {fields.length > 1 ? <DeleteOutlined onClick={() => remove(name)} /> : null}
-                                        </Space>
-                                    ))}
-                                    <Form.Item>
-                                        <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                                            옵션 추가
-                                        </Button>
-                                    </Form.Item>
-                                </>
-                            )}
-                        </Form.List>
+            <Modal
+                title={
+                    <div className="modal-title-wrapper">
+                        <SettingOutlined />
+                        <span>{editingGroup ? "옵션 그룹 수정" : "새 옵션 그룹"}</span>
+                    </div>
+                }
+                open={isModalVisible}
+                onOk={handleOk}
+                onCancel={handleCancel}
+                okText="저장"
+                cancelText="취소"
+                className="option-group-modal" // Apply modal class
+                width={600} // Adjust width as needed
+                centered
+            >
+                <Form form={form} layout="vertical" initialValues={editingGroup ? undefined : { options: [{ name: '', price: 0 }]}} className="option-group-form">
+                    <div className="form-section">
+                        <div className="form-section-title">
+                            <SettingOutlined />
+                            기본 정보
+                        </div>
+                        <Form.Item name="name" label="옵션 그룹 이름 (예: 사이즈)" rules={[{ required: true, message: '그룹 이름을 입력해주세요.' }]}>
+                            <Input size="large" />
+                        </Form.Item>
+                    </div>
+
+                    {!editingGroup && ( // Only show option list for new groups
+                        <div className="form-section" style={{ marginTop: '24px' }}>
+                            <div className="form-section-title">
+                                <PlusOutlined />
+                                옵션 목록
+                            </div>
+                            <Form.List name="options">
+                                {(fields, { add, remove }) => (
+                                    <>
+                                        {fields.map(({ key, name, ...restField }) => (
+                                            <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'name']}
+                                                    rules={[{ required: true, message: '옵션 이름을 입력해주세요.' }]}
+                                                    style={{ flex: 1 }}
+                                                >
+                                                    <Input placeholder="옵션 이름 (예: L 사이즈)" size="large" />
+                                                </Form.Item>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'price']}
+                                                    rules={[{ required: true, message: '추가 가격을 입력해주세요.' }]}
+                                                    style={{ flex: 1 }}
+                                                >
+                                                    <InputNumber placeholder="추가 가격 (예: 500)" style={{ width: '100%' }} size="large" />
+                                                </Form.Item>
+                                                {fields.length > 1 ? <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} /> : null}
+                                            </Space>
+                                        ))}
+                                        <Form.Item>
+                                            <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />} size="large">
+                                                옵션 추가
+                                            </Button>
+                                        </Form.Item>
+                                    </>
+                                )}
+                            </Form.List>
+                        </div>
                     )}
                 </Form>
             </Modal>

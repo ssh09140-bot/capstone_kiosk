@@ -1,0 +1,106 @@
+/* Modal Customization - Copied from CategoryList.css and adapted for OptionGroupList */
+.option-group-modal .ant-modal-content {
+    border-radius: 20px !important;
+    overflow: hidden;
+    padding: 0 !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+.option-group-modal .ant-modal-header {
+    background: linear-gradient(135deg, #1677ff 0%, #0d6bdf 100%);
+    padding: 20px 24px;
+    margin: 0 !important;
+    border-bottom: none !important;
+}
+
+.option-group-modal .ant-modal-title {
+    color: white !important;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.option-group-modal .ant-modal-close {
+    color: rgba(255, 255, 255, 0.7) !important;
+    top: 20px !important;
+    right: 20px !important;
+}
+
+.option-group-modal .ant-modal-close:hover {
+    color: white !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.option-group-modal .ant-modal-body {
+    padding: 32px 24px !important;
+}
+
+.option-group-modal .ant-modal-footer {
+    padding: 16px 24px 24px 24px !important;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Modal Buttons */
+.option-group-modal .ant-btn-default {
+    border-radius: 10px;
+    height: 40px;
+    font-weight: 500;
+    border-color: #d9d9d9;
+}
+
+.option-group-modal .ant-btn-primary {
+    border-radius: 10px;
+    height: 40px;
+    font-weight: 500;
+    background: linear-gradient(135deg, #1677ff 0%, #0d6bdf 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+}
+
+.option-group-modal .ant-btn-primary:hover {
+    background: linear-gradient(135deg, #0d6bdf 0%, #0a5fc2 100%) !important;
+    box-shadow: 0 6px 16px rgba(22, 119, 255, 0.4);
+}
+
+/* Input Styling in Modal */
+.option-group-form .ant-input,
+.option-group-form .ant-input-number {
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 15px;
+    border: 2px solid #e8eaf6;
+}
+
+.option-group-form .ant-input:hover,
+.option-group-form .ant-input:focus,
+.option-group-form .ant-input-number:hover,
+.option-group-form .ant-input-number:focus-within {
+    border-color: #1677ff;
+    box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1);
+}
+
+.option-group-form .ant-form-item-label label {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Reusing form-section styles */
+.form-section {
+    background: #f9fafb;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    border: 1px solid #e5e7eb;
+}
+
+.form-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

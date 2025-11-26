@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, Divider, List } from 'antd';
-import { UploadOutlined, DeleteOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { Form, Input, Button, InputNumber, Upload, message, Select, Spin, Card, Divider, List, Space } from 'antd';
+import { UploadOutlined, DeleteOutlined, ArrowLeftOutlined, ShoppingOutlined, SettingOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import api, { type Inventory, getInventory } from '../api';
 import type { UploadFile } from 'antd/lib/upload/interface';
+import './ProductForm.css';
 
 const { Option } = Select;
 const FormItem = Form.Item;
@@ -155,111 +156,158 @@ const ProductForm: React.FC = () => {
         }
     };
 
-    if (loading) {
-        return <Spin size="large" style={{ display: 'block', marginTop: '50px' }} />;
+    if (loading && isEditMode) {
+        return (
+            <div className="form-loading">
+                <Spin size="large" />
+            </div>
+        );
     }
 
     return (
-        <Card
-            title={isEditMode ? '상품 수정' : '새 상품 등록'}
-            style={{ maxWidth: '600px', margin: 'auto' }}
-            extra={
-                <Button
-                    icon={<ArrowLeftOutlined />}
-                    onClick={() => navigate('/products')}
-                >
-                    목록으로
-                </Button>
-            }
-        >
-            <Form form={form} layout="vertical" onFinish={onFinish}>
-                <FormItem label="상품명" name="name" rules={[{ required: true, message: '상품명을 입력해주세요.' }]}>
-                    <Input />
-                </FormItem>
-                <FormItem label="상세설명" name="description">
-                    <Input.TextArea rows={4} />
-                </FormItem>
-                <FormItem label="가격" name="price" rules={[{ required: true, message: '가격을 입력해주세요.' }]}>
-                    <InputNumber min={0} style={{ width: '100%' }} addonAfter="원" />
-                </FormItem>
-
-                <FormItem label="카테고리" name="categoryId">
-                    <Select placeholder="카테고리를 선택하세요 (선택 사항)" allowClear>
-                        {categories.map(cat => <Option key={cat.id} value={cat.id}>{cat.name}</Option>)}
-                    </Select>
-                </FormItem>
-                <FormItem label="옵션 그룹 연결" name="optionGroupIds">
-                    <Select mode="multiple" placeholder="이 상품에 연결할 옵션 그룹들을 선택하세요" allowClear>
-                        {optionGroups.map(group => (
-                            <Option key={group.id} value={group.id}>{group.name}</Option>
-                        ))}
-                    </Select>
-                </FormItem>
-                <FormItem label="상품 사진">
-                    <Upload
-                        maxCount={1}
-                        showUploadList={true}
-                        beforeUpload={() => false}
-                        onChange={({ fileList: newFileList }) => setFileList(newFileList)}
-                        fileList={fileList}
-                        listType="picture"
+        <div className="product-form-container">
+            <Card
+                className="product-form-card"
+                title={
+                    <>
+                        <ShoppingOutlined />
+                        {isEditMode ? '상품 수정' : '새 상품 등록'}
+                    </>
+                }
+                extra={
+                    <Button
+                        className="back-button"
+                        icon={<ArrowLeftOutlined />}
+                        onClick={() => navigate('/products')}
                     >
-                        <Button icon={<UploadOutlined />}>이미지 업로드</Button>
-                    </Upload>
-                    {productImageUrl && fileList.length === 0 && (
-                        <img src={`https://capstone-kiosk.onrender.com${productImageUrl}`} alt="상품 이미지" style={{ width: '100px', marginTop: '10px', borderRadius: '4px' }} />
-                    )}
-                </FormItem>
+                        목록으로
+                    </Button>
+                }
+            >
+                <Form form={form} layout="vertical" onFinish={onFinish}>
+                    {/* Basic Information Section */}
+                    <div className="form-section">
+                        <div className="form-section-title">
+                            <SettingOutlined />
+                            기본 정보
+                        </div>
+                        <FormItem label="상품명" name="name" rules={[{ required: true, message: '상품명을 입력해주세요.' }]}>
+                            <Input placeholder="예: 아메리카노" />
+                        </FormItem>
+                        <FormItem label="상세설명" name="description">
+                            <Input.TextArea rows={4} placeholder="상품에 대한 자세한 설명을 입력하세요" />
+                        </FormItem>
+                        <FormItem label="가격" name="price" rules={[{ required: true, message: '가격을 입력해주세요.' }]}>
+                            <InputNumber min={0} style={{ width: '100%' }} addonAfter="원" placeholder="0" />
+                        </FormItem>
 
-                <Divider>레시피 설정</Divider>
-                <List
-                    header={<div>이 상품에 사용되는 재료</div>}
-                    bordered
-                    dataSource={usages}
-                    renderItem={(item) => (
-                        <List.Item
-                            actions={[<Button type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemoveUsage(item.inventoryId)} />]}
+                        <FormItem label="카테고리" name="categoryId">
+                            <Select placeholder="카테고리를 선택하세요 (선택 사항)" allowClear>
+                                {categories.map(cat => <Option key={cat.id} value={cat.id}>{cat.name}</Option>)}
+                            </Select>
+                        </FormItem>
+                        <FormItem label="옵션 그룹 연결" name="optionGroupIds">
+                            <Select mode="multiple" placeholder="이 상품에 연결할 옵션 그룹들을 선택하세요" allowClear>
+                                {optionGroups.map(group => (
+                                    <Option key={group.id} value={group.id}>{group.name}</Option>
+                                ))}
+                            </Select>
+                        </FormItem>
+                    </div>
+                    {/* Image Upload Section */}
+                    <FormItem label="상품 사진">
+                        <div className="upload-section">
+                            <Upload
+                                maxCount={1}
+                                showUploadList={true}
+                                beforeUpload={() => false}
+                                onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+                                fileList={fileList}
+                                listType="picture"
+                            >
+                                <Button icon={<UploadOutlined />}>이미지 업로드</Button>
+                            </Upload>
+                            {productImageUrl && fileList.length === 0 && (
+                                <div className="current-image">
+                                    <img src={`https://capstone-kiosk.onrender.com${productImageUrl}`} alt="상품 이미지" style={{ width: '100px' }} />
+                                </div>
+                            )}
+                        </div>
+                    </FormItem>
+
+                    {/* Recipe Section */}
+                    <Divider className="recipe-divider">
+                        <ExperimentOutlined />
+                        레시피 설정
+                    </Divider>
+                    <List
+                        className="recipe-list"
+                        header={<div>이 상품에 사용되는 재료</div>}
+                        bordered
+                        dataSource={usages}
+                        renderItem={(item) => (
+                            <List.Item
+                                actions={[<Button type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemoveUsage(item.inventoryId)} />]}
+                            >
+                                <List.Item.Meta
+                                    title={item.inventoryName}
+                                    description={`소모량: ${item.usageAmount}${item.usageUnit}`}
+                                />
+                            </List.Item>
+                        )}
+                        locale={{ emptyText: '등록된 재료 없음' }}
+                    />
+                    <div className="recipe-input-container">
+                        <Select
+                            showSearch
+                            placeholder="재고 품목 선택"
+                            style={{ flex: 1 }}
+                            value={selectedInventory}
+                            onChange={setSelectedInventory}
+                            optionFilterProp="children"
                         >
-                            <List.Item.Meta
-                                title={item.inventoryName}
-                                description={`소모량: ${item.usageAmount}${item.usageUnit}`}
-                            />
-                        </List.Item>
-                    )}
-                    locale={{ emptyText: '등록된 재료 없음' }}
-                />
-                <div style={{ display: 'flex', marginTop: '16px', gap: '8px' }}>
-                    <Select
-                        showSearch
-                        placeholder="재고 품목 선택"
-                        style={{ flex: 2 }}
-                        value={selectedInventory}
-                        onChange={setSelectedInventory}
-                        optionFilterProp="children"
-                    >
-                        {inventories.map(i => <Option key={i.id} value={i.id}>{i.name}</Option>)}
-                    </Select>
-                    <InputNumber
-                        min={0}
-                        placeholder="소모량"
-                        style={{ flex: 1 }}
-                        value={usageAmount}
-                        onChange={(value) => setUsageAmount(value)}
-                    />
-                    <Input
-                        placeholder="단위 (g, ml)"
-                        style={{ flex: 1 }}
-                        value={usageUnit}
-                        onChange={(e) => setUsageUnit(e.target.value)}
-                    />
-                    <Button type="primary" onClick={handleAddUsage}>추가</Button>
-                </div>
+                            {inventories.map(i => <Option key={i.id} value={i.id}>{i.name}</Option>)}
+                        </Select>
+                        <InputNumber
+                            min={0}
+                            placeholder="소모량"
+                            style={{ flex: 1 }}
+                            value={usageAmount}
+                            onChange={(value) => setUsageAmount(value)}
+                        />
+                        <Input
+                            placeholder="단위"
+                            style={{ flex: 1 }}
+                            value={usageUnit}
+                            onChange={(e) => setUsageUnit(e.target.value)}
+                        />
+                        <Button className="recipe-add-button" type="primary" onClick={handleAddUsage}>추가</Button>
+                    </div>
 
-                <FormItem style={{ marginTop: '32px' }}>
-                    <Button type="primary" htmlType="submit" block>저장하기</Button>
-                </FormItem>
-            </Form>
-        </Card>
+                    {/* Action Buttons */}
+                    <FormItem>
+                        <Space className="form-actions" style={{ width: '100%', justifyContent: 'flex-end' }}>
+                            <Button
+                                className="cancel-button"
+                                onClick={() => navigate('/products')}
+                                size="large"
+                            >
+                                취소
+                            </Button>
+                            <Button
+                                className="save-button"
+                                type="primary"
+                                htmlType="submit"
+                                loading={loading}
+                                size="large"
+                            >
+                                {isEditMode ? '수정하기' : '저장하기'}
+                            </Button>
+                        </Space>
+                    </FormItem>
+                </Form>
+            </Card>
+        </div>
     );
 };
 

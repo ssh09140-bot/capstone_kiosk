@@ -1,5 +1,6 @@
 .reports-container {
     position: relative;
+    padding-bottom: 40px;
 }
 
 /* Loading State */
@@ -9,6 +10,7 @@
     align-items: center;
     justify-content: center;
     padding: 80px 20px;
+    min-height: 400px;
 }
 
 /* Summary Cards */
@@ -17,100 +19,103 @@
 }
 
 .stat-card {
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 20px !important;
+    border: none !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
     transition: all 0.3s ease;
+    overflow: hidden;
+    height: 100%;
 }
 
 .stat-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+.stat-card .ant-card-body {
+    padding: 24px !important;
 }
 
 .stat-card .ant-statistic-title {
     font-size: 14px;
-    font-weight: 500;
-    color: #666;
-    margin-bottom: 8px;
+    font-weight: 600;
+    color: #8c8c8c;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .stat-card .ant-statistic-content {
-    font-size: 24px;
-    font-weight: 600;
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'Roboto', 'Helvetica Neue', sans-serif;
 }
 
 /* Chart Cards */
 .chart-card {
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 20px !important;
+    border: none !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+    overflow: hidden;
+    height: 100%;
 }
 
 .chart-card .ant-card-head {
-    border-bottom: 2px solid #f0f0f0;
-    font-weight: 600;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 20px 24px;
+    font-size: 16px;
+    font-weight: 700;
+    background: #fff;
 }
 
 .chart-card .ant-card-body {
-    padding: 20px;
+    padding: 24px;
 }
 
-/* Mobile Optimizations */
-@media (max-width: 768px) {
-    .reports-container {
-        padding-bottom: 20px;
-    }
+/* Custom Tabs */
+.reports-tabs .ant-tabs-nav {
+    margin-bottom: 24px;
+}
 
-    /* Date Picker Full Width */
-    .ant-picker-range {
-        width: 100% !important;
-    }
+.reports-tabs .ant-tabs-tab {
+    padding: 12px 24px !important;
+    font-size: 16px;
+    font-weight: 500;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
 
-    /* Stat Cards */
-    .stat-card .ant-statistic-content {
-        font-size: 20px;
-    }
+.reports-tabs .ant-tabs-tab:hover {
+    background: rgba(22, 119, 255, 0.05);
+}
 
-    .stat-card .ant-card-body {
-        padding: 16px;
-    }
+.reports-tabs .ant-tabs-tab-active {
+    background: rgba(22, 119, 255, 0.1);
+}
 
-    /* Chart Cards */
-    .chart-card .ant-card-head {
-        padding: 12px 16px;
-        font-size: 15px;
-    }
+.reports-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: #1677ff !important;
+    font-weight: 700;
+}
 
-    .chart-card .ant-card-body {
-        padding: 16px;
-    }
+.reports-tabs .ant-tabs-ink-bar {
+    height: 3px;
+    border-radius: 3px;
+    background: #1677ff;
+}
 
-    /* Chart Container */
-    .chart-card canvas {
-        max-width: 100%;
-        height: auto !important;
-    }
+/* Date Picker Customization */
+.custom-range-picker {
+    border-radius: 10px;
+    padding: 8px 16px;
+    border: 1px solid #d9d9d9;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
 
-    /* Reduce chart margins on mobile */
-    .chart-card .ant-card-body>div {
-        margin: 0 !important;
-    }
-
-    /* Summary Cards Animation */
-    .summary-cards .ant-col {
-        animation: fadeInUp 0.4s ease-out;
-    }
-
-    .summary-cards .ant-col:nth-child(1) {
-        animation-delay: 0.1s;
-    }
-
-    .summary-cards .ant-col:nth-child(2) {
-        animation-delay: 0.2s;
-    }
-
-    .summary-cards .ant-col:nth-child(3) {
-        animation-delay: 0.3s;
-    }
+.custom-range-picker:hover, 
+.custom-range-picker:focus-within {
+    border-color: #1677ff;
+    box-shadow: 0 2px 12px rgba(22, 119, 255, 0.1);
 }
 
 /* Animation */
@@ -126,29 +131,36 @@
     }
 }
 
-/* Desktop Enhancements */
-@media (min-width: 769px) {
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .reports-container {
+        padding-bottom: 20px;
+    }
+
+    /* Date Picker Full Width */
+    .custom-range-picker {
+        width: 100% !important;
+    }
+
+    /* Stat Cards */
     .stat-card .ant-statistic-content {
-        font-size: 28px;
+        font-size: 24px;
+    }
+
+    .stat-card .ant-card-body {
+        padding: 20px !important;
+    }
+
+    /* Chart Cards */
+    .chart-card .ant-card-head {
+        padding: 16px 20px;
     }
 
     .chart-card .ant-card-body {
-        padding: 24px;
+        padding: 16px;
     }
-}
-
-/* Chart Color Adjustments */
-.chart-card .g2-tooltip {
-    background: rgba(0, 0, 0, 0.75) !important;
-    border-radius: 8px !important;
-    padding: 8px 12px !important;
-}
-
-.chart-card .g2-tooltip-title {
-    color: #fff !important;
-    font-weight: 600 !important;
-}
-
-.chart-card .g2-tooltip-list-item {
-    color: #fff !important;
 }

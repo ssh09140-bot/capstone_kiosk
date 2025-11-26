@@ -234,3 +234,97 @@
         display: none;
     }
 }
+
+/* Modal Customization */
+.category-modal .ant-modal-content {
+    border-radius: 20px !important;
+    overflow: hidden;
+    padding: 0 !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+.category-modal .ant-modal-header {
+    background: linear-gradient(135deg, #1677ff 0%, #0d6bdf 100%);
+    padding: 20px 24px;
+    margin: 0 !important;
+    border-bottom: none !important;
+}
+
+.category-modal .ant-modal-title {
+    color: white !important;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.modal-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-title-wrapper .anticon {
+    font-size: 22px;
+}
+
+.category-modal .ant-modal-close {
+    color: rgba(255, 255, 255, 0.7) !important;
+    top: 20px !important;
+    right: 20px !important;
+}
+
+.category-modal .ant-modal-close:hover {
+    color: white !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.category-modal .ant-modal-body {
+    padding: 32px 24px !important;
+}
+
+.category-modal .ant-modal-footer {
+    padding: 16px 24px 24px 24px !important;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Modal Buttons */
+.category-modal .ant-btn-default {
+    border-radius: 10px;
+    height: 40px;
+    font-weight: 500;
+    border-color: #d9d9d9;
+}
+
+.category-modal .ant-btn-primary {
+    border-radius: 10px;
+    height: 40px;
+    font-weight: 500;
+    background: linear-gradient(135deg, #1677ff 0%, #0d6bdf 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+}
+
+.category-modal .ant-btn-primary:hover {
+    background: linear-gradient(135deg, #0d6bdf 0%, #0a5fc2 100%) !important;
+    box-shadow: 0 6px 16px rgba(22, 119, 255, 0.4);
+}
+
+/* Input Styling in Modal */
+.category-form .ant-input {
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 15px;
+    border: 2px solid #e8eaf6;
+}
+
+.category-form .ant-input:hover,
+.category-form .ant-input:focus {
+    border-color: #1677ff;
+}
+
+.category-form .ant-form-item-label label {
+    font-weight: 600;
+    color: #333;
+}

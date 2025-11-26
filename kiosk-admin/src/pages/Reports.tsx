@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Typography, message, DatePicker, Spin, Flex } from 'antd';
-import { LineChartOutlined, ShoppingCartOutlined, DollarCircleOutlined } from '@ant-design/icons';
-import { Line, Column, Area } from '@ant-design/charts';
+import { LineChartOutlined, ShoppingCartOutlined, DollarCircleOutlined, BarChartOutlined } from '@ant-design/icons';
+import { Area, Line } from '@ant-design/charts';
 import { getAnalyticsReport, type ReportResponse } from '../api';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -62,90 +61,143 @@ const Reports: React.FC = () => {
     };
   });
 
-  const lineChartConfig = {
+  // Line Chart Configuration (Daily Trends)
+  const dailySalesConfig = {
     data: data?.dailyTrends || [],
     xField: 'date',
     yField: 'sales',
-    height: isMobile ? 250 : 300,
+    height: 350,
+    smooth: true,
+    color: '#3B82F6',
+    lineStyle: {
+      lineWidth: 3,
+    },
+    point: {
+      size: 5,
+      shape: 'circle',
+      style: {
+        fill: '#3B82F6',
+        stroke: '#fff',
+        lineWidth: 2,
+      },
+    },
     yAxis: {
       label: {
         formatter: (v: string) => `${parseInt(v).toLocaleString()}원`,
+        style: { fontSize: 12, fill: '#6b7280', fontWeight: 500 },
       },
+      grid: { line: { style: { lineDash: [4, 4], stroke: '#e5e7eb' } } },
+    },
+    xAxis: {
+      label: { style: { fontSize: 12, fill: '#6b7280', fontWeight: 500 } },
+      grid: { line: { style: { stroke: 'transparent' } } },
     },
     tooltip: {
-      formatter: (datum: any) => ({
-        name: '매출',
-        value: `${datum.sales.toLocaleString()}원`,
-      }),
-    },
-    point: {
-      shape: 'circle',
-      size: 4,
-    },
-  };
-
-  const topProductsConfig = {
-    data: data?.topProducts || [],
-    xField: 'name',
-    yField: 'quantity',
-    height: isMobile ? 250 : 300,
-    xAxis: {
-      label: {
-        autoHide: true,
-        autoRotate: false,
+      title: (datum: any) => datum.date,
+      formatter: (datum: any) => {
+        return { name: '매출액', value: `${datum.sales.toLocaleString()}원` };
       },
     },
-    meta: {
-      name: { alias: '상품명' },
-      quantity: { alias: '판매량' },
-    },
-    color: '#1677ff',
-  };
-
-  const bottomProductsConfig = {
-    data: data?.bottomProducts || [],
-    xField: 'name',
-    yField: 'quantity',
-    height: isMobile ? 250 : 300,
-    xAxis: {
-      label: {
-        autoHide: true,
-        autoRotate: false,
+    label: {
+      style: { fill: '#000000', fontSize: 12, fontWeight: 'bold' },
+      formatter: (item: any) => {
+        const sales = item?.sales || 0;
+        if (sales === 0) return '';
+        return `${sales.toLocaleString()}원`;
       },
     },
-    meta: {
-      name: { alias: '상품명' },
-      quantity: { alias: '판매량' },
+    animation: {
+      appear: { animation: 'path-in', duration: 1000 },
     },
-    color: '#ff4d4f',
   };
 
-  const salesByHourConfig = {
+  // Area Chart Configuration (Sales by Hour) - Cyan to Blue Gradient
+  const hourlyAreaConfig = {
     data: processedSalesByHour,
     xField: 'hour',
     yField: 'sales',
-    height: isMobile ? 250 : 300,
-    smooth: true,
-    color: 'l(270) 0:#ffffff 1:#7ec2f3',
-    areaStyle: () => ({
-      fill: 'l(270) 0:#ffffff 1:#7ec2f3',
-    }),
-    xAxis: {
-      range: [0, 1],
-      tickCount: isMobile ? 6 : 12,
+    height: 350,
+    color: 'l(270) 0:#eff6ff 0.5:#06B6D4 1:#2563EB', // Lighter start to cyan to blue
+    line: {
+      color: '#2563EB',
+      size: 3
     },
+    areaStyle: { fillOpacity: 0.6 }, // Slightly increased opacity for richer color
+    smooth: true,
     yAxis: {
       label: {
         formatter: (v: string) => `${parseInt(v).toLocaleString()}원`,
+        style: { fontSize: 12, fill: '#6b7280', fontWeight: 500 },
       },
+      grid: { line: { style: { lineDash: [4, 4], stroke: '#e5e7eb' } } },
     },
     tooltip: {
-      formatter: (datum: any) => ({
-        name: '매출',
-        value: `${datum.sales.toLocaleString()}원`,
-      }),
+      title: (datum: any) => datum.hour,
+      formatter: (datum: any) => {
+        return { name: '매출액', value: `${datum.sales.toLocaleString()}원` };
+      },
     },
   };
+
+
+
+  const renderOverviewTab = () => (
+    <div className="fade-in-up">
+      <Row gutter={[24, 24]} className="summary-cards">
+        <Col xs={24} sm={8}>
+          <Card className="stat-card">
+            <Statistic
+              title="총 매출"
+              value={data?.summary.totalSales}
+              precision={0}
+              prefix={<DollarCircleOutlined />}
+              suffix="원"
+              valueStyle={{ color: '#3B82F6', fontWeight: 700 }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card className="stat-card">
+            <Statistic
+              title="총 주문 수"
+              value={data?.summary.totalOrders}
+              precision={0}
+              prefix={<ShoppingCartOutlined />}
+              suffix="건"
+              valueStyle={{ color: '#059669', fontWeight: 700 }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card className="stat-card">
+            <Statistic
+              title="평균 주문 금액"
+              value={data?.summary.averageOrderValue}
+              precision={0}
+              prefix={<LineChartOutlined />}
+              suffix="원"
+              valueStyle={{ color: '#f59e0b', fontWeight: 700 }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+        <Col span={24}>
+          <Card title="📈 일별 매출 추이" className="chart-card">
+            <Line {...dailySalesConfig} />
+          </Card>
+        </Col>
+        <Col span={24}>
+          <Card title="⏰ 시간대별 매출 패턴" className="chart-card">
+            <Area {...hourlyAreaConfig} />
+          </Card>
+        </Col>
+      </Row>
+    </div>
+  );
+
+
 
   return (
     <div className="reports-container">
@@ -154,90 +206,29 @@ const Reports: React.FC = () => {
         align="center"
         wrap="wrap"
         gap={isMobile ? 12 : 16}
-        style={{ marginBottom: isMobile ? 16 : 24 }}
+        style={{ marginBottom: 24 }}
       >
-        <Title level={3} style={{ margin: 0 }}>상세 분석 리포트</Title>
+        <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#1a1a1a' }}>
+          <BarChartOutlined style={{ marginRight: 12, color: '#3B82F6' }} />
+          상세 리포트
+        </Title>
         <RangePicker
           value={dateRange}
           onChange={onRangeChange}
-          style={{ width: isMobile ? '100%' : 'auto' }}
+          className="custom-range-picker"
+          size="large"
         />
       </Flex>
 
       {loading ? (
         <div className="loading-container">
-          <Spin size="large" />
-          <Text type="secondary" style={{ marginTop: 16 }}>데이터 분석 중...</Text>
+          <Spin size="large" tip="데이터를 분석하고 있습니다..." />
         </div>
       ) : data ? (
-        <>
-          <Row gutter={[16, 16]} className="summary-cards">
-            <Col xs={24} sm={8}>
-              <Card className="stat-card">
-                <Statistic
-                  title="총 매출"
-                  value={data.summary.totalSales}
-                  precision={0}
-                  prefix={<DollarCircleOutlined />}
-                  suffix="원"
-                  valueStyle={{ color: '#1677ff' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card className="stat-card">
-                <Statistic
-                  title="총 주문 수"
-                  value={data.summary.totalOrders}
-                  precision={0}
-                  prefix={<ShoppingCartOutlined />}
-                  suffix="건"
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card className="stat-card">
-                <Statistic
-                  title="평균 주문 금액"
-                  value={data.summary.averageOrderValue}
-                  precision={0}
-                  prefix={<LineChartOutlined />}
-                  suffix="원"
-                  valueStyle={{ color: '#faad14' }}
-                />
-              </Card>
-            </Col>
-          </Row>
-
-          <Card title="매출 추이" className="chart-card" style={{ marginTop: isMobile ? 16 : 24 }}>
-            <Line {...lineChartConfig} />
-          </Card>
-
-          <Row gutter={[16, 16]} style={{ marginTop: isMobile ? 16 : 24 }}>
-            <Col xs={24} lg={12}>
-              <Card title="인기 상품 Top 5" className="chart-card">
-                <Column {...topProductsConfig} />
-              </Card>
-            </Col>
-            <Col xs={24} lg={12}>
-              <Card title="비인기 상품 Top 5" className="chart-card">
-                <Column {...bottomProductsConfig} />
-              </Card>
-            </Col>
-          </Row>
-
-          <Row gutter={[16, 16]} style={{ marginTop: isMobile ? 16 : 24 }}>
-            <Col xs={24}>
-              <Card title="시간대별 매출 분석" className="chart-card">
-                <Area {...salesByHourConfig} />
-              </Card>
-            </Col>
-          </Row>
-        </>
+        renderOverviewTab()
       ) : (
-        <Card style={{ textAlign: 'center', padding: '40px' }}>
-          <Text type="secondary">데이터가 없습니다.</Text>
+        <Card style={{ textAlign: 'center', padding: '80px' }}>
+          <Text type="secondary" style={{ fontSize: '16px' }}>데이터를 불러올 수 없습니다.</Text>
         </Card>
       )}
     </div>

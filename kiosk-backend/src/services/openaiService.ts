@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import https from 'https';  // SSL 인증서 검증 비활성화를 위한 https 모듈
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error('OPENAI_API_KEY is not set in the environment variables.');
@@ -6,6 +7,9 @@ if (!process.env.OPENAI_API_KEY) {
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  httpAgent: new https.Agent({  // SSL 인증서 검증 비활성화를 위한 https 모듈
+    rejectUnauthorized: false, // SSL 인증서 검증 비활성화 (개발 환경용)
+  }),
 });
 
 const AI_MODEL = 'gpt-3.5-turbo';
