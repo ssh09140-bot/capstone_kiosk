@@ -62,196 +62,212 @@ export default function PaymentScreen() {
     setIsProcessing(true);
 
     try {
-      const storeId = await AsyncStorage.getItem('storeId');
+      const storeId = (await AsyncStorage.getItem('storeId'))?.trim();
       console.log('StoreId from AsyncStorage:', storeId);
 
-      storeId,
+      if (!storeId) {
+        Alert.alert('오류', '가게 정보가 없습니다. 앱을 재시작해주세요.');
+        setIsProcessing(false);
+        return;
+      }
+
+      const items = cartItems.map(item => ({
+        productId: Number(item.product.id),
+        quantity: item.quantity,
+        pricePerItem: item.itemTotalPrice,
+        selectedOptions: item.selectedOptions,
+      }));
+
+      console.log('Sending payment request:', {
+        amount: finalPrice,
+        orderName: '키오스크 주문',
+        storeId,
         items,
       });
 
-    const response = await api.post('/payment/toss/prepare', {
-      amount: finalPrice,
-      orderName: '키오스크 주문',
-      storeId,
-      items,
-    });
+      const response = await api.post('/payment/toss/prepare', {
+        amount: finalPrice,
+        orderName: '키오스크 주문',
+        storeId,
+        items,
+      });
 
-    console.log('Payment response received:', response.data);
+      console.log('Payment response received:', response.data);
 
-    // QR 코드용 URL 받음
-    setPaymentUrl(response.data.paymentUrl);
-    setOrderId(response.data.orderId);
-    setShowPaymentModal(true);
+      // QR 코드용 URL 받음
+      setPaymentUrl(response.data.paymentUrl);
+      setOrderId(response.data.orderId);
+      setShowPaymentModal(true);
 
-    // Polling 시작
-    startPolling(response.data.orderId);
+      // Polling 시작
+      startPolling(response.data.orderId);
 
-  } catch (error: any) {
-    console.error("Payment preparation failed:", error);
-    console.error("Error response:", error.response?.data);
-    console.error("Error status:", error.response?.status);
+    } catch (error: any) {
+      console.error("Payment preparation failed:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
 
-    const details = error.response?.data?.details || '';
-    const errorMsg = error.response?.data?.error || '결제 준비 중 오류가 발생했습니다.';
-    const fullMessage = details ? `${errorMsg}\n\n상세: ${details}` : errorMsg;
+      const details = error.response?.data?.details || '';
+      const errorMsg = error.response?.data?.error || '결제 준비 중 오류가 발생했습니다.';
+      const fullMessage = details ? `${errorMsg}\n\n상세: ${details}` : errorMsg;
 
-    Alert.alert('결제 실패', fullMessage);
-  } finally {
-    setIsProcessing(false);
-  }
-};
+      Alert.alert('결제 실패', fullMessage);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-const handleGoHome = () => {
-  router.replace('/product');
-};
+  const handleGoHome = () => {
+    router.replace('/product');
+  };
 
-const handleCancelPayment = () => {
-  // Polling 중지
-  if (pollingIntervalRef.current) {
-    clearInterval(pollingIntervalRef.current);
-  }
-  setShowPaymentModal(false);
-  setPaymentUrl('');
-  setOrderId(null);
-};
+  const handleCancelPayment = () => {
+    // Polling 중지
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+    setShowPaymentModal(false);
+    setPaymentUrl('');
+    setOrderId(null);
+  };
 
-if (paymentSuccess) {
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.successContainer}>
-        <Ionicons name="checkmark-circle" size={120} color="#722ed1" />
-        <Text style={styles.successTitle}>결제 성공!</Text>
-        <Text style={styles.successMessage}>주문이 완료되었습니다.</Text>
-        <Text style={styles.successSubMessage}>맛있게 만들어 드릴게요!</Text>
+  if (paymentSuccess) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.successContainer}>
+          <Ionicons name="checkmark-circle" size={120} color="#722ed1" />
+          <Text style={styles.successTitle}>결제 성공!</Text>
+          <Text style={styles.successMessage}>주문이 완료되었습니다.</Text>
+          <Text style={styles.successSubMessage}>맛있게 만들어 드릴게요!</Text>
 
-        <TouchableOpacity style={styles.homeButton} onPress={handleGoHome}>
-          <Text style={styles.homeButtonText}>처음으로 돌아가기</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-return (
-  <SafeAreaView style={styles.container}>
-    <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 20 }}>
-      <Text style={styles.title}>결제하기</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>주문 내역 확인</Text>
-
-        {/* Detailed Order List */}
-        <View style={styles.orderList}>
-          {cartItems.map((item) => (
-            <View key={item.id} style={styles.orderItem}>
-              <View style={styles.orderItemHeader}>
-                <Text style={styles.orderItemName}>{item.product.name}</Text>
-                <Text style={styles.orderItemPrice}>{item.itemTotalPrice.toLocaleString()}원</Text>
-              </View>
-              {Object.values(item.selectedOptions).length > 0 && (
-                <Text style={styles.orderItemOptions}>
-                  {Object.values(item.selectedOptions).map(opt => opt.optionName).join(', ')}
-                </Text>
-              )}
-              <Text style={styles.orderItemQuantity}>수량: {item.quantity}개</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.row}>
-          <Text style={styles.label}>총 주문 수량</Text>
-          <Text style={styles.value}>{cartItems.length}개</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.totalLabel}>총 결제 금액</Text>
-          <Text style={styles.totalPrice}>{finalPrice.toLocaleString()}원</Text>
-        </View>
-      </View>
-
-      <View style={styles.infoBox}>
-        <Ionicons name="qr-code-outline" size={24} color="#722ed1" />
-        <Text style={styles.infoText}>QR 코드로 간편하게 결제하세요</Text>
-      </View>
-    </ScrollView>
-
-    <View style={styles.bottomBar}>
-      <View style={styles.buttonGroup}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          disabled={isProcessing}
-        >
-          <Text style={styles.backButtonText}>더 담으러 가기</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.payButton, isProcessing && styles.payButtonDisabled]}
-          onPress={handlePaymentRequest}
-          disabled={isProcessing}
-        >
-          {isProcessing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.payButtonText}>{finalPrice.toLocaleString()}원 결제</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-
-    {/* QR Code Modal */}
-    <Modal
-      visible={showPaymentModal}
-      animationType="slide"
-      onRequestClose={handleCancelPayment}
-    >
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>QR 코드 결제</Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleCancelPayment}
-          >
-            <Ionicons name="close" size={24} color="#333" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.qrContainer}>
-          <Text style={styles.qrTitle}>휴대폰으로 QR을 스캔하세요</Text>
-          <Text style={styles.qrSubtitle}>카카오페이, 토스 등으로 결제 가능</Text>
-
-          <View style={styles.qrCodeWrapper}>
-            {paymentUrl ? (
-              <QRCode
-                value={paymentUrl}
-                size={280}
-                color="#000"
-                backgroundColor="#fff"
-              />
-            ) : (
-              <ActivityIndicator size="large" color="#722ed1" />
-            )}
-          </View>
-
-          <View style={styles.qrInfo}>
-            <Ionicons name="time-outline" size={20} color="#666" />
-            <Text style={styles.qrInfoText}>결제 대기 중...</Text>
-          </View>
-
-          <Text style={styles.qrAmount}>{finalPrice.toLocaleString()}원</Text>
-
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={handleCancelPayment}
-          >
-            <Text style={styles.cancelButtonText}>취소</Text>
+          <TouchableOpacity style={styles.homeButton} onPress={handleGoHome}>
+            <Text style={styles.homeButtonText}>처음으로 돌아가기</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-    </Modal>
-  </SafeAreaView>
-);
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 20 }}>
+        <Text style={styles.title}>결제하기</Text>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>주문 내역 확인</Text>
+
+          {/* Detailed Order List */}
+          <View style={styles.orderList}>
+            {cartItems.map((item) => (
+              <View key={item.id} style={styles.orderItem}>
+                <View style={styles.orderItemHeader}>
+                  <Text style={styles.orderItemName}>{item.product.name}</Text>
+                  <Text style={styles.orderItemPrice}>{item.itemTotalPrice.toLocaleString()}원</Text>
+                </View>
+                {Object.values(item.selectedOptions).length > 0 && (
+                  <Text style={styles.orderItemOptions}>
+                    {Object.values(item.selectedOptions).map(opt => opt.optionName).join(', ')}
+                  </Text>
+                )}
+                <Text style={styles.orderItemQuantity}>수량: {item.quantity}개</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.row}>
+            <Text style={styles.label}>총 주문 수량</Text>
+            <Text style={styles.value}>{cartItems.length}개</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.totalLabel}>총 결제 금액</Text>
+            <Text style={styles.totalPrice}>{finalPrice.toLocaleString()}원</Text>
+          </View>
+        </View>
+
+        <View style={styles.infoBox}>
+          <Ionicons name="qr-code-outline" size={24} color="#722ed1" />
+          <Text style={styles.infoText}>QR 코드로 간편하게 결제하세요</Text>
+        </View>
+      </ScrollView>
+
+      <View style={styles.bottomBar}>
+        <View style={styles.buttonGroup}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            disabled={isProcessing}
+          >
+            <Text style={styles.backButtonText}>더 담으러 가기</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.payButton, isProcessing && styles.payButtonDisabled]}
+            onPress={handlePaymentRequest}
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.payButtonText}>{finalPrice.toLocaleString()}원 결제</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* QR Code Modal */}
+      <Modal
+        visible={showPaymentModal}
+        animationType="slide"
+        onRequestClose={handleCancelPayment}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>QR 코드 결제</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={handleCancelPayment}
+            >
+              <Ionicons name="close" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.qrContainer}>
+            <Text style={styles.qrTitle}>휴대폰으로 QR을 스캔하세요</Text>
+            <Text style={styles.qrSubtitle}>카카오페이, 토스 등으로 결제 가능</Text>
+
+            <View style={styles.qrCodeWrapper}>
+              {paymentUrl ? (
+                <QRCode
+                  value={paymentUrl}
+                  size={280}
+                  color="#000"
+                  backgroundColor="#fff"
+                />
+              ) : (
+                <ActivityIndicator size="large" color="#722ed1" />
+              )}
+            </View>
+
+            <View style={styles.qrInfo}>
+              <Ionicons name="time-outline" size={20} color="#666" />
+              <Text style={styles.qrInfoText}>결제 대기 중...</Text>
+            </View>
+
+            <Text style={styles.qrAmount}>{finalPrice.toLocaleString()}원</Text>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancelPayment}
+            >
+              <Text style={styles.cancelButtonText}>취소</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -32,11 +32,6 @@ router.post('/billing/issue-billing-key', authenticateToken, async (req, res) =>
     return res.status(400).json({ error: 'customerKey and authKey are required' });
   }
 
-  // authenticateToken 미들웨어에서 이미 인증을 처리하므로, userId가 없을 경우는 발생하지 않습니다.
-  // if (!userId) {
-  //   return res.status(403).json({ error: 'User not authenticated' });
-  // }
-
   try {
     // Call Toss Payments API to issue the billing key
     const response = await fetch('https://api.tosspayments.com/v1/billing/authorizations/issue', {
@@ -93,13 +88,6 @@ interface TossPaymentPrepareRequest {
   }>;
 }
 
-interface TossPaymentResponse {
-  orderId: string;
-  checkout: {
-    url: string;
-  };
-}
-
 // 1. 결제 준비 - QR 코드용 결제 URL 생성
 router.post('/payment/toss/prepare', async (req, res) => {
   console.log('Reached /payment/toss/prepare route');
@@ -144,7 +132,9 @@ router.post('/payment/toss/prepare', async (req, res) => {
 
     // 테스트용 결제 URL 생성
     // 실제 운영 시에는 Toss Payments Widget API를 사용해야 합니다
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+    // const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+    const backendUrl = 'http://192.168.197.191:3000'; // 강제 적용
+    console.log('Using BACKEND_URL:', backendUrl); // 로그 추가
     const paymentUrl = `${backendUrl}/api/payment/toss/checkout?orderId=${order.id}&amount=${amount}&orderName=${encodeURIComponent(orderName)}`;
 
     console.log('Payment URL generated:', paymentUrl);
@@ -197,7 +187,6 @@ router.post('/payment/toss/confirm', async (req, res) => {
     }
 
     // orderId는 ORDER_timestamp 형식이므로 DB에서 해당 주문 찾기
-    // 여기서는 간단히 최근 주문을 사용 (실제로는 orderId를 DB에 저장해야 함)
     const order = await prisma.order.findFirst({
       orderBy: {
         createdAt: 'desc',
@@ -240,11 +229,12 @@ router.post('/payment/toss/confirm', async (req, res) => {
   }
 });
 
-// 체크아웃 페이지 - QR 코드로 접속
+// 체크아웃 페이지 - Toss Payments SDK 연동
 router.get('/payment/toss/checkout', async (req, res) => {
   const { orderId, amount, orderName } = req.query;
+  const clientKey = process.env.TOSS_CLIENT_KEY || 'test_ck_ZLKGPx4M3M1MZzdk5RQ23BaWypv1';
+  const backendUrl = 'http://192.168.197.191:3000'; // 강제 적용
 
-  // HTML 페이지 반환
   res.send(`
     <!DOCTYPE html>
     <html lang="ko">
@@ -252,186 +242,114 @@ router.get('/payment/toss/checkout', async (req, res) => {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>결제하기</title>
+      <script src="https://js.tosspayments.com/v1/payment"></script>
       <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-        }
-        .container {
-          background: white;
-          border-radius: 20px;
-          padding: 40px;
-          max-width: 400px;
-          width: 100%;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        h1 {
-          color: #333;
-          font-size: 28px;
-          margin-bottom: 10px;
-          text-align: center;
-        }
-        .order-name {
-          color: #666;
-          font-size: 16px;
-          text-align: center;
-          margin-bottom: 30px;
-        }
-        .amount {
-          font-size: 48px;
-          font-weight: bold;
-          color: #722ed1;
-          text-align: center;
-          margin: 30px 0;
-        }
-        .won { font-size: 24px; }
-        .pay-btn {
-          width: 100%;
-          padding: 18px;
-          background: #722ed1;
-          color: white;
-          border: none;
-          border-radius: 12px;
-          font-size: 18px;
-          font-weight: bold;
-          cursor: pointer;
-          transition: all 0.3s;
-        }
-        .pay-btn:hover {
-          background: #5a1fa7;
-          transform: translateY(-2px);
-          box-shadow: 0 10px 20px rgba(114, 46, 209, 0.3);
-        }
-        .pay-btn:active { transform: translateY(0); }
-        .success {
-          text-align: center;
-          display: none;
-        }
-        .success-icon {
-          font-size: 80px;
-          margin: 20px 0;
-        }
-        .success h2 {
-          color: #722ed1;
-          font-size: 32px;
-          margin-bottom: 10px;
-        }
-        .success p {
-          color: #666;
-          font-size: 16px;
-        }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; font-family: sans-serif; }
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        p { margin-top: 20px; color: #666; }
+        .container { text-align: center; }
       </style>
     </head>
     <body>
       <div class="container">
-        <div id="payment-form">
-          <h1>💳 결제하기</h1>
-          <p class="order-name">${orderName}</p>
-          <div class="amount">${Number(amount).toLocaleString()}<span class="won">원</span></div>
-          <button class="pay-btn" onclick="processPayment()">결제하기</button>
-        </div>
-        
-        <div id="success-message" class="success">
-          <div class="success-icon">✅</div>
-          <h2>결제 완료!</h2>
-          <p>주문이 성공적으로 완료되었습니다.</p>
-          <p style="margin-top: 20px; color: #999;">이 창을 닫아주세요.</p>
-        </div>
+        <div class="loader"></div>
+        <p>결제창을 불러오는 중입니다...</p>
       </div>
-
       <script>
-        async function processPayment() {
-          const btn = document.querySelector('.pay-btn');
-          btn.disabled = true;
-          btn.textContent = '처리 중...';
+        const clientKey = '${clientKey}';
+        const tossPayments = TossPayments(clientKey);
 
-          try {
-            // 백엔드에 결제 완료 알림 (confirm 대신 간단히 주문 완료 처리)
-            const response = await fetch('/api/payment/toss/test-complete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                orderId: ${orderId},
-                amount: ${amount}
-              })
-            });
-
-            if (response.ok) {
-              document.getElementById('payment-form').style.display = 'none';
-              document.getElementById('success-message').style.display = 'block';
-            } else {
-              alert('결제 처리 중 오류가 발생했습니다.');
-              btn.disabled = false;
-              btn.textContent = '결제하기';
-            }
-          } catch (error) {
-            console.error('Payment error:', error);
-            alert('결제 처리 중 오류가 발생했습니다.');
-            btn.disabled = false;
-            btn.textContent = '결제하기';
+        tossPayments.requestPayment('카드', {
+          amount: ${amount},
+          orderId: '${req.query.tossOrderId || "ORDER_" + orderId}',
+          orderName: '${orderName}',
+          customerName: '키오스크 고객',
+          successUrl: '${backendUrl}/api/payment/toss/success?dbOrderId=${orderId}',
+          failUrl: '${backendUrl}/api/payment/toss/fail',
+        }).catch(function (error) {
+          if (error.code === 'USER_CANCEL') {
+            alert('결제가 취소되었습니다.');
+            window.close();
+          } else if (error.code === 'INVALID_CARD_COMPANY') {
+            alert('유효하지 않은 카드입니다.');
           }
-        }
+        });
       </script>
     </body>
     </html>
   `);
 });
 
-// 테스트용 결제 완료 처리
-router.post('/payment/toss/test-complete', async (req, res) => {
-  const { orderId, amount } = req.body;
+// 결제 성공 처리 (Redirect URL)
+router.get('/payment/toss/success', async (req, res) => {
+  const { paymentKey, orderId, amount, dbOrderId } = req.query;
+  
+  console.log('Payment success callback:', req.query);
 
   try {
+    const orderIdNum = Number(dbOrderId);
+
     const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        orderItems: {
-          include: {
-            product: true,
-          },
-        },
-      },
+      where: { id: orderIdNum },
+      include: { orderItems: true }
     });
 
     if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
+      return res.status(404).send('Order not found');
     }
 
     // 재고 차감
     for (const item of order.orderItems) {
       await prisma.product.update({
         where: { id: item.productId },
-        data: {
-          stock: {
-            decrement: item.quantity,
-          },
-        },
+        data: { stock: { decrement: item.quantity } },
       });
     }
 
-    // 주문을 완료 상태로 표시 (실제로는 status 필드가 있다면 업데이트)
-    console.log(`Order ${orderId} completed successfully`);
-
-    res.status(200).json({
-      message: 'Payment completed successfully',
-      order,
+    // 주문 상태 완료로 변경
+    await prisma.order.update({
+      where: { id: orderIdNum },
+      data: { status: 'COMPLETED' },
     });
+
+    console.log(`Order ${orderIdNum} completed successfully`);
+
+    res.send(`
+      <div style="text-align:center; padding-top:50px; font-family:sans-serif;">
+        <h1 style="color:#4CAF50;">결제가 완료되었습니다!</h1>
+        <p>키오스크 화면을 확인해주세요.</p>
+        <script>
+          setTimeout(() => {
+             window.close();
+          }, 3000);
+        </script>
+      </div>
+    `);
+
   } catch (error) {
-    console.error('Error completing payment:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Payment confirmation failed:', error);
+    res.status(500).send('Payment confirmation failed');
   }
+});
+
+// 결제 실패 처리
+router.get('/payment/toss/fail', (req, res) => {
+  const { code, message } = req.query;
+  res.send(`
+    <div style="text-align:center; padding-top:50px; font-family:sans-serif;">
+      <h1 style="color:#F44336;">결제 실패</h1>
+      <p>${message}</p>
+      <p>코드: ${code}</p>
+      <button onclick="window.close()">닫기</button>
+    </div>
+  `);
 });
 
 // 3. 결제 상태 조회 - 프론트엔드 Polling용
 router.get('/payment/toss/status/:orderId', async (req, res) => {
   const { orderId } = req.params;
-  const orderIdNum = parseInt(orderId);
+  const orderIdNum = parseInt(orderId, 10);
 
   if (isNaN(orderIdNum)) {
     return res.status(400).json({ error: 'Invalid orderId' });
@@ -453,10 +371,10 @@ router.get('/payment/toss/status/:orderId', async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // 주문이 존재하면 결제 완료로 간주
+    // 주문의 실제 status 반환
     res.status(200).json({
       orderId: order.id,
-      status: 'COMPLETED', // Order가 생성되면 결제 완료
+      status: order.status,
       amount: order.totalAmount,
       order,
     });

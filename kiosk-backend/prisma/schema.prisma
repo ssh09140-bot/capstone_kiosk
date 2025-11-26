@@ -83,6 +83,7 @@ model Order {
   id            Int            @id @default(autoincrement())
   totalAmount   Int
   totalCost     Float? // 주문 총 원가
+  status        OrderStatus    @default(PENDING)
   createdAt     DateTime       @default(now())
   store         User           @relation(fields: [storeId], references: [storeId])
   storeId       String
@@ -228,6 +229,13 @@ enum NotificationType {
   DELIVERY_PROMPT
   DELIVERY_REMINDER
 }
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
 
 model EmailVerification {
   id        Int      @id @default(autoincrement())
