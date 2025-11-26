@@ -65,15 +65,22 @@ const AppLayout: React.FC = () => {
   }, [fetchNotifications]);
 
   const handleNotificationClick = async (notification: Notification) => {
+    console.log('Notification clicked:', notification);
+    console.log('Notification type:', notification.type);
+
     try {
       await api.post(`/notifications/${notification.id}/read`);
       setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
-      // 이미 읽은 알림을 다시 클릭한 경우 unreadCount를 감소시키지 않음
+
       if (!notification.read) {
         setUnreadCount(prev => prev - 1);
       }
+
       if (notification.type === 'DELIVERY_PROMPT' || notification.type === 'LOW_STOCK_WARNING') {
+        console.log('Navigating to /purchase-orders');
         navigate('/purchase-orders');
+      } else {
+        console.log('Condition not met. Type:', notification.type);
       }
     } catch (error) {
       console.error('알림 읽음 처리 실패', error);

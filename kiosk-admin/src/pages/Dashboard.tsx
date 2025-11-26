@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Typography, List, Button, Space, Tag } from 'antd';
-import { ArrowUpOutlined, RobotOutlined, ShopOutlined, DollarOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, RobotOutlined, ShopOutlined, DollarOutlined, CalendarOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/charts';
 import api from '../api';
 import SalesAnalysisModal from '../components/SalesAnalysisModal';
@@ -73,7 +73,7 @@ const Dashboard: React.FC = () => {
         {/* Key Metrics Section */}
         {profitSummary && (
           <Row gutter={[24, 24]}>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={8} lg={6}>
               <Card bordered={false} hoverable style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                 <Statistic
                   title="총 매출"
@@ -84,7 +84,7 @@ const Dashboard: React.FC = () => {
                 />
               </Card>
             </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={8} lg={6}>
               <Card bordered={false} hoverable style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                 <Statistic
                   title="총 원가"
@@ -95,7 +95,18 @@ const Dashboard: React.FC = () => {
                 />
               </Card>
             </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12} lg={6}>
+              <Card bordered={false} hoverable style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <Statistic
+                  title="이번 달 매출액"
+                  value={currentMonthSales}
+                  suffix="원"
+                  prefix={<CalendarOutlined style={{ color: '#722ed1', fontSize: 24, background: '#f9f0ff', padding: 8, borderRadius: '50%' }} />}
+                  valueStyle={{ fontWeight: 700, fontSize: 24 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8} lg={6}>
               <Card bordered={false} hoverable style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                 <Statistic
                   title="총 이익"
