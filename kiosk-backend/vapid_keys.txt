@@ -1,0 +1,3 @@
+VAPID_PUBLIC_KEY=BPIdq_KBfCgqkIrXdhqEPKwKdSr8A1wX-eyhPPklE6u_zRGh6n042oS9M5qcuCKvy3s6NThp4zmR72tuc0lA_pU
+VAPID_PRIVATE_KEY=ijTM8gKvCFqgcuoxj4bsYYQhiPvSRQjkfuAfepGu9nc
+VAPID_MAILTO=mailto:admin@kiosk.com

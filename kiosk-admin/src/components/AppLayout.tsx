@@ -26,6 +26,22 @@ import './AppLayout.css';
 const { Header, Content, Sider } = Layout;
 const { Text } = Typography;
 
+// Helper function for VAPID key conversion
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -61,6 +77,44 @@ const AppLayout: React.FC = () => {
   useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000);
+
+    // Register Service Worker and Subscribe to Push Notifications
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(async (registration) => {
+          console.log('Service Worker registered:', registration);
+
+          try {
+            // Check existing subscription
+            const existingSubscription = await registration.pushManager.getSubscription();
+            if (existingSubscription) {
+              console.log('Already subscribed:', existingSubscription);
+              return;
+            }
+
+            // Get VAPID Public Key from server
+            const { data: { publicKey } } = await api.get('/notifications/vapid-public-key');
+            const convertedVapidKey = urlBase64ToUint8Array(publicKey);
+
+            // Subscribe
+            const subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: convertedVapidKey
+            });
+
+            // Send subscription to server
+            await api.post('/notifications/subscribe', subscription);
+            console.log('Push notification subscribed successfully');
+
+          } catch (error) {
+            console.error('Failed to subscribe to push notifications:', error);
+          }
+        })
+        .catch((error) => {
+          console.error('Service Worker registration failed:', error);
+        });
+    }
+
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 

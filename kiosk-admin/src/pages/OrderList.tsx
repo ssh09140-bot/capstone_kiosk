@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Typography, message, Button, Modal, Descriptions, DatePicker, Space, Card, Tag, Statistic, Row, Col, Pagination } from 'antd';
 import api from '../api';
 import dayjs from 'dayjs';
-import { EyeOutlined, ShoppingCartOutlined, CalendarOutlined, DollarOutlined, ClockCircleOutlined, FileTextOutlined } from '@ant-design/icons';
+import { EyeOutlined, ShoppingCartOutlined, CalendarOutlined, DollarOutlined, ClockCircleOutlined, FileTextOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons';
 import './OrderList.css';
 
 const { Title, Text } = Typography;
@@ -15,6 +15,7 @@ interface Order {
     createdAt: string;
     storeId: string;
     orderItems: any[];
+    status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
 }
 
 const OrderList: React.FC = () => {
@@ -66,6 +67,20 @@ const OrderList: React.FC = () => {
         }
     };
 
+    const updateOrderStatus = async (orderId: number, status: string) => {
+        try {
+            await api.patch(`/orders/${orderId}/status`, { status });
+            message.success('주문 상태가 변경되었습니다.');
+            fetchOrders(); // 목록 새로고침
+            if (selectedOrder && selectedOrder.id === orderId) {
+                setSelectedOrder({ ...selectedOrder, status: status as any });
+            }
+            setIsDetailModalVisible(false);
+        } catch (error) {
+            message.error('주문 상태 변경에 실패했습니다.');
+        }
+    };
+
     // Reset to first page when orders change
     useEffect(() => {
         setCurrentPage(1);
@@ -79,6 +94,19 @@ const OrderList: React.FC = () => {
     // Calculate statistics
     const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
     const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+
+    const getStatusTag = (status: string) => {
+        switch (status) {
+            case 'PENDING':
+                return <Tag color="gold" icon={<SyncOutlined spin />}>대기 중</Tag>;
+            case 'COMPLETED':
+                return <Tag color="green" icon={<CheckCircleOutlined />}>완료됨</Tag>;
+            case 'CANCELLED':
+                return <Tag color="red" icon={<CloseCircleOutlined />}>취소됨</Tag>;
+            default:
+                return <Tag>{status}</Tag>;
+        }
+    };
 
     // Desktop Card View
     const renderDesktopCards = () => (
@@ -99,7 +127,10 @@ const OrderList: React.FC = () => {
                         >
                             <div className="order-card-desktop-header">
                                 <div className="order-desktop-main">
-                                    <Text className="order-desktop-number">주문 #{order.id}</Text>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <Text className="order-desktop-number">주문 #{order.id}</Text>
+                                        {getStatusTag(order.status)}
+                                    </div>
                                     <div className="order-desktop-date">
                                         <ClockCircleOutlined style={{ fontSize: 14, marginRight: 6 }} />
                                         {new Date(order.createdAt).toLocaleString('ko-KR')}
@@ -154,7 +185,10 @@ const OrderList: React.FC = () => {
                             <ShoppingCartOutlined />
                         </div>
                         <div className="order-main-info">
-                            <Text strong className="order-number">주문 #{order.id}</Text>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text strong className="order-number">주문 #{order.id}</Text>
+                                {getStatusTag(order.status)}
+                            </div>
                             <div className="order-date">
                                 <CalendarOutlined style={{ fontSize: 12, marginRight: 4 }} />
                                 {new Date(order.createdAt).toLocaleString('ko-KR', {
@@ -290,12 +324,37 @@ const OrderList: React.FC = () => {
                 open={isDetailModalVisible}
                 onOk={() => setIsDetailModalVisible(false)}
                 onCancel={() => setIsDetailModalVisible(false)}
-                footer={<Button key="ok" type="primary" onClick={() => setIsDetailModalVisible(false)}>닫기</Button>}
+                footer={[
+                    <Button key="close" onClick={() => setIsDetailModalVisible(false)}>
+                        닫기
+                    </Button>,
+                    selectedOrder?.status === 'PENDING' && (
+                        <Button
+                            key="complete"
+                            type="primary"
+                            onClick={() => updateOrderStatus(selectedOrder.id, 'COMPLETED')}
+                        >
+                            주문 완료
+                        </Button>
+                    ),
+                    selectedOrder?.status === 'PENDING' && (
+                        <Button
+                            key="cancel"
+                            danger
+                            onClick={() => updateOrderStatus(selectedOrder.id, 'CANCELLED')}
+                        >
+                            주문 취소
+                        </Button>
+                    ),
+                ]}
                 width={isMobile ? '100%' : 600}
                 style={isMobile ? { top: 0, maxWidth: '100vw', margin: 0, padding: 0 } : {}}
             >
                 {selectedOrder && (
                     <Descriptions bordered column={1} size={isMobile ? 'small' : 'default'}>
+                        <Descriptions.Item label="주문 상태">
+                            {getStatusTag(selectedOrder.status)}
+                        </Descriptions.Item>
                         <Descriptions.Item label="주문 일시">{new Date(selectedOrder.createdAt).toLocaleString('ko-KR')}</Descriptions.Item>
                         <Descriptions.Item label="총 금액">
                             <Text strong style={{ fontSize: 16, color: '#1677ff' }}>

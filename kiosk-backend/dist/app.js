@@ -21,8 +21,9 @@ const notifications_1 = __importDefault(require("./notifications"));
 const purchase_orders_1 = __importDefault(require("./purchase-orders"));
 const inventory_1 = __importDefault(require("./inventory"));
 const suppliers_1 = __importDefault(require("./suppliers"));
-const inventory_logs_1 = __importDefault(require("./inventory-logs")); // Import the new inventory log router
+const inventory_logs_1 = __importDefault(require("./inventory-logs"));
 const recommendations_1 = __importDefault(require("./recommendations"));
+const errorHandler_1 = require("./middleware/errorHandler");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
@@ -57,4 +58,6 @@ app.use('/api/recommendations', recommendations_1.default);
 app.use((req, res, next) => {
     res.status(404).json({ message: `Route not found: ${req.method} ${req.url}` });
 });
+// Global Error Handler (must be last)
+app.use(errorHandler_1.errorHandler);
 exports.default = app;
