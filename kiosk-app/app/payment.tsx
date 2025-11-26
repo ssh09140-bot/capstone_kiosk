@@ -5,10 +5,7 @@ import { useCart } from '../context/CartContext';
 import api from '../src/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { WebView } from 'react-native-webview';
-
-// Toss Payments Test Client Key
-const TOSS_CLIENT_KEY = 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eqa';
+import QRCode from 'react-native-qrcode-svg';
 
 export default function PaymentScreen() {
   const router = useRouter();
@@ -18,7 +15,9 @@ export default function PaymentScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'CARD' | 'EASY_PAY'>('CARD');
+  const [paymentUrl, setPaymentUrl] = useState('');
+  const [orderId, setOrderId] = useState<number | null>(null);
+  const pollingIntervalRef = useRef<number | null>(null);
 
   // If accessed directly without items or price, redirect
   useEffect(() => {
@@ -29,264 +28,230 @@ export default function PaymentScreen() {
     }
   }, []);
 
-  const handlePaymentRequest = () => {
-    setShowPaymentModal(true);
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const startPolling = (orderIdToCheck: number) => {
+    // 3초마다 결제 상태 확인
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const response = await api.get(`/payment/toss/status/${orderIdToCheck}`);
+        if (response.data.status === 'COMPLETED') {
+          // 결제 완료!
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+          }
+          setShowPaymentModal(false);
+          setPaymentSuccess(true);
+          clearCart();
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+    }, 3000);
   };
 
-  const handlePaymentComplete = async (paymentData: any) => {
-    setShowPaymentModal(false);
+  const handlePaymentRequest = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
 
     try {
       const storeId = await AsyncStorage.getItem('storeId');
-      if (!storeId) {
-        Alert.alert('오류', '가게 정보가 없습니다. 앱을 재시작해주세요.');
-        return;
-      }
+      console.log('StoreId from AsyncStorage:', storeId);
 
-      // Construct payload for backend
-      const items = cartItems.map(item => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-        pricePerItem: item.itemTotalPrice,
-      }));
+      storeId,
+        items,
+      });
 
-      // In a real scenario, you would send paymentKey to backend for verification here
-      // const { paymentKey, orderId, amount } = paymentData;
-      // await api.post('/payments/confirm', { paymentKey, orderId, amount, items });
+    const response = await api.post('/payment/toss/prepare', {
+      amount: finalPrice,
+      orderName: '키오스크 주문',
+      storeId,
+      items,
+    });
 
-      // For now, we just save the order as before
-      await api.post('/orders', { items });
+    console.log('Payment response received:', response.data);
 
-      // Show custom success modal
-      setPaymentSuccess(true);
+    // QR 코드용 URL 받음
+    setPaymentUrl(response.data.paymentUrl);
+    setOrderId(response.data.orderId);
+    setShowPaymentModal(true);
 
-    } catch (error: any) {
-      console.error("Payment failed:", error);
-      const message = error.response?.data?.message || '결제 처리 중 오류가 발생했습니다.';
-      Alert.alert('결제 실패', message);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+    // Polling 시작
+    startPolling(response.data.orderId);
 
-  const handleGoHome = () => {
-    clearCart();
-    router.replace('/product');
-  };
+  } catch (error: any) {
+    console.error("Payment preparation failed:", error);
+    console.error("Error response:", error.response?.data);
+    console.error("Error status:", error.response?.status);
 
-  // HTML content for Toss Payments Widget
-  const paymentHtml = `
-    <!DOCTYPE html>
-    <html lang="ko">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <script src="https://js.tosspayments.com/v1/payment-widget"></script>
-        <style>
-          body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background-color: #fff; }
-          #payment-method { flex: 1; }
-          #agreement { padding: 20px; }
-          .btn-container { padding: 20px; }
-          .pay-btn {
-            width: 100%;
-            padding: 15px;
-            background-color: #722ed1;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-          }
-        </style>
-      </head>
-      <body>
-        <div id="payment-method"></div>
-        <div id="agreement"></div>
-        <div class="btn-container">
-          <button class="pay-btn" onclick="requestPayment()">결제하기</button>
-        </div>
+    const details = error.response?.data?.details || '';
+    const errorMsg = error.response?.data?.error || '결제 준비 중 오류가 발생했습니다.';
+    const fullMessage = details ? `${errorMsg}\n\n상세: ${details}` : errorMsg;
 
-        <script>
-          const clientKey = '${TOSS_CLIENT_KEY}';
-          const customerKey = 'test_customer_key'; // Random customer key for non-member
-          const paymentWidget = PaymentWidget(clientKey, customerKey);
-          const paymentMethodWidget = paymentWidget.renderPaymentMethods(
-            '#payment-method',
-            { value: ${finalPrice} },
-            { variantKey: 'DEFAULT' }
-          );
-          
-          paymentWidget.renderAgreement('#agreement', { variantKey: 'AGREEMENT' });
-
-          function requestPayment() {
-            const orderId = 'ORDER_' + new Date().getTime();
-            paymentWidget.requestPayment({
-              orderId: orderId,
-              orderName: '키오스크 주문',
-              successUrl: window.location.origin + '/success',
-              failUrl: window.location.origin + '/fail',
-            }).catch(function (error) {
-              if (error.code === 'USER_CANCEL') {
-                // User canceled
-              } else {
-                // Error
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'FAIL', error: error }));
-              }
-            });
-          }
-          
-          // Hook into URL changes to detect success/fail redirects if they happen in-webview
-          // Note: requestPayment usually redirects. We need to handle navigation state change in RN.
-        </script>
-      </body>
-    </html>
-  `;
-
-  const handleWebViewMessage = (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'FAIL') {
-        Alert.alert('결제 실패', data.error.message);
-        setShowPaymentModal(false);
-      }
-    } catch (e) {
-      // Ignore non-JSON messages
-    }
-  };
-
-  const handleWebViewNavigationStateChange = (navState: any) => {
-    const { url } = navState;
-    if (url.includes('/success')) {
-      // Extract params from URL
-      // In a real app, parse query params: paymentKey, orderId, amount
-      handlePaymentComplete({});
-    } else if (url.includes('/fail')) {
-      setShowPaymentModal(false);
-      Alert.alert('결제 실패', '결제가 취소되었거나 실패했습니다.');
-    }
-  };
-
-  if (paymentSuccess) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.successContainer}>
-          <Ionicons name="checkmark-circle" size={120} color="#722ed1" />
-          <Text style={styles.successTitle}>결제 성공!</Text>
-          <Text style={styles.successMessage}>주문이 완료되었습니다.</Text>
-          <Text style={styles.successSubMessage}>맛있게 만들어 드릴게요!</Text>
-
-          <TouchableOpacity style={styles.homeButton} onPress={handleGoHome}>
-            <Text style={styles.homeButtonText}>처음으로 돌아가기</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
+    Alert.alert('결제 실패', fullMessage);
+  } finally {
+    setIsProcessing(false);
   }
+};
 
+const handleGoHome = () => {
+  router.replace('/product');
+};
+
+const handleCancelPayment = () => {
+  // Polling 중지
+  if (pollingIntervalRef.current) {
+    clearInterval(pollingIntervalRef.current);
+  }
+  setShowPaymentModal(false);
+  setPaymentUrl('');
+  setOrderId(null);
+};
+
+if (paymentSuccess) {
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 20 }}>
-        <Text style={styles.title}>결제하기</Text>
+      <View style={styles.successContainer}>
+        <Ionicons name="checkmark-circle" size={120} color="#722ed1" />
+        <Text style={styles.successTitle}>결제 성공!</Text>
+        <Text style={styles.successMessage}>주문이 완료되었습니다.</Text>
+        <Text style={styles.successSubMessage}>맛있게 만들어 드릴게요!</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>주문 내역 확인</Text>
+        <TouchableOpacity style={styles.homeButton} onPress={handleGoHome}>
+          <Text style={styles.homeButtonText}>처음으로 돌아가기</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
 
-          {/* Detailed Order List */}
-          <View style={styles.orderList}>
-            {cartItems.map((item) => (
-              <View key={item.id} style={styles.orderItem}>
-                <View style={styles.orderItemHeader}>
-                  <Text style={styles.orderItemName}>{item.product.name}</Text>
-                  <Text style={styles.orderItemPrice}>{item.itemTotalPrice.toLocaleString()}원</Text>
-                </View>
-                {Object.values(item.selectedOptions).length > 0 && (
-                  <Text style={styles.orderItemOptions}>
-                    {Object.values(item.selectedOptions).map(opt => opt.optionName).join(', ')}
-                  </Text>
-                )}
-                <Text style={styles.orderItemQuantity}>수량: {item.quantity}개</Text>
+return (
+  <SafeAreaView style={styles.container}>
+    <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 20 }}>
+      <Text style={styles.title}>결제하기</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>주문 내역 확인</Text>
+
+        {/* Detailed Order List */}
+        <View style={styles.orderList}>
+          {cartItems.map((item) => (
+            <View key={item.id} style={styles.orderItem}>
+              <View style={styles.orderItemHeader}>
+                <Text style={styles.orderItemName}>{item.product.name}</Text>
+                <Text style={styles.orderItemPrice}>{item.itemTotalPrice.toLocaleString()}원</Text>
               </View>
-            ))}
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <Text style={styles.label}>총 주문 수량</Text>
-            <Text style={styles.value}>{cartItems.length}개</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.totalLabel}>총 결제 금액</Text>
-            <Text style={styles.totalPrice}>{finalPrice.toLocaleString()}원</Text>
-          </View>
+              {Object.values(item.selectedOptions).length > 0 && (
+                <Text style={styles.orderItemOptions}>
+                  {Object.values(item.selectedOptions).map(opt => opt.optionName).join(', ')}
+                </Text>
+              )}
+              <Text style={styles.orderItemQuantity}>수량: {item.quantity}개</Text>
+            </View>
+          ))}
         </View>
 
-        <View style={styles.paymentMethods}>
-          <Text style={styles.methodTitle}>결제 수단 선택</Text>
-          <View style={styles.methodGrid}>
-            <TouchableOpacity
-              style={[styles.methodButton, paymentMethod === 'CARD' && styles.methodButtonActive]}
-              onPress={() => setPaymentMethod('CARD')}
-            >
-              <Text style={[styles.methodText, paymentMethod === 'CARD' && styles.methodTextActive]}>신용카드 / 간편결제</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+          <Text style={styles.label}>총 주문 수량</Text>
+          <Text style={styles.value}>{cartItems.length}개</Text>
         </View>
-      </ScrollView>
-
-      <View style={styles.bottomBar}>
-        <View style={styles.buttonGroup}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            disabled={isProcessing}
-          >
-            <Text style={styles.backButtonText}>더 담으러 가기</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.payButton, isProcessing && styles.payButtonDisabled]}
-            onPress={handlePaymentRequest}
-            disabled={isProcessing}
-          >
-            {isProcessing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.payButtonText}>{finalPrice.toLocaleString()}원 결제</Text>
-            )}
-          </TouchableOpacity>
+        <View style={styles.row}>
+          <Text style={styles.totalLabel}>총 결제 금액</Text>
+          <Text style={styles.totalPrice}>{finalPrice.toLocaleString()}원</Text>
         </View>
       </View>
 
-      <Modal
-        visible={showPaymentModal}
-        animationType="slide"
-        onRequestClose={() => setShowPaymentModal(false)}
-      >
-        <SafeAreaView style={{ flex: 1 }}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>결제</Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setShowPaymentModal(false)}
-            >
-              <Ionicons name="close" size={24} color="#333" />
-            </TouchableOpacity>
+      <View style={styles.infoBox}>
+        <Ionicons name="qr-code-outline" size={24} color="#722ed1" />
+        <Text style={styles.infoText}>QR 코드로 간편하게 결제하세요</Text>
+      </View>
+    </ScrollView>
+
+    <View style={styles.bottomBar}>
+      <View style={styles.buttonGroup}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          disabled={isProcessing}
+        >
+          <Text style={styles.backButtonText}>더 담으러 가기</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.payButton, isProcessing && styles.payButtonDisabled]}
+          onPress={handlePaymentRequest}
+          disabled={isProcessing}
+        >
+          {isProcessing ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.payButtonText}>{finalPrice.toLocaleString()}원 결제</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+
+    {/* QR Code Modal */}
+    <Modal
+      visible={showPaymentModal}
+      animationType="slide"
+      onRequestClose={handleCancelPayment}
+    >
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>QR 코드 결제</Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={handleCancelPayment}
+          >
+            <Ionicons name="close" size={24} color="#333" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.qrContainer}>
+          <Text style={styles.qrTitle}>휴대폰으로 QR을 스캔하세요</Text>
+          <Text style={styles.qrSubtitle}>카카오페이, 토스 등으로 결제 가능</Text>
+
+          <View style={styles.qrCodeWrapper}>
+            {paymentUrl ? (
+              <QRCode
+                value={paymentUrl}
+                size={280}
+                color="#000"
+                backgroundColor="#fff"
+              />
+            ) : (
+              <ActivityIndicator size="large" color="#722ed1" />
+            )}
           </View>
-          <WebView
-            originWhitelist={['*']}
-            source={{ html: paymentHtml }}
-            onMessage={handleWebViewMessage}
-            onNavigationStateChange={handleWebViewNavigationStateChange}
-            style={{ flex: 1 }}
-          />
-        </SafeAreaView>
-      </Modal>
-    </SafeAreaView>
-  );
+
+          <View style={styles.qrInfo}>
+            <Ionicons name="time-outline" size={20} color="#666" />
+            <Text style={styles.qrInfoText}>결제 대기 중...</Text>
+          </View>
+
+          <Text style={styles.qrAmount}>{finalPrice.toLocaleString()}원</Text>
+
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleCancelPayment}
+          >
+            <Text style={styles.cancelButtonText}>취소</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </Modal>
+  </SafeAreaView>
+);
 }
 
 const styles = StyleSheet.create({
@@ -320,29 +285,15 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#f3e8ff', marginVertical: 16 },
   totalLabel: { fontSize: 18, fontFamily: 'Pretendard-Bold', color: '#120338' },
   totalPrice: { fontSize: 24, fontFamily: 'Pretendard-Bold', color: '#722ed1' },
-  paymentMethods: { marginTop: 10 },
-  methodTitle: { fontSize: 16, fontFamily: 'Pretendard-Bold', marginBottom: 12, color: '#555' },
-  methodGrid: { flexDirection: 'row', gap: 10 },
-  methodButton: {
-    flex: 1,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderRadius: 16,
+  infoBox: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#f3e8ff'
+    backgroundColor: '#f9f0ff',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
   },
-  methodButtonActive: {
-    borderColor: '#722ed1',
-    backgroundColor: '#722ed1',
-    shadowColor: "#722ed1",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  methodText: { fontSize: 16, color: '#888', fontFamily: 'Pretendard-Regular' },
-  methodTextActive: { fontSize: 16, color: '#fff', fontFamily: 'Pretendard-Bold' },
+  infoText: { fontSize: 16, color: '#722ed1', fontFamily: 'Pretendard-Regular' },
   bottomBar: {
     padding: 20,
     paddingBottom: 34,
@@ -380,7 +331,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     shadowColor: "#722ed1",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
@@ -425,7 +376,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   homeButtonText: {
-    color: '#722ed1',
+    color: '#fff',
     fontSize: 18,
     fontFamily: 'Pretendard-Bold',
   },
@@ -444,5 +395,63 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     right: 15,
-  }
+  },
+  qrContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  qrTitle: {
+    fontSize: 24,
+    fontFamily: 'Pretendard-Bold',
+    color: '#120338',
+    marginBottom: 8,
+  },
+  qrSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Pretendard-Regular',
+    color: '#888',
+    marginBottom: 40,
+  },
+  qrCodeWrapper: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  qrInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 30,
+    gap: 8,
+  },
+  qrInfoText: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Pretendard-Regular',
+  },
+  qrAmount: {
+    fontSize: 32,
+    fontFamily: 'Pretendard-Bold',
+    color: '#722ed1',
+    marginTop: 20,
+  },
+  cancelButton: {
+    marginTop: 40,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Pretendard-Regular',
+  },
 });
