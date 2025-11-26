@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -321,6 +354,50 @@ router.get('/analytics/monthly-summary', auth_1.authenticateToken, async (req, r
     catch (error) {
         console.error('Error generating monthly summary:', error);
         res.status(500).json({ message: '월간 판매 분석 생성에 실패했습니다.' });
+    }
+});
+// [GET] /api/analytics/hygiene-check
+router.get('/analytics/hygiene-check', auth_1.authenticateToken, async (req, res) => {
+    if (!req.user)
+        return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    try {
+        // 최근 3시간 주문 조회
+        const threeHoursAgo = new Date();
+        threeHoursAgo.setHours(threeHoursAgo.getHours() - 3);
+        const recentOrders = await db_1.default.orderItem.findMany({
+            where: {
+                order: {
+                    storeId: req.user.storeId,
+                    createdAt: { gte: threeHoursAgo },
+                },
+            },
+            include: {
+                product: true,
+            },
+        });
+        if (recentOrders.length === 0) {
+            return res.json({
+                status: '양호',
+                reason: '최근 3시간 동안 주문이 없습니다.',
+                message: '매장 상태가 깨끗할 것으로 예상됩니다.',
+            });
+        }
+        // AI 분석을 위한 데이터 가공
+        const ordersForAnalysis = recentOrders.map(item => ({
+            productName: item.product.name,
+            quantity: item.quantity,
+            options: item.selectedOptions ? JSON.stringify(item.selectedOptions) : '',
+        }));
+        // OpenAI 분석 호출
+        const hygieneCheckResult = await Promise.resolve().then(() => __importStar(require('./services/openaiService'))).then(m => m.generateHygieneCheck(ordersForAnalysis));
+        if (!hygieneCheckResult) {
+            throw new Error('AI 분석 실패');
+        }
+        res.json(JSON.parse(hygieneCheckResult));
+    }
+    catch (error) {
+        console.error('Error generating hygiene check:', error);
+        res.status(500).json({ message: '위생 점검 분석에 실패했습니다.' });
     }
 });
 exports.default = router;

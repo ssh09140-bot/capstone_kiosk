@@ -56,6 +56,7 @@ router.delete('/:id', auth_1.authenticateToken, async (req, res) => {
         res.status(204).send();
     }
     catch (error) {
+        console.error('Failed to delete option group:', error);
         res.status(400).json({ message: '옵션 그룹에 속한 상품이 있어 삭제할 수 없습니다.' });
     }
 });

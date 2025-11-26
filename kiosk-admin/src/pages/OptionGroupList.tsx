@@ -4,7 +4,7 @@ import { PlusOutlined, DeleteOutlined, EditOutlined, SettingOutlined } from '@an
 import api from '../api';
 import './OptionGroupList.css'; // Import the new CSS file
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 interface Option {
     id: number;
@@ -79,7 +79,7 @@ const OptionGroupList: React.FC = () => {
             }
         }
     };
-    
+
     const showEditModal = (group: OptionGroup) => {
         setEditingGroup(group);
         form.setFieldsValue(group);
@@ -135,7 +135,7 @@ const OptionGroupList: React.FC = () => {
                 width={600} // Adjust width as needed
                 centered
             >
-                <Form form={form} layout="vertical" initialValues={editingGroup ? undefined : { options: [{ name: '', price: 0 }]}} className="option-group-form">
+                <Form form={form} layout="vertical" initialValues={editingGroup ? undefined : { options: [{ name: '', price: 0 }] }} className="option-group-form">
                     <div className="form-section">
                         <div className="form-section-title">
                             <SettingOutlined />

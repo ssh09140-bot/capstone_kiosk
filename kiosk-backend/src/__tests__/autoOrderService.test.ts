@@ -79,6 +79,7 @@ describe('AutoOrderService', () => {
             },
           },
         ],
+        packAmount: 1,
       };
 
       mockPrisma.inventory.findMany.mockResolvedValue([mockInventory]);
@@ -141,6 +142,7 @@ describe('AutoOrderService', () => {
             },
           },
         ],
+        packAmount: 1,
       };
 
       mockPrisma.inventory.findMany.mockResolvedValue([mockInventory]);
@@ -171,6 +173,7 @@ describe('AutoOrderService', () => {
         autoOrderEnabled: true,
         lastLowStockNotifiedAt: null,
         suppliedBy: [],
+        packAmount: 1,
       };
 
       mockPrisma.inventory.findMany.mockResolvedValue([mockInventory]);

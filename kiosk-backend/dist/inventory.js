@@ -55,7 +55,7 @@ inventoryRouter.post('/', auth_1.authenticateToken, async (req, res) => {
         return res.status(401).json({ message: 'Unauthorized: User not found.' });
     }
     const storeId = req.user.storeId;
-    const { name, quantity, unit, threshold, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays } = req.body;
+    const { name, quantity, unit, threshold, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, packAmount } = req.body;
     if (!name || quantity === undefined || !unit) {
         return res.status(400).json({ message: 'Name, quantity, and unit are required.' });
     }
@@ -71,6 +71,7 @@ inventoryRouter.post('/', auth_1.authenticateToken, async (req, res) => {
                 minStockThreshold,
                 orderQuantity,
                 estimatedDeliveryDays,
+                packAmount: packAmount || 1.0,
             },
         });
         res.status(201).json(newInventoryItem);
@@ -90,7 +91,7 @@ inventoryRouter.put('/:id', auth_1.authenticateToken, async (req, res) => {
     }
     const storeId = req.user.storeId;
     const { id } = req.params;
-    const { name, quantity, unit, threshold, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays } = req.body;
+    const { name, quantity, unit, threshold, autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, packAmount } = req.body;
     try {
         const updatedInventoryItem = await db_1.default.$transaction(async (tx) => {
             // 1. Get the current state of the inventory item
@@ -113,6 +114,7 @@ inventoryRouter.put('/:id', auth_1.authenticateToken, async (req, res) => {
                     minStockThreshold,
                     orderQuantity,
                     estimatedDeliveryDays,
+                    packAmount: packAmount || 1.0,
                 },
             });
             // 3. Log the change if quantity was modified
