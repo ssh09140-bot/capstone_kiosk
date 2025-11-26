@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Typography, List, Button, Space, Tag } from 'antd';
 import { ArrowUpOutlined, RobotOutlined, ShopOutlined, DollarOutlined } from '@ant-design/icons';
@@ -6,6 +5,7 @@ import { Column } from '@ant-design/charts';
 import api from '../api';
 import SalesAnalysisModal from '../components/SalesAnalysisModal';
 import RecommendationCard from '../components/RecommendationCard';
+import HygieneCheckCard from '../components/HygieneCheckCard';
 
 const { Title, Text } = Typography;
 
@@ -110,7 +110,14 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* AI Insights Section */}
-        <RecommendationCard />
+        <Row gutter={[24, 24]}>
+          <Col xs={24} md={12}>
+            <RecommendationCard />
+          </Col>
+          <Col xs={24} md={12}>
+            <HygieneCheckCard />
+          </Col>
+        </Row>
 
         {/* Charts & Analysis Section */}
         <Row gutter={[24, 24]}>

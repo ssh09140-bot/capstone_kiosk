@@ -175,6 +175,7 @@ model Inventory {
   orderQuantity            Float?
   estimatedDeliveryDays    Int?
   lastLowStockNotifiedAt   DateTime?
+  packAmount               Float                 @default(1.0)
   suppliedBy               SupplierInventory[]
 
   @@unique([name, storeId])
@@ -203,6 +204,7 @@ model SupplierInventory {
   inventoryId Int
   price       Float?
   leadTimeDays Int?
+  packAmount  Float     @default(1.0)
 
   @@unique([supplierId, inventoryId])
 }

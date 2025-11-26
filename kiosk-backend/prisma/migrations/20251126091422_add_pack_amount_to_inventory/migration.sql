@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Inventory" ADD COLUMN     "packAmount" DOUBLE PRECISION NOT NULL DEFAULT 1.0;

@@ -63,7 +63,7 @@ const RecommendationCard: React.FC = () => {
   }
 
   return (
-    <Card 
+    <Card
       title={<><BulbOutlined style={{ marginRight: 8 }} /> AI 발주 추천</>}
       style={{ marginBottom: 24 }}
       extra={loading && <Spin size="small" />}
@@ -77,8 +77,8 @@ const RecommendationCard: React.FC = () => {
             <List.Item
               key={item.inventoryId}
               actions={[
-                <Button 
-                  type="primary" 
+                <Button
+                  type="primary"
                   onClick={() => handleCreateOrder(item)}
                   loading={orderingId === item.inventoryId}
                 >
@@ -90,7 +90,7 @@ const RecommendationCard: React.FC = () => {
               ]}
             >
               <List.Item.Meta
-                title={`${item.inventoryName} ${item.recommendedOrderAmount}${item.unit} 발주 추천`}
+                title={`${item.inventoryName} ${item.recommendedPackCount}개 (총 ${item.recommendedOrderAmount}${item.unit}) 발주 추천`}
                 description={<Text type="secondary">{item.reason}</Text>}
               />
               <Flex gap="large" style={{ marginTop: 16, flexWrap: 'wrap' }}>
