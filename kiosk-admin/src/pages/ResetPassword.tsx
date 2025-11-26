@@ -187,10 +187,14 @@ const ResetPassword: React.FC = () => {
                         name="newPassword"
                         rules={[
                             { required: true, message: '새 비밀번호를 입력해주세요!' },
-                            { min: 6, message: '비밀번호는 최소 6자 이상이어야 합니다!' }
+                            { min: 7, message: '비밀번호는 최소 7자 이상이어야 합니다!' },
+                            {
+                                pattern: /^(?=(?:.*[0-9]){6})(?=.*[!@#$%^&*(),.?":{}|<>])/,
+                                message: '비밀번호는 숫자 최소 6개와 특수문자 최소 1개를 포함해야 합니다!',
+                            },
                         ]}
                     >
-                        <Input.Password prefix={<LockOutlined />} placeholder="새 비밀번호" />
+                        <Input.Password prefix={<LockOutlined />} placeholder="새 비밀번호 (최소 7자, 숫자 6개 이상, 특수문자 포함)" />
                     </Form.Item>
 
                     <Form.Item
