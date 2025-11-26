@@ -75,7 +75,7 @@ model Option {
   id            Int         @id @default(autoincrement())
   name          String
   price         Int
-  optionGroup   OptionGroup @relation(fields: [optionGroupId], references: [id])
+  optionGroup   OptionGroup @relation(fields: [optionGroupId], references: [id], onDelete: Cascade)
   optionGroupId Int
 }
 

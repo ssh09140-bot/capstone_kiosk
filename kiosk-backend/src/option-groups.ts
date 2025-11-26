@@ -34,7 +34,7 @@ router.post('/', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
   const { name, options } = req.body;
-  
+
   // As the frontend note says, we don't support editing options here, only the name.
   const optionGroup = await prisma.optionGroup.update({
     where: { id: parseInt(req.params.id), storeId: req.user.storeId },
@@ -53,6 +53,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     });
     res.status(204).send();
   } catch (error) {
+    console.error('Failed to delete option group:', error);
     res.status(400).json({ message: '옵션 그룹에 속한 상품이 있어 삭제할 수 없습니다.' });
   }
 });

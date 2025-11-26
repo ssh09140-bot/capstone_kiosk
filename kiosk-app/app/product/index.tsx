@@ -17,9 +17,11 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api, { BACKEND_URL } from '../../src/api';
 import { Product, Category } from '@kiosk/shared-types';
+import { useCart } from '../../context/CartContext';
 
 export default function ProductScreen() {
   const router = useRouter();
+  const { cartItems } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -128,6 +130,8 @@ export default function ProductScreen() {
     );
   };
 
+  const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -141,9 +145,7 @@ export default function ProductScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.storeTitle}>{storeName}</Text>
-        <TouchableOpacity onPress={() => router.push('/cart')}>
-          <Text style={styles.cartButton}>🛒</Text>
-        </TouchableOpacity>
+        {/* Cart button removed from header */}
       </View>
       <View style={styles.searchContainer}>
         <TextInput style={styles.searchInput} placeholder="메뉴를 검색해보세요" value={searchTerm} onChangeText={setSearchTerm} />
@@ -167,8 +169,21 @@ export default function ProductScreen() {
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}
         ListEmptyComponent={<Text style={styles.emptyText}>상품이 없습니다.</Text>}
-        contentContainerStyle={{ paddingHorizontal: 5, paddingBottom: 80 }}
+        contentContainerStyle={{ paddingHorizontal: 5, paddingBottom: 100 }} // Increased paddingBottom for footer
       />
+
+      {/* Footer Cart Button */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.footerCartButton} onPress={() => router.push('/cart')}>
+          <Text style={styles.footerCartButtonText}>장바구니</Text>
+          {totalQuantity > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{totalQuantity}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.resetButtonContainer}>
         <Button title="가게 설정 초기화 (테스트용)" color="red" onPress={handleStoreReset} />
       </View>
@@ -181,76 +196,96 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center', // Centered title since button is gone
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 5,
+    paddingBottom: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3e8ff',
   },
   storeTitle: {
     fontFamily: 'Pretendard-Bold',
     fontSize: 24,
-  },
-  cartButton: {
-    fontSize: 24,
+    color: '#722ed1',
   },
   searchContainer: {
     paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingVertical: 15,
+    backgroundColor: '#fff',
   },
   searchInput: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f9f0ff',
     paddingHorizontal: 20,
-    height: 44,
-    borderRadius: 22,
+    height: 50,
+    borderRadius: 25,
     fontFamily: 'Pretendard-Regular',
     fontSize: 15,
+    color: '#120338',
+    borderWidth: 1,
+    borderColor: '#e9d5ff',
   },
-  categoryContainer: { paddingHorizontal: 15, alignItems: 'center' },
+  categoryContainer: { paddingHorizontal: 15, alignItems: 'center', paddingBottom: 10 },
   categoryButton: {
     paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingVertical: 10,
     marginRight: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f9f0ff',
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#f3e8ff',
   },
-  categoryButtonSelected: { backgroundColor: '#000000' },
-  categoryText: { color: '#333', fontFamily: 'Pretendard-Bold', fontSize: 14 },
+  categoryButtonSelected: {
+    backgroundColor: '#722ed1',
+    borderColor: '#722ed1',
+    shadowColor: "#722ed1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  categoryText: { color: '#722ed1', fontFamily: 'Pretendard-Bold', fontSize: 14 },
   categoryTextSelected: { color: '#fff' },
   productCard: {
     flex: 1,
     backgroundColor: '#fff',
-    borderRadius: 12,
-    margin: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1, },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    borderRadius: 20,
+    margin: 8,
+    shadowColor: "#722ed1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: '#f3e8ff',
+    overflow: 'hidden',
   },
   productImage: {
     width: '100%',
-    height: 150,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    height: 160,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   productInfo: {
-    padding: 12,
+    padding: 16,
     width: '100%',
   },
   productName: {
     fontFamily: 'Pretendard-Bold',
     fontSize: 16,
-    marginBottom: 4,
-    height: 40,
+    marginBottom: 8,
+    height: 44,
+    color: '#120338',
   },
   productPrice: {
-    fontFamily: 'Pretendard-Regular',
-    fontSize: 14,
-    color: '#555'
+    fontFamily: 'Pretendard-Bold',
+    fontSize: 16,
+    color: '#722ed1',
   },
   emptyText: { textAlign: 'center', marginTop: 50, fontFamily: 'Pretendard-Regular', fontSize: 16, color: '#888' },
   soldOutCard: {
+    opacity: 0.9,
   },
   soldOutImage: {
     opacity: 0.5,
@@ -260,23 +295,76 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 150,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    height: 160,
+    backgroundColor: 'rgba(114, 46, 209, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   soldOutText: {
     fontFamily: 'Pretendard-Bold',
     fontSize: 24,
-    color: '#333',
-    transform: [{ rotate: '-15deg' }]
+    color: '#fff',
+    transform: [{ rotate: '-15deg' }],
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 5,
   },
   resetButtonContainer: {
     position: 'absolute',
-    bottom: 20,
+    top: 50, // Moved to top left to avoid footer overlap, or maybe just hidden/smaller?
+    // Actually let's keep it bottom left but higher z-index if needed, or just leave it. 
+    // It was bottom: 20. Now footer is there. 
+    // I'll move it to top left for now as it's dev only.
     left: 20,
-    right: 20,
+    zIndex: 100,
+    opacity: 0.5
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 20,
+    paddingBottom: 34, // Safe area
+    borderTopWidth: 1,
+    borderColor: '#f3e8ff',
+    shadowColor: "#722ed1",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  footerCartButton: {
+    backgroundColor: '#722ed1',
+    paddingVertical: 18,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    shadowColor: "#722ed1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  footerCartButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontFamily: 'Pretendard-Bold',
+  },
+  badge: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 10,
+  },
+  badgeText: {
+    color: '#722ed1',
+    fontSize: 14,
+    fontFamily: 'Pretendard-Bold',
   }
 });
