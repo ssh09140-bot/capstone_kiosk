@@ -187,7 +187,9 @@ const generateRecommendations = async (storeId) => {
                 supplierId: bestSupplier.supplier.id,
                 supplierName: bestSupplier.supplier.name,
                 minStockThreshold: inv.minStockThreshold || 0,
-                packAmount: bestSupplier.packAmount || 1.0, // Type assertion until Prisma client updates
+                packAmount: bestSupplier.packAmount && bestSupplier.packAmount !== 1.0
+                    ? bestSupplier.packAmount
+                    : (inv.packAmount || 1.0),
             });
         }
     }

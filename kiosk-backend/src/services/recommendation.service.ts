@@ -229,7 +229,9 @@ export const generateRecommendations = async (storeId: string) => {
         supplierId: bestSupplier.supplier.id,
         supplierName: bestSupplier.supplier.name,
         minStockThreshold: inv.minStockThreshold || 0,
-        packAmount: (bestSupplier as any).packAmount || 1.0, // Type assertion until Prisma client updates
+        packAmount: (bestSupplier as any).packAmount && (bestSupplier as any).packAmount !== 1.0
+          ? (bestSupplier as any).packAmount
+          : ((inv as any).packAmount || 1.0),
       });
     }
   }
