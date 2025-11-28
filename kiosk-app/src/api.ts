@@ -8,8 +8,8 @@ import { router } from 'expo-router';
 const getBaseUrl = () => {
   const url = Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_API_URL;
   if (!url) {
-    console.warn('API URL not found in environment variables. Defaulting to localhost.');
-    return 'http://localhost:3000';
+    console.warn('API URL not found in environment variables. Defaulting to 10.0.2.2 (Android Emulator).');
+    return 'http://10.0.2.2:3000';
   }
   return url;
 };

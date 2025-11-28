@@ -94,7 +94,7 @@ export default function ProductScreen() {
         disabled={isSoldOut}
       >
         <Image
-          source={{ uri: item.imageUrl ? `${BACKEND_URL}${item.imageUrl}` : 'https://placehold.co/600x400/png?text=No+Image' }}
+          source={{ uri: item.imageUrl ? item.imageUrl : 'https://placehold.co/600x400/png?text=No+Image' }}
           style={[styles.productImage, isSoldOut && styles.soldOutImage]}
         />
         {isSoldOut && (

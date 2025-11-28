@@ -229,7 +229,7 @@ const ProductForm: React.FC = () => {
                             </Upload>
                             {productImageUrl && fileList.length === 0 && (
                                 <div className="current-image">
-                                    <img src={`https://capstone-kiosk.onrender.com${productImageUrl}`} alt="상품 이미지" style={{ width: '100px' }} />
+                                    <img src={productImageUrl} alt="상품 이미지" style={{ width: '100px' }} />
                                 </div>
                             )}
                         </div>
