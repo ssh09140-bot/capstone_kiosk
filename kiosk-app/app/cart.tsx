@@ -44,7 +44,7 @@ export default function CartScreen() {
           renderItem={({ item }) => (
             <View style={styles.cartItem}>
               <Image
-                source={{ uri: item.product.imageUrl ? `${BACKEND_URL}${item.product.imageUrl}` : 'https://placehold.co/100x100/png?text=No+Image' }}
+                source={{ uri: item.product.imageUrl ? item.product.imageUrl : 'https://placehold.co/100x100/png?text=No+Image' }}
                 style={styles.itemImage}
               />
               <View style={styles.itemInfo}>

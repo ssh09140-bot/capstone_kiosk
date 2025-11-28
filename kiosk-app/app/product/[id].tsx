@@ -43,7 +43,7 @@ export default function ProductDetailScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: parsedProduct.imageUrl ? `${BACKEND_URL}${parsedProduct.imageUrl}` : 'https://placehold.co/600x400/png?text=No+Image' }}
+            source={{ uri: parsedProduct.imageUrl ? parsedProduct.imageUrl : 'https://placehold.co/600x400/png?text=No+Image' }}
             style={styles.productImage}
           />
           <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
