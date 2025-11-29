@@ -1,23 +1,19 @@
 import nodemailer from 'nodemailer';
 
 // SMTP 설정
+// service: 'gmail'을 사용하면 host, port 등을 자동으로 설정해줍니다.
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   // 연결 안정성 및 디버깅을 위한 추가 설정
-  connectionTimeout: 20000, // 20초
-  greetingTimeout: 20000,
-  socketTimeout: 20000,
+  connectionTimeout: 30000, // 30초로 증가
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
   debug: true, // 상세 로그 출력
   logger: true, // 로거 활성화
-  tls: {
-    rejectUnauthorized: false // 인증서 오류 무시 (디버깅용)
-  }
 });
 
 // 환경 변수 로드 확인 (디버깅용)
