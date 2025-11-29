@@ -11,11 +11,13 @@ datasource db {
 }
 
 model User {
-  id                         Int             @id @default(autoincrement())
-  email                      String          @unique
-  password                   String
-  storeName                  String
-  storeId                    String          @unique @default(uuid())
+  id                         Int            @id @default(autoincrement())
+  email                      String         @unique
+  firebaseUid                String?        @unique // Firebase 연동용 (필수)
+  storeName                  String         // 가게 이름
+  storeId                    String         @unique @default(uuid()) // 가게 고유 ID (UUID)
+  
+  // 관계형 필드들
   products                   Product[]
   orders                     Order[]
   categories                 Category[]
@@ -24,43 +26,48 @@ model User {
   notifications              Notification[]
   inventories                Inventory[]
   suppliers                  Supplier[]
+  
+  // 결제/사업자 정보
   billingKey                 String?
   customerKey                String?
   cardCompany                String?
   cardNumber                 String?
-  businessRegistrationNumber String?         @unique
+  businessRegistrationNumber String?        @unique
   businessLicenseImageUrl    String?
-  storeAddress               String? // New field for store address
+  storeAddress               String?
 }
 
 model Category {
-  id       Int       @id @default(autoincrement())
-  name     String
-  store    User      @relation(fields: [storeId], references: [storeId])
-  storeId  String
+  id      Int       @id @default(autoincrement())
+  name    String
+  store   User      @relation(fields: [storeId], references: [storeId])
+  storeId String
   products Product[]
 }
 
 model Product {
-  id                    Int                   @id @default(autoincrement())
-  name                  String
-  description           String?
-  price                 Int
-  stock                 Int                   @default(0)  // ← 여기 추가
-  imageUrl              String?
-  createdAt             DateTime              @default(now())
-  owner                 User                  @relation(fields: [storeId], references: [storeId])
-  storeId               String
-  category              Category?             @relation(fields: [categoryId], references: [id])
-  categoryId            Int?
-  optionGroups          OptionGroup[]
-  orderItems            OrderItem[]
-  purchaseOrderItems    PurchaseOrderItem[]
-  inventoryUsages       ProductInventoryUsage[] 
-  isEventProduct        Boolean               @default(false)
-  eventPrice            Int?
+  id                 Int       @id @default(autoincrement())
+  name               String
+  description        String?
+  price              Int
+  stock              Int       @default(0)
+  imageUrl           String?
+  createdAt          DateTime  @default(now())
+  
+  owner              User      @relation(fields: [storeId], references: [storeId])
+  storeId            String
+  
+  category           Category? @relation(fields: [categoryId], references: [id])
+  categoryId         Int?
+  
+  optionGroups       OptionGroup[]
+  orderItems         OrderItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+  inventoryUsages    ProductInventoryUsage[]
+  
+  isEventProduct     Boolean   @default(false)
+  eventPrice         Int?
 }
-
 
 model OptionGroup {
   id       Int      @id @default(autoincrement())
@@ -82,15 +89,17 @@ model Option {
 model Order {
   id            Int            @id @default(autoincrement())
   totalAmount   Int
-  totalCost     Float? // 주문 총 원가
+  totalCost     Float?
   createdAt     DateTime       @default(now())
+  
   store         User           @relation(fields: [storeId], references: [storeId])
   storeId       String
+  
   orderItems    OrderItem[]
-  inventoryLogs InventoryLog[] // 재고 변동 로그 연결
-  // Fields for recommendation engine
-  weather       String? // e.g., "Rain", "Clear"
-  temperature   Float? // e.g., 25.5
+  inventoryLogs InventoryLog[]
+  
+  weather       String?
+  temperature   Float?
 }
 
 model OrderItem {
@@ -101,33 +110,39 @@ model OrderItem {
   productId       Int
   quantity        Int
   pricePerItem    Int
-  costPerItem     Float? // 주문 시점의 개당 원가
+  costPerItem     Float?
   selectedOptions Json?
 }
 
 model PurchaseOrder {
-  id                   Int                 @id @default(autoincrement())
-  createdAt            DateTime            @default(now())
-  orderedAt            DateTime?
-  estimatedDeliveryAt  DateTime?
-  deliveredAt          DateTime?
-  status               PurchaseOrderStatus @default(PENDING_CONFIRMATION)
-  store                User                @relation(fields: [storeId], references: [storeId])
-  storeId              String
-  supplier             Supplier?           @relation(fields: [supplierId], references: [id])
-  supplierId           Int?
-  purchaseOrderItems   PurchaseOrderItem[]
+  id                  Int                 @id @default(autoincrement())
+  createdAt           DateTime            @default(now())
+  orderedAt           DateTime?
+  estimatedDeliveryAt DateTime?
+  deliveredAt         DateTime?
+  status              PurchaseOrderStatus @default(PENDING_CONFIRMATION)
+  
+  store               User                @relation(fields: [storeId], references: [storeId])
+  storeId             String
+  
+  supplier            Supplier?           @relation(fields: [supplierId], references: [id])
+  supplierId          Int?
+  
+  purchaseOrderItems  PurchaseOrderItem[]
 }
 
 model PurchaseOrderItem {
-  id                Int           @id @default(autoincrement())
-  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId   Int
-  product           Product?      @relation(fields: [productId], references: [id])
-  productId         Int?
-  inventory         Inventory?    @relation(fields: [inventoryId], references: [id])
-  inventoryId       Int?
-  quantity          Float // Int -> Float
+  id              Int           @id @default(autoincrement())
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+  
+  product         Product?      @relation(fields: [productId], references: [id])
+  productId       Int?
+  
+  inventory       Inventory?    @relation(fields: [inventoryId], references: [id])
+  inventoryId     Int?
+  
+  quantity        Float
   defectiveQuantity Float?
 }
 
@@ -137,31 +152,34 @@ model Notification {
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
   type      NotificationType
+  
   store     User             @relation(fields: [storeId], references: [storeId])
   storeId   String
 }
 
 model Inventory {
-  id                       Int                   @id @default(autoincrement())
-  name                     String
-  quantity                 Float
-  unit                     String // e.g., "kg", "L", "pieces"
-  itemType                 String? // New field: e.g., "Coffee Bean", "Milk", "Syrup", "Cup"
-  threshold                Float?
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
-  store                    User                  @relation(fields: [storeId], references: [storeId])
-  storeId                  String
-  purchaseOrderItems       PurchaseOrderItem[]
-  inventoryUsages          ProductInventoryUsage[] // 제품 연결
-  logs                     InventoryLog[] // 재고 로그
-  // Fields for automated ordering
-  autoOrderEnabled         Boolean               @default(false)
-  minStockThreshold        Float?
-  orderQuantity            Float?
-  estimatedDeliveryDays    Int?
-  lastLowStockNotifiedAt   DateTime? // 알림 반복 방지
-  suppliedBy               SupplierInventory[]
+  id                     Int       @id @default(autoincrement())
+  name                   String
+  quantity               Float
+  unit                   String
+  itemType               String?
+  threshold              Float?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  
+  store                  User      @relation(fields: [storeId], references: [storeId])
+  storeId                String
+  
+  purchaseOrderItems     PurchaseOrderItem[]
+  inventoryUsages        ProductInventoryUsage[]
+  logs                   InventoryLog[]
+  suppliedBy             SupplierInventory[]
+  
+  autoOrderEnabled       Boolean   @default(false)
+  minStockThreshold      Float?
+  orderQuantity          Float?
+  estimatedDeliveryDays  Int?
+  lastLowStockNotifiedAt DateTime?
 
   @@unique([name, storeId])
 }
@@ -172,8 +190,10 @@ model Supplier {
   contact        String?
   email          String?
   address        String?
+  
   store          User                @relation(fields: [storeId], references: [storeId])
   storeId        String
+  
   purchaseOrders PurchaseOrder[]
   supplies       SupplierInventory[]
 
@@ -186,8 +206,8 @@ model SupplierInventory {
   supplierId  Int
   inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
   inventoryId Int
-  price       Float? // 품목별 단가
-  leadTimeDays Int? // 품목별 리드타임
+  price       Float?
+  leadTimeDays Int?
 
   @@unique([supplierId, inventoryId])
 }
@@ -198,8 +218,8 @@ model ProductInventoryUsage {
   productId   Int
   inventory   Inventory @relation(fields: [inventoryId], references: [id])
   inventoryId Int
-  usageAmount Float // e.g., 15 for 15g of coffee beans
-  usageUnit   String? // e.g., "g", "ml", "pcs"
+  usageAmount Float
+  usageUnit   String?
 
   @@unique([productId, inventoryId])
 }
@@ -208,13 +228,14 @@ model InventoryLog {
   id          Int       @id @default(autoincrement())
   inventory   Inventory @relation(fields: [inventoryId], references: [id])
   inventoryId Int
-  change      Float // Positive for increase, negative for decrease
-  reason      String // e.g., "Order #123", "Stock Correction", "PO #45 Received"
+  change      Float
+  reason      String
   order       Order?    @relation(fields: [orderId], references: [id])
   orderId     Int?
   createdAt   DateTime  @default(now())
 }
 
+// Enum은 상태값만 가져야 함
 enum PurchaseOrderStatus {
   PENDING_CONFIRMATION
   ORDERED
@@ -227,12 +248,4 @@ enum NotificationType {
   ORDER_CONFIRMATION
   DELIVERY_PROMPT
   DELIVERY_REMINDER
-}
-
-model EmailVerification {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  code      String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
 }

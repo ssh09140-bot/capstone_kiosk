@@ -1,19 +1,9 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendVerificationEmail = sendVerificationEmail;
 exports.generateVerificationCode = generateVerificationCode;
-const nodemailer_1 = __importDefault(require("nodemailer"));
-// SMTP 설정
-const transporter = nodemailer_1.default.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
+const resend_1 = require("resend");
+const resend = new resend_1.Resend(process.env.RESEND_API_KEY);
 /**
  * 이메일 인증 코드를 발송하는 함수
  * @param to 받는 사람 이메일 주소
@@ -21,11 +11,15 @@ const transporter = nodemailer_1.default.createTransport({
  */
 async function sendVerificationEmail(to, code) {
     const senderName = process.env.EMAIL_SENDER_NAME || 'OPTIMA ORDER';
-    const mailOptions = {
-        from: `"${senderName}" <${process.env.EMAIL_USER}>`,
-        to,
-        subject: '[OPTIMA ORDER] 이메일 인증 코드',
-        html: `
+    // 개발/테스트 환경에서는 onboarding@resend.dev 사용 (또는 .env에 설정된 검증된 도메인)
+    // 주의: onboarding@resend.dev는 to가 가입된 이메일(optimaorder6@gmail.com)일 때만 발송됨
+    const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    try {
+        const { data, error } = await resend.emails.send({
+            from: `"${senderName}" <${fromEmail}>`,
+            to: [to],
+            subject: '[OPTIMA ORDER] 이메일 인증 코드',
+            html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px;">
           이메일 인증 코드
@@ -49,10 +43,12 @@ async function sendVerificationEmail(to, code) {
         </p>
       </div>
     `,
-    };
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`✅ 인증 이메일 발송 성공: ${to}`);
+        });
+        if (error) {
+            console.error('❌ Resend 이메일 발송 에러:', error);
+            throw new Error('이메일 발송에 실패했습니다.');
+        }
+        console.log(`✅ 인증 이메일 발송 성공: ${to}, ID: ${data?.id}`);
     }
     catch (error) {
         console.error('❌ 이메일 발송 실패:', error);

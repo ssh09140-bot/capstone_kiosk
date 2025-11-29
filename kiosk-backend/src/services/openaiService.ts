@@ -84,7 +84,7 @@ Structure the output clearly with bullet points or numbered lists and use line b
         },
       ],
       temperature: 0.8,
-      max_tokens: 1000,
+      max_tokens: 700,
     });
 
     return response.choices[0].message.content?.trim() ?? null;

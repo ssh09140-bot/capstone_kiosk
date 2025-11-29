@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import app from './app';
 import cron from 'node-cron';
 import {
