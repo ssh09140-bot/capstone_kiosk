@@ -4,11 +4,20 @@ import nodemailer from 'nodemailer';
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
-  secure: true, // true for 465, false for other ports
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  // 연결 안정성 및 디버깅을 위한 추가 설정
+  connectionTimeout: 20000, // 20초
+  greetingTimeout: 20000,
+  socketTimeout: 20000,
+  debug: true, // 상세 로그 출력
+  logger: true, // 로거 활성화
+  tls: {
+    rejectUnauthorized: false // 인증서 오류 무시 (디버깅용)
+  }
 });
 
 // 환경 변수 로드 확인 (디버깅용)
