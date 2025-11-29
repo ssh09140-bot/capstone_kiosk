@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Response } from 'express';
 import prisma from './db';
-import { authenticateBoth } from './middleware/authenticateBoth'; // Import authenticateBoth middleware
+import { AuthRequest } from './middleware/authMiddleware';
 import multer from 'multer';
 import { uploadImage } from './services/cloudinaryService'; // Import Cloudinary upload service
 import { convertToBaseUnit } from './services/unitConversionService'; // Import unit conversion service
@@ -18,7 +18,7 @@ function calculateAvailableStock(product: any): number {
       return 0;
     }
     const availableUnits = usage.inventory.quantity;
-    
+
     // Convert usage amount to the inventory's base unit before calculation
     const requiredUnits = convertToBaseUnit(
       usage.usageAmount,
@@ -43,7 +43,7 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /api/products
-router.get('/', authenticateBoth, async (req, res) => {
+router.get('/', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
   const products = await prisma.product.findMany({
     where: { storeId: req.user.storeId },
@@ -60,10 +60,10 @@ router.get('/', authenticateBoth, async (req, res) => {
   }));
 
   res.json(productsWithAvailableStock);
-});
+}) as any);
 
 // GET /api/products/:id
-router.get('/:id', authenticateBoth, async (req, res) => {
+router.get('/:id', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' }); // Updated message
   const product = await prisma.product.findUnique({
     where: { id: parseInt(req.params.id), storeId: req.user.storeId },
@@ -83,13 +83,13 @@ router.get('/:id', authenticateBoth, async (req, res) => {
   };
 
   res.json(productWithAvailableStock);
-});
+}) as any);
 
 // POST /api/products
-router.post('/', authenticateBoth, upload.single('image'), async (req, res) => {
+router.post('/', upload.single('image'), (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
   const { name, price, categoryId, description, optionGroupIds, inventoryUsages } = req.body;
-  
+
   let imageUrl: string | undefined = undefined;
   if (req.file) {
     imageUrl = await uploadImage(req.file.buffer);
@@ -122,13 +122,13 @@ router.post('/', authenticateBoth, upload.single('image'), async (req, res) => {
   });
 
   res.status(201).json(createdProduct);
-});
+}) as any);
 
 // PUT /api/products/:id
-router.put('/:id', authenticateBoth, upload.single('image'), async (req, res) => {
+router.put('/:id', upload.single('image'), (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
   const { name, price, categoryId, description, optionGroupIds, inventoryUsages } = req.body;
-  
+
   let imageUrl: string | undefined = req.body.imageUrl;
   if (req.file) {
     imageUrl = await uploadImage(req.file.buffer);
@@ -159,15 +159,15 @@ router.put('/:id', authenticateBoth, upload.single('image'), async (req, res) =>
   });
 
   res.json(updatedProduct);
-});
+}) as any);
 
 // DELETE /api/products/:id
-router.delete('/:id', authenticateBoth, async (req, res) => {
+router.delete('/:id', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Store ID가 제공되지 않았습니다.' });
   await prisma.product.delete({
     where: { id: parseInt(req.params.id), storeId: req.user.storeId },
   });
   res.status(204).send();
-});
+}) as any);
 
 export default router;

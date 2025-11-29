@@ -1,4 +1,3 @@
-
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -28,14 +27,17 @@ async function main() {
 
   // 2. Create a single user for the store
   const hashedPassword = await bcrypt.hash('password', 10);
+
+  // 👇 여기가 수정된 부분입니다. (UID 추가 및 이메일 일치화)
   const user = await prisma.user.create({
     data: {
-      email: 'store-owner@test.com',
+      email: 'steam0460@naver.com', // 실제 로그인하는 네이버 이메일로 변경 (로그인 매칭 위해)
       password: hashedPassword,
       storeName: 'My Awesome Kiosk',
+      firebaseUid: 'H7rwGsgdUPPYcmJBNn9280A2Ank1', // 🔥 여기에 UID를 넣었습니다!
     },
   });
-  console.log(`Created user: ${user.email} with storeId: ${user.storeId}`);
+  console.log(`Created user: ${user.email} with storeId: ${user.storeId} and FirebaseUID linked.`);
 
   // 3. Create categories
   const categories = await Promise.all([
@@ -78,14 +80,14 @@ async function main() {
         const quantity = getRandomInt(1, 3);
         const pricePerItem = product.price;
         totalAmount += pricePerItem * quantity;
-        
+
         orderItemsData.push({
           productId: product.id,
           quantity: quantity,
           pricePerItem: pricePerItem,
         });
       }
-      
+
       // Create the order with its items
       await prisma.order.create({
         data: {

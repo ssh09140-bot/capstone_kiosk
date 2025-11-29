@@ -1,11 +1,11 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import prisma from './db';
-import { authenticateToken } from './middleware/auth';
+import { AuthRequest } from './middleware/authMiddleware';
 
 const inventoryLogRouter = Router();
 
 // GET all inventory logs for the current store
-inventoryLogRouter.get('/', authenticateToken, async (req, res) => {
+inventoryLogRouter.get('/', (async (req: AuthRequest, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized: User not found.' });
   }
@@ -34,6 +34,6 @@ inventoryLogRouter.get('/', authenticateToken, async (req, res) => {
     console.error('Error fetching inventory logs:', error);
     res.status(500).json({ message: 'Failed to fetch inventory logs.' });
   }
-});
+}) as any);
 
 export default inventoryLogRouter;

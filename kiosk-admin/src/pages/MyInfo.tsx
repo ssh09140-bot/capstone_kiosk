@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, type ChangeEvent } from 'react';
-import { Card, Descriptions, Spin, Typography, message, Button, Divider, Input, Image } from 'antd';
-import { LogoutOutlined, CreditCardOutlined, SaveOutlined, UserOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Spin, Typography, message, Button, Divider, Input, Image, Modal } from 'antd';
+import { LogoutOutlined, CreditCardOutlined, SaveOutlined, UserOutlined, EyeOutlined, EyeInvisibleOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { auth } from '../firebase';
+import { signOut } from 'firebase/auth';
 import './MyInfo.css';
 
 const { Title, Text } = Typography;
@@ -95,6 +97,60 @@ const MyInfo: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     navigate('/login');
+  };
+
+  const handleDeleteAccount = () => {
+    let confirmInput = '';
+
+    Modal.confirm({
+      title: '회원 탈퇴',
+      content: (
+        <div>
+          <p style={{ marginBottom: 16, color: '#ff4d4f', fontWeight: 'bold' }}>
+            정말로 탈퇴하시겠습니까?
+          </p>
+          <p style={{ marginBottom: 16 }}>
+            모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
+          </p>
+          <Input
+            placeholder="탈퇴를 원하시면 '탈퇴'를 입력해주세요"
+            onChange={(e) => { confirmInput = e.target.value; }}
+          />
+        </div>
+      ),
+      okText: '확인',
+      cancelText: '취소',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        if (confirmInput !== '탈퇴') {
+          message.error('"탈퇴"를 정확히 입력해주세요.');
+          return Promise.reject();
+        }
+
+        try {
+          const currentUser = auth.currentUser;
+          if (!currentUser) {
+            message.error('로그인 정보를 찾을 수 없습니다.');
+            return;
+          }
+
+          const idToken = await currentUser.getIdToken();
+          await api.delete('/auth/delete', {
+            headers: { Authorization: `Bearer ${idToken}` }
+          });
+
+          message.success('회원 탈퇴가 완료되었습니다.');
+          await signOut(auth);
+          localStorage.removeItem('authToken');
+          navigate('/login');
+        } catch (error: any) {
+          console.error('회원 탈퇴 실패:', error);
+          const errorMessage = error.response?.data?.message || '회원 탈퇴 처리 중 오류가 발생했습니다.';
+          message.error(errorMessage);
+          return Promise.reject(); // Prevent modal from closing on error
+        }
+      },
+    });
   };
 
   const handleRegisterCard = () => {
@@ -263,6 +319,18 @@ const MyInfo: React.FC = () => {
           className="logout-button"
         >
           로그아웃
+        </Button>
+
+        <Divider />
+
+        <Button
+          type="default"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={handleDeleteAccount}
+          style={{ width: '100%' }}
+        >
+          회원 탈퇴
         </Button>
       </Card>
     </div>

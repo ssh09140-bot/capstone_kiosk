@@ -1,18 +1,23 @@
 // src/api.ts
 import axios from 'axios';
+import { auth } from './firebase';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
-// 요청을 보내기 전에 가로채서 토큰을 헤더에 추가하는 로직
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
+api.interceptors.request.use(async (config) => {
+  const user = auth.currentUser;
+  console.log('[API Interceptor] Current user:', user?.email || 'No user');
+  if (user) {
+    const token = await user.getIdToken();
+    console.log('[API Interceptor] Token obtained:', token ? 'Yes' : 'No');
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    console.log('[API Interceptor] No authenticated user found');
   }
   return config;
-}, error => {
+}, (error) => {
   return Promise.reject(error);
 });
 

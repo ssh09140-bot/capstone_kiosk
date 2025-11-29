@@ -24,6 +24,7 @@ import inventoryRoutes from './inventory';
 import supplierRoutes from './suppliers';
 import inventoryLogRoutes from './inventory-logs'; // Import the new inventory log router
 import recommendationRouter from './recommendations';
+import { verifyToken } from './middleware/authMiddleware';
 
 
 const app = express();
@@ -51,7 +52,12 @@ app.use((req, res, next) => {
     next();
 });
 
+// Auth routes (no authentication required)
 app.use('/api/auth', authRoutes);
+
+// All other routes require authentication
+app.use('/api', verifyToken as any);
+
 app.use('/api', analyticsRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);

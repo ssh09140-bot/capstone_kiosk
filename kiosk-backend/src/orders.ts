@@ -1,8 +1,7 @@
-import express from 'express';
+import express, { Response } from 'express';
 import prisma from './db';
 import { Prisma, NotificationType } from '@prisma/client';
-import { authenticateToken } from './middleware/auth';
-import { authenticateBoth } from './middleware/authenticateBoth';
+import { AuthRequest } from './middleware/authMiddleware';
 import { generateLowStockNotification } from './services/openaiService';
 import { getCurrentWeather } from './services/weatherService';
 import { convertToBaseUnit } from './services/unitConversionService';
@@ -10,7 +9,7 @@ import { convertToBaseUnit } from './services/unitConversionService';
 const router = express.Router();
 
 // GET /api/orders
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', (async (req: AuthRequest, res: Response) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
     const { startDate, endDate } = req.query;
@@ -35,10 +34,10 @@ router.get('/', authenticateToken, async (req, res) => {
         },
     });
     res.json(orders);
-});
+}) as any);
 
 // GET /api/orders/:id
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', (async (req: AuthRequest, res: Response) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
     const order = await prisma.order.findUnique({
         where: { id: parseInt(req.params.id), storeId: req.user.storeId },
@@ -54,10 +53,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
         return res.status(404).json({ message: '주문을 찾을 수 없습니다.' });
     }
     res.json(order);
-});
+}) as any);
 
 // POST /api/orders
-router.post('/', authenticateBoth, async (req, res) => {
+router.post('/', (async (req: AuthRequest, res: Response) => {
     if (!req.user) {
         return res.status(401).json({ message: 'User not authenticated' });
     }
@@ -210,6 +209,6 @@ router.post('/', authenticateBoth, async (req, res) => {
         }
         res.status(500).json({ message: 'Failed to create order.', error: String(error) });
     }
-});
+}) as any);
 
 export default router;

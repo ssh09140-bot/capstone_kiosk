@@ -1,12 +1,12 @@
-import express from 'express';
+import express, { Response } from 'express';
 import prisma from './db';
-import { authenticateToken } from './middleware/auth';
+import { AuthRequest } from './middleware/authMiddleware';
 import { PurchaseOrderStatus, NotificationType } from '@prisma/client';
 
 const router = express.Router();
 
 // [POST] /api/purchase-orders/from-recommendation
-router.post('/from-recommendation', authenticateToken, async (req, res) => {
+router.post('/from-recommendation', (async (req: AuthRequest, res: Response) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
     const { inventoryId, supplierId, quantity } = req.body;
 
@@ -49,11 +49,11 @@ router.post('/from-recommendation', authenticateToken, async (req, res) => {
         console.error('Error creating purchase order from recommendation:', error);
         res.status(500).json({ message: '추천 기반 발주 생성에 실패했습니다.' });
     }
-});
+}) as any);
 
 
 // [GET] /api/purchase-orders
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', (async (req: AuthRequest, res: Response) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
     const purchaseOrders = await prisma.purchaseOrder.findMany({
         where: { storeId: req.user.storeId },
@@ -69,14 +69,14 @@ router.get('/', authenticateToken, async (req, res) => {
         },
     });
     res.json(purchaseOrders);
-});
+}) as any);
 
 // [POST] /api/purchase-orders/:id/confirm
-router.post('/:id/confirm', authenticateToken, async (req, res) => {
+router.post('/:id/confirm', (async (req: AuthRequest, res: Response) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
     const orderId = parseInt(req.params.id);
-    
-    const purchaseOrder = await prisma.purchaseOrder.findUnique({ 
+
+    const purchaseOrder = await prisma.purchaseOrder.findUnique({
         where: { id: orderId, storeId: req.user.storeId },
         include: { supplier: true, purchaseOrderItems: { include: { inventory: true, product: true } } }
     });
@@ -128,10 +128,10 @@ router.post('/:id/confirm', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedOrder);
-});
+}) as any);
 
 // [POST] /api/purchase-orders/:id/receive
-router.post('/:id/receive', authenticateToken, async (req, res) => {
+router.post('/:id/receive', (async (req: AuthRequest, res: Response) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
     const orderId = parseInt(req.params.id);
     const { items } = req.body; // items: [{ purchaseOrderItemId, defectiveQuantity }]
@@ -178,10 +178,10 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
         console.error('Error receiving purchase order:', error);
         res.status(500).json({ message: '발주 입고 처리에 실패했습니다.' });
     }
-});
+}) as any);
 
 // [POST] /api/purchase-orders/:id/delay
-router.post('/:id/delay', authenticateToken, async (req, res) => {
+router.post('/:id/delay', (async (req: AuthRequest, res: Response) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
     const orderId = parseInt(req.params.id);
     const { delayHours } = req.body; // e.g., 3 hours
@@ -195,6 +195,6 @@ router.post('/:id/delay', authenticateToken, async (req, res) => {
     });
 
     res.status(200).send('Delivery reminder postponed.');
-});
+}) as any);
 
 export default router;

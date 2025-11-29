@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Response } from 'express';
 import prisma from './db';
-import { authenticateToken } from './middleware/auth';
+import { AuthRequest } from './middleware/authMiddleware';
 import { generateSalesAnalysis } from './services/openaiService';
 import { Prisma } from '@prisma/client';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
@@ -41,7 +41,7 @@ function calculateAvailableStock(product: any): number {
 }
 
 // [GET] /api/analytics/reports
-router.get('/analytics/reports', authenticateToken, async (req, res) => {
+router.get('/analytics/reports', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
   const { startDate: startDateQuery, endDate: endDateQuery } = req.query;
@@ -153,11 +153,11 @@ router.get('/analytics/reports', authenticateToken, async (req, res) => {
     console.error('Error fetching report data:', error);
     res.status(500).json({ message: '리포트 데이터를 가져오는데 실패했습니다.' });
   }
-});
+}) as any);
 
 
 // [GET] /api/sales/summary
-router.get('/sales/summary', authenticateToken, async (req, res) => {
+router.get('/sales/summary', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
   try {
@@ -186,10 +186,10 @@ router.get('/sales/summary', authenticateToken, async (req, res) => {
     console.error('Error fetching sales summary:', error);
     res.status(500).json({ message: '매출 요약 정보를 가져오는데 실패했습니다.' });
   }
-});
+}) as any);
 
 // [GET] /api/analytics/top-products
-router.get('/analytics/top-products', authenticateToken, async (req, res) => {
+router.get('/analytics/top-products', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
   try {
@@ -217,10 +217,10 @@ router.get('/analytics/top-products', authenticateToken, async (req, res) => {
     console.error(error);
     res.status(500).json({ message: '인기 상품 정보를 가져오는데 실패했습니다.' });
   }
-});
+}) as any);
 
 // [GET] /api/analytics/bottom-products
-router.get('/analytics/bottom-products', authenticateToken, async (req, res) => {
+router.get('/analytics/bottom-products', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
   try {
@@ -248,10 +248,10 @@ router.get('/analytics/bottom-products', authenticateToken, async (req, res) => 
     console.error(error);
     res.status(500).json({ message: '비인기 상품 정보를 가져오는데 실패했습니다.' });
   }
-});
+}) as any);
 
 // [GET] /api/analytics/profit-summary
-router.get('/analytics/profit-summary', authenticateToken, async (req, res) => {
+router.get('/analytics/profit-summary', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
   const { startDate: startDateQuery, endDate: endDateQuery } = req.query;
@@ -343,10 +343,10 @@ router.get('/analytics/profit-summary', authenticateToken, async (req, res) => {
     console.error('Error fetching profit summary:', error);
     res.status(500).json({ message: '수익성 요약 정보를 가져오는데 실패했습니다.' });
   }
-});
+}) as any);
 
 // [GET] /api/analytics/monthly-summary
-router.get('/analytics/monthly-summary', authenticateToken, async (req, res) => {
+router.get('/analytics/monthly-summary', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
   try {
@@ -396,6 +396,6 @@ router.get('/analytics/monthly-summary', authenticateToken, async (req, res) => 
     console.error('Error generating monthly summary:', error);
     res.status(500).json({ message: '월간 판매 분석 생성에 실패했습니다.' });
   }
-});
+}) as any);
 
 export default router;

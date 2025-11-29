@@ -1,21 +1,21 @@
-import express from 'express';
+import express, { Response } from 'express';
 import prisma from './db';
-import { authenticateToken } from './middleware/auth';
+import { AuthRequest } from './middleware/authMiddleware';
 
 const router = express.Router();
 
 // GET /api/option-groups
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
   const optionGroups = await prisma.optionGroup.findMany({
     where: { storeId: req.user.storeId },
     include: { options: true },
   });
   res.json(optionGroups);
-});
+}) as any);
 
 // POST /api/option-groups
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
   const { name, options } = req.body;
   const optionGroup = await prisma.optionGroup.create({
@@ -28,13 +28,13 @@ router.post('/', authenticateToken, async (req, res) => {
     },
   });
   res.status(201).json(optionGroup);
-});
+}) as any);
 
 // PUT /api/option-groups/:id
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
   const { name, options } = req.body;
-  
+
   // As the frontend note says, we don't support editing options here, only the name.
   const optionGroup = await prisma.optionGroup.update({
     where: { id: parseInt(req.params.id), storeId: req.user.storeId },
@@ -42,10 +42,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
   });
 
   res.json(optionGroup);
-});
+}) as any);
 
 // DELETE /api/option-groups/:id
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', (async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
   try {
     await prisma.optionGroup.delete({
@@ -55,6 +55,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: '옵션 그룹에 속한 상품이 있어 삭제할 수 없습니다.' });
   }
-});
+}) as any);
 
 export default router;

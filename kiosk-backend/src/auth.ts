@@ -77,4 +77,32 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// [DELETE] /api/auth/delete - 회원 탈퇴
+router.delete('/delete', async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: '인증 토큰이 필요합니다.' });
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+
+  try {
+    // Firebase Token 검증
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const { uid } = decodedToken;
+
+    // 1. PostgreSQL에서 사용자 삭제 (연관 데이터도 Cascade로 자동 삭제됨)
+    await prisma.user.delete({ where: { firebaseUid: uid } });
+
+    // 2. Firebase Authentication에서 사용자 삭제
+    await admin.auth().deleteUser(uid);
+
+    res.json({ message: '회원 탈퇴가 완료되었습니다.' });
+  } catch (error) {
+    console.error('회원 탈퇴 실패:', error);
+    res.status(500).json({ message: '회원 탈퇴 처리 중 오류가 발생했습니다.' });
+  }
+});
+
 export default router;

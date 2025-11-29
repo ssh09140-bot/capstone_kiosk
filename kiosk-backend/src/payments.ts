@@ -1,8 +1,7 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import prisma from './db';
-import { authenticateToken } from './middleware/auth';
+import { AuthRequest } from './middleware/authMiddleware';
 import fetch from 'node-fetch';
-import { JwtPayload } from './custom.d'; // JwtPayload 인터페이스 임포트
 
 console.log('payments.ts file loaded');
 
@@ -23,10 +22,10 @@ interface TossBillingAuthResponse {
 }
 
 // Endpoint to register a card (issue a billing key)
-router.post('/billing/issue-billing-key', authenticateToken, async (req, res) => {
+router.post('/billing/issue-billing-key', (async (req: AuthRequest, res: Response) => {
   console.log('Reached /billing/issue-billing-key route');
   const { customerKey, authKey } = req.body;
-  const userId = (req.user as JwtPayload).id; // from authenticateToken middleware
+  const userId = req.user?.id; // from AuthRequest
 
   if (!customerKey || !authKey) {
     return res.status(400).json({ error: 'customerKey and authKey are required' });
@@ -75,6 +74,6 @@ router.post('/billing/issue-billing-key', authenticateToken, async (req, res) =>
     console.error('Error issuing billing key:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-});
+}) as any);
 
 export default router;

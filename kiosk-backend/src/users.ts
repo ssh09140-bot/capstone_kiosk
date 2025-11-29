@@ -1,7 +1,6 @@
-import express from 'express';
+import express, { Response } from 'express';
 import prisma from './db';
-import { authenticateToken } from './middleware/auth';
-import { JwtPayload } from './custom.d'; // JwtPayload 인터페이스 임포트
+import { AuthRequest } from './middleware/authMiddleware'; // AuthRequest 타입 임포트
 import multer from 'multer'; // Multer 임포트
 import { uploadImage } from './services/cloudinaryService'; // Cloudinary upload service 임포트
 
@@ -11,15 +10,19 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // [GET] /api/me
-router.get('/me', authenticateToken, async (req, res) => {
+router.get('/me', (async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user || !req.user.storeId) {
+      return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    }
+
     const user = await prisma.user.findUnique({
-      where: { id: (req.user as JwtPayload).id },
-      select: { 
-        email: true, 
-        storeName: true, 
-        storeId: true, 
-        cardCompany: true, 
+      where: { storeId: req.user.storeId },
+      select: {
+        email: true,
+        storeName: true,
+        storeId: true,
+        cardCompany: true,
         cardNumber: true,
         businessRegistrationNumber: true, // 사업자 등록번호 추가
         businessLicenseImageUrl: true, // 사업자 등록증 이미지 URL 추가
@@ -43,17 +46,26 @@ router.get('/me', authenticateToken, async (req, res) => {
     console.error(error);
     res.status(500).json({ message: '서버 오류가 발생했습니다.' });
   }
-});
+}) as any);
 
 // [PUT] /api/users/me/business-info - 사업자 등록 정보 업데이트
-router.put('/me/business-info', authenticateToken, upload.single('businessLicenseImage'), async (req, res) => {
+router.put('/me/business-info', upload.single('businessLicenseImage'), (async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req.user as JwtPayload).id;
+    const userStoreId = req.user?.storeId;
     const { businessRegistrationNumber, storeAddress } = req.body; // Destructure storeAddress
     let businessLicenseImageUrl: string | undefined = req.body.businessLicenseImageUrl; // 기존 URL 유지 또는 업데이트
 
-    if (!userId) {
+    if (!userStoreId) {
       return res.status(401).json({ message: '인증 정보가 없습니다.' });
+    }
+
+    // Find user by storeId first
+    const currentUser = await prisma.user.findUnique({
+      where: { storeId: userStoreId }
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
     }
 
     // 파일이 업로드된 경우 Cloudinary에 업로드
@@ -67,13 +79,13 @@ router.put('/me/business-info', authenticateToken, upload.single('businessLicens
         where: { businessRegistrationNumber },
       });
 
-      if (existingUserWithBusinessNumber && existingUserWithBusinessNumber.id !== userId) {
+      if (existingUserWithBusinessNumber && existingUserWithBusinessNumber.id !== currentUser.id) {
         return res.status(409).json({ message: '이미 등록된 사업자 등록번호입니다.' });
       }
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
+      where: { id: currentUser.id },
       data: {
         businessRegistrationNumber: businessRegistrationNumber || null,
         businessLicenseImageUrl: businessLicenseImageUrl || null,
@@ -94,7 +106,7 @@ router.put('/me/business-info', authenticateToken, upload.single('businessLicens
     console.error('Error updating business info:', error);
     res.status(500).json({ message: '사업자 정보 업데이트 중 오류가 발생했습니다.' });
   }
-});
+}) as any);
 
 
 // [GET] /api/store/:storeId

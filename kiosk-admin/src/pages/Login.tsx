@@ -4,7 +4,6 @@ import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
-import api from '../api';
 import './Auth.css';
 
 const { Title } = Typography;
@@ -16,18 +15,9 @@ const Login: React.FC = () => {
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      // 1. Firebase 로그인
-      const userCredential = await signInWithEmailAndPassword(auth, values.username, values.password);
-      const user = userCredential.user;
+      // Firebase 로그인
+      await signInWithEmailAndPassword(auth, values.username, values.password);
 
-      // 2. ID 토큰 가져오기
-      const idToken = await user.getIdToken();
-
-      // 3. 백엔드 로그인 (토큰 검증)
-      const response = await api.post('/auth/login', { idToken });
-
-      // 4. 토큰 저장 및 이동
-      localStorage.setItem('authToken', response.data.token);
       message.success('로그인 성공!');
       navigate('/');
     } catch (error: any) {
