@@ -7,12 +7,20 @@ exports.sendVerificationEmail = sendVerificationEmail;
 exports.generateVerificationCode = generateVerificationCode;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 // SMTP 설정
+// SMTP 설정
 const transporter = nodemailer_1.default.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // true for 465, false for other ports
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+});
+// 환경 변수 로드 확인 (디버깅용)
+console.log('Email Config Check:', {
+    user: process.env.EMAIL_USER ? 'Set' : 'Not Set',
+    pass: process.env.EMAIL_PASS ? 'Set' : 'Not Set',
 });
 /**
  * 이메일 인증 코드를 발송하는 함수
