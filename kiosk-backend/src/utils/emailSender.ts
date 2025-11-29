@@ -1,12 +1,21 @@
 import nodemailer from 'nodemailer';
 
 // SMTP 설정
+// SMTP 설정
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// 환경 변수 로드 확인 (디버깅용)
+console.log('Email Config Check:', {
+  user: process.env.EMAIL_USER ? 'Set' : 'Not Set',
+  pass: process.env.EMAIL_PASS ? 'Set' : 'Not Set',
 });
 
 /**
@@ -15,13 +24,13 @@ const transporter = nodemailer.createTransport({
  * @param code 6자리 인증 번호
  */
 export async function sendVerificationEmail(to: string, code: string): Promise<void> {
-    const senderName = process.env.EMAIL_SENDER_NAME || 'OPTIMA ORDER';
+  const senderName = process.env.EMAIL_SENDER_NAME || 'OPTIMA ORDER';
 
-    const mailOptions = {
-        from: `"${senderName}" <${process.env.EMAIL_USER}>`,
-        to,
-        subject: '[OPTIMA ORDER] 이메일 인증 코드',
-        html: `
+  const mailOptions = {
+    from: `"${senderName}" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: '[OPTIMA ORDER] 이메일 인증 코드',
+    html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px;">
           이메일 인증 코드
@@ -45,20 +54,20 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
         </p>
       </div>
     `,
-    };
+  };
 
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`✅ 인증 이메일 발송 성공: ${to}`);
-    } catch (error) {
-        console.error('❌ 이메일 발송 실패:', error);
-        throw new Error('이메일 발송에 실패했습니다.');
-    }
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ 인증 이메일 발송 성공: ${to}`);
+  } catch (error) {
+    console.error('❌ 이메일 발송 실패:', error);
+    throw new Error('이메일 발송에 실패했습니다.');
+  }
 }
 
 /**
  * 6자리 랜덤 인증 코드 생성
  */
 export function generateVerificationCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
