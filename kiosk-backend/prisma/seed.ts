@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+// import bcrypt from 'bcryptjs';  <-- 비밀번호 해싱 필요 없음
 
 const prisma = new PrismaClient();
 
@@ -26,15 +26,14 @@ async function main() {
   await prisma.user.deleteMany({});
 
   // 2. Create a single user for the store
-  const hashedPassword = await bcrypt.hash('password', 10);
+  // Firebase를 쓰므로 비밀번호 해싱 과정 삭제
 
-  // 👇 여기가 수정된 부분입니다. (UID 추가 및 이메일 일치화)
   const user = await prisma.user.create({
     data: {
-      email: 'steam0460@naver.com', // 실제 로그인하는 네이버 이메일로 변경 (로그인 매칭 위해)
-      password: hashedPassword,
+      email: 'store-owner@test.com',
+      // password: hashedPassword, <-- 이 줄 삭제됨 (DB에 컬럼이 없음)
       storeName: 'My Awesome Kiosk',
-      firebaseUid: 'H7rwGsgdUPPYcmJBNn9280A2Ank1', // 🔥 여기에 UID를 넣었습니다!
+      firebaseUid: 'H7rwGsgdUPPYcmJBNn9280A2Ank1',
     },
   });
   console.log(`Created user: ${user.email} with storeId: ${user.storeId} and FirebaseUID linked.`);
