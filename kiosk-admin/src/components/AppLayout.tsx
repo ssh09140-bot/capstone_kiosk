@@ -65,8 +65,13 @@ const AppLayout: React.FC = () => {
     setLoading(true);
     try {
       const response = await api.get('/notifications');
-      setNotifications(response.data);
-      setUnreadCount(response.data.filter((n: Notification) => !n.read).length);
+      if (Array.isArray(response.data)) {
+        setNotifications(response.data);
+        setUnreadCount(response.data.filter((n: Notification) => !n.read).length);
+      } else {
+        console.error("Invalid notifications response:", response.data);
+        setNotifications([]);
+      }
     } catch (error) {
       console.error("알림 목록 로딩 실패:", error);
     } finally {
@@ -93,7 +98,14 @@ const AppLayout: React.FC = () => {
             }
 
             // Get VAPID Public Key from server
-            const { data: { publicKey } } = await api.get('/notifications/vapid-public-key');
+            const { data } = await api.get('/notifications/vapid-public-key');
+            const publicKey = data?.publicKey;
+
+            if (!publicKey) {
+              console.error('VAPID Public Key is missing');
+              return;
+            }
+
             const convertedVapidKey = urlBase64ToUint8Array(publicKey);
 
             // Subscribe

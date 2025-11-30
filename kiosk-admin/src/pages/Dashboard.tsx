@@ -137,7 +137,7 @@ const Dashboard: React.FC = () => {
               <div style={{ marginBottom: 24, display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <Text type="secondary">이번 달 매출액</Text>
                 <Title level={3} style={{ margin: 0, color: '#1677ff' }}>
-                  {currentMonthSales.toLocaleString()}원
+                  {(currentMonthSales || 0).toLocaleString()}원
                 </Title>
               </div>
               <Column {...chartConfig} />

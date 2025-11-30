@@ -40,6 +40,25 @@ const SERVICE_LEVEL_Z_SCORE = {
   C: 1.28, // 90% (비중 낮은 자재)
 };
 
+const CITY_NAME_MAP: Record<string, string> = {
+  'Seoul': '서울',
+  'Busan': '부산',
+  'Daegu': '대구',
+  'Incheon': '인천',
+  'Gwangju': '광주',
+  'Daejeon': '대전',
+  'Ulsan': '울산',
+  'Jeju City': '제주',
+};
+
+const WEATHER_CONDITION_MAP: Record<string, string> = {
+  'Rain': '비',
+  'Snow': '눈',
+  'Clear': '맑음',
+  'Clouds': '흐림',
+  'Other': '기타',
+};
+
 // --- Helper Functions ---
 
 /**
@@ -166,6 +185,7 @@ function calculateWeatherFactor(itemName: string, weather: SimplifiedWeather): n
 
 export const generateRecommendations = async (storeId: string) => {
   const city = await getCityForWeather(storeId);
+  const displayCity = CITY_NAME_MAP[city] || city;
 
   // 1. 자동 발주 대상 품목 조회
   const inventories = await prisma.inventory.findMany({
@@ -308,7 +328,9 @@ export const generateRecommendations = async (storeId: string) => {
       const finalOrderAmount = recommendedPackCount * packAmount;
 
       // 추천 사유 생성
-      const weatherInfo = forecast[0] ? `${forecast[0].condition}, ${forecast[0].temp_celsius}°C` : '정보 없음';
+      const weatherInfo = forecast[0]
+        ? `${WEATHER_CONDITION_MAP[forecast[0].condition] || forecast[0].condition}, ${forecast[0].temp_celsius}°C`
+        : '정보 없음';
       const reason = `[${abcClass}등급] 안전재고 ${safetyStock.toFixed(1)}${item.unit} 확보 필요. (내일 날씨: ${weatherInfo})`;
 
       recommendations.push({
@@ -329,11 +351,11 @@ export const generateRecommendations = async (storeId: string) => {
   }
 
   const forecastSummary = forecast.map(f =>
-    `[${format(new Date(f.date), 'MM/dd')} ${f.condition} ${f.temp_celsius}°C]`
+    `[${format(new Date(f.date), 'MM/dd')} ${WEATHER_CONDITION_MAP[f.condition] || f.condition} ${f.temp_celsius}°C]`
   ).join(', ');
 
   return {
-    message: `${city} 날씨 예보: ${forecastSummary}`,
+    message: `${displayCity} 날씨 예보: ${forecastSummary}`,
     recommendations,
   };
 };
