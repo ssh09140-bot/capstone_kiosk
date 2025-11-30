@@ -29,8 +29,8 @@ const Login: React.FC = () => {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // 2. 이메일 인증 확인
-      if (!user.emailVerified) {
+      // 2. 이메일 인증 확인 (테스트 계정 예외 처리)
+      if (!user.emailVerified && user.email !== 'store-owner@test.com') {
         message.warning('이메일 인증이 필요합니다. 이메일을 확인해주세요.');
         await auth.signOut();
         setLoading(false);
