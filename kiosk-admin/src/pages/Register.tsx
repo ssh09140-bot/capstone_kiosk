@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Typography, message, Space } from 'antd';
-import { MailOutlined, LockOutlined, ShopOutlined, SafetyOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { Form, Input, Button, message, Typography } from 'antd';
+import { MailOutlined, LockOutlined, ShopOutlined } from '@ant-design/icons';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { auth } from '../firebase';
 import api from '../api';
 import './Auth.css';
 
@@ -10,99 +12,50 @@ const { Title } = Typography;
 const Register: React.FC = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
-
-  const [codeSent, setCodeSent] = useState(false);
-  const [verified, setVerified] = useState(false);
-  const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
 
+  // 이미 로그인한 사용자는 대시보드로 리다이렉트
   useEffect(() => {
-    if (timer > 0) {
-      const interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
-      return () => clearInterval(interval);
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      navigate('/dashboard');
     }
-  }, [timer]);
-
-  const handleSendCode = async () => {
-    const email = form.getFieldValue('email');
-
-    if (!email) {
-      message.warning('이메일을 먼저 입력해주세요!');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      message.error('올바른 이메일 형식을 입력해주세요!');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await api.post('/auth/send-code', { email });
-      message.success('인증 코드가 이메일로 발송되었습니다!');
-      setCodeSent(true);
-      setTimer(300);
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || '인증 코드 발송에 실패했습니다.';
-      message.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    const email = form.getFieldValue('email');
-    const code = form.getFieldValue('verificationCode');
-
-    if (!code) {
-      message.warning('인증 코드를 입력해주세요!');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await api.post('/auth/verify-code', { email, code });
-      message.success('이메일 인증이 완료되었습니다! ✅');
-      setVerificationCode(code);
-      setVerified(true);
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || '인증 코드가 일치하지 않습니다.';
-      message.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [navigate]);
 
   const onFinish = async (values: any) => {
-    if (!verified) {
-      message.error('이메일 인증을 먼저 완료해주세요!');
-      return;
-    }
-
+    setLoading(true);
     try {
+      // 1. Firebase에 사용자 생성
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      // 2. 백엔드에 사용자 정보 저장
       await api.post('/auth/register', {
         email: values.email,
-        password: values.password,
         storeName: values.storeName,
-        verificationCode: verificationCode,
+        firebaseUid: user.uid,
       });
 
-      message.success('회원가입 성공! 로그인 페이지로 이동합니다.');
+      // 3. 인증 이메일 발송
+      await sendEmailVerification(user);
+
+      message.success('회원가입 성공! 인증 메일을 확인해주세요.');
+      message.info('이메일 인증 후 로그인할 수 있습니다.');
       navigate('/login');
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || '회원가입 중 오류가 발생했습니다.';
+      console.error('회원가입 에러:', error);
+      let errorMessage = '회원가입 중 오류가 발생했습니다.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = '이미 사용 중인 이메일입니다.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = '비밀번호는 6자리 이상이어야 합니다.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
       message.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -119,75 +72,11 @@ const Register: React.FC = () => {
             name="email"
             rules={[{ required: true, message: '이메일을 입력해주세요!', type: 'email' }]}
           >
-            <Space.Compact style={{ width: '100%' }}>
-              <Input
-                prefix={<MailOutlined />}
-                placeholder="이메일 (로그인 ID)"
-                disabled={verified}
-                style={{ flex: 1 }}
-              />
-              <Button
-                type="primary"
-                onClick={handleSendCode}
-                loading={loading}
-                disabled={verified || (timer > 0)}
-                style={{ minWidth: '120px' }}
-              >
-                {timer > 0 ? formatTime(timer) : codeSent ? '재발송' : '인증코드 발송'}
-              </Button>
-            </Space.Compact>
+            <Input prefix={<MailOutlined />} placeholder="이메일 (로그인 ID)" />
           </Form.Item>
 
-          {codeSent && !verified && (
-            <Form.Item
-              name="verificationCode"
-              rules={[{ required: true, message: '인증 코드를 입력해주세요!' }]}
-            >
-              <Space.Compact style={{ width: '100%' }}>
-                <Input
-                  prefix={<SafetyOutlined />}
-                  placeholder="인증 코드 6자리"
-                  maxLength={6}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  type="default"
-                  onClick={handleVerifyCode}
-                  loading={loading}
-                  style={{ minWidth: '100px' }}
-                >
-                  인증 확인
-                </Button>
-              </Space.Compact>
-            </Form.Item>
-          )}
-
-          {verified && (
-            <div style={{
-              marginBottom: '16px',
-              padding: '12px',
-              background: '#f0f9ff',
-              borderRadius: '8px',
-              color: '#0369a1',
-              textAlign: 'center',
-              fontWeight: 500
-            }}>
-              ✅ 이메일 인증 완료!
-            </div>
-          )}
-
-          <Form.Item
-            name="password"
-            rules={[
-              { required: true, message: '비밀번호를 입력해주세요!' },
-              { min: 7, message: '비밀번호는 최소 7자 이상이어야 합니다!' },
-              {
-                pattern: /^(?=(?:.*[0-9]){6})(?=.*[!@#$%^&*(),.?":{}|<>])/,
-                message: '비밀번호는 숫자 최소 6개와 특수문자 최소 1개를 포함해야 합니다!',
-              },
-            ]}
-          >
-            <Input.Password prefix={<LockOutlined />} placeholder="비밀번호 (최소 7자, 숫자 6개 이상, 특수문자 포함)" />
+          <Form.Item name="password" rules={[{ required: true, message: '비밀번호를 입력해주세요!' }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="비밀번호" />
           </Form.Item>
 
           <Form.Item
@@ -213,7 +102,7 @@ const Register: React.FC = () => {
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" className="auth-button" disabled={!verified}>
+            <Button type="primary" htmlType="submit" className="auth-button" loading={loading}>
               회원가입
             </Button>
           </Form.Item>
