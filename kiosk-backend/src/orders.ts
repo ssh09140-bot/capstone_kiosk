@@ -184,7 +184,9 @@ router.post('/', authenticateBoth, async (req, res) => {
 
             for (const item of sanitizedItems) {
                 const product = productMap.get(item.productId)!;
-                if (product.inventoryUsages) {
+                console.log(`[Inventory Check] Product: ${product.name} (ID: ${product.id})`);
+
+                if (product.inventoryUsages && product.inventoryUsages.length > 0) {
                     for (const usage of product.inventoryUsages) {
                         const amountToDecrement = convertToBaseUnit(
                             usage.usageAmount,
@@ -192,11 +194,18 @@ router.post('/', authenticateBoth, async (req, res) => {
                             usage.inventory.unit
                         ) * item.quantity;
 
+                        console.log(`[Inventory Deduct] Inventory: ${usage.inventory.name} (ID: ${usage.inventoryId})`);
+                        console.log(`  - Usage: ${usage.usageAmount}${usage.usageUnit}`);
+                        console.log(`  - Order Qty: ${item.quantity}`);
+                        console.log(`  - Total Decrement: ${amountToDecrement} ${usage.inventory.unit}`);
+
                         const updatedInventory = await tx.inventory.update({
                             where: { id: usage.inventoryId },
                             data: { quantity: { decrement: amountToDecrement } },
                         });
                         inventoryUpdates.push({ id: updatedInventory.id, newQuantity: updatedInventory.quantity });
+
+                        console.log(`  - Remaining Stock: ${updatedInventory.quantity} ${usage.inventory.unit}`);
 
                         await tx.inventoryLog.create({
                             data: {
@@ -207,6 +216,8 @@ router.post('/', authenticateBoth, async (req, res) => {
                             }
                         });
                     }
+                } else {
+                    console.log(`[Inventory Check] No inventory usages found for product ${product.name}`);
                 }
             }
 
