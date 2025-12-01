@@ -18,12 +18,27 @@ async function main() {
   console.log('Start seeding...');
 
   // 1. Clean up existing data
+  // 1. Clean up existing data
+  // 참조 무결성 제약 조건을 피하기 위해 자식 테이블부터 삭제
+  await prisma.productInventoryUsage.deleteMany({});
+  await prisma.inventoryLog.deleteMany({});
+  await prisma.supplierInventory.deleteMany({});
+  await prisma.purchaseOrderItem.deleteMany({});
+  await prisma.purchaseOrder.deleteMany({});
+
   await prisma.orderItem.deleteMany({});
   await prisma.option.deleteMany({});
   await prisma.order.deleteMany({});
+
   await prisma.product.deleteMany({});
   await prisma.optionGroup.deleteMany({});
   await prisma.category.deleteMany({});
+
+  await prisma.inventory.deleteMany({});
+  await prisma.supplier.deleteMany({});
+  await prisma.notification.deleteMany({});
+  await prisma.pushSubscription.deleteMany({});
+
   await prisma.user.deleteMany({});
 
   // 2. Create a single user for the store
@@ -61,13 +76,16 @@ async function main() {
   console.log(`Created ${products.length} products.`);
 
   // 5. Generate orders for the past 90 days
+  console.log('Generating orders for the past 90 days...');
   const today = new Date();
+
   for (let i = 0; i < 90; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() - i);
 
-    // Create a random number of orders for the day
     const ordersPerDay = getRandomInt(5, 20);
+    const dailyOrderPromises = [];
+
     for (let j = 0; j < ordersPerDay; j++) {
       const itemsInOrder = getRandomInt(1, 4);
       const orderItemsData = [];
@@ -78,29 +96,36 @@ async function main() {
         const quantity = getRandomInt(1, 3);
         const pricePerItem = product.price;
         totalAmount += pricePerItem * quantity;
-        
+
         orderItemsData.push({
           productId: product.id,
           quantity: quantity,
           pricePerItem: pricePerItem,
         });
       }
-      
-      // Create the order with its items
-      await prisma.order.create({
-        data: {
-          storeId: user.storeId,
-          totalAmount: totalAmount,
-          createdAt: date,
-          orderItems: {
-            create: orderItemsData,
+
+      dailyOrderPromises.push(
+        prisma.order.create({
+          data: {
+            storeId: user.storeId,
+            totalAmount: totalAmount,
+            createdAt: date,
+            orderItems: {
+              create: orderItemsData,
+            },
           },
-        },
-      });
+        })
+      );
+    }
+
+    await Promise.all(dailyOrderPromises);
+
+    process.stdout.write(`.`);
+    if ((i + 1) % 10 === 0) {
+      console.log(` ${i + 1}/90 days completed`);
     }
   }
-  console.log('Finished generating orders.');
-
+  console.log('\nFinished generating orders.');
   console.log('Seeding finished.');
 }
 

@@ -11,7 +11,19 @@ const router = express.Router();
 // Firebase Admin SDK 초기화
 if (!admin.apps.length) {
   try {
-    const serviceAccount = require('../firebase-service-account.json');
+    let serviceAccount;
+
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+      // Render 등 배포 환경: 환경 변수에서 Base64 디코딩
+      const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
+      serviceAccount = JSON.parse(decoded);
+      console.log('Loaded Firebase credentials from environment variable.');
+    } else {
+      // 로컬 개발 환경: 파일에서 로드
+      serviceAccount = require('../firebase-service-account.json');
+      console.log('Loaded Firebase credentials from local file.');
+    }
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
