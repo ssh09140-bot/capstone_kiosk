@@ -4,6 +4,7 @@ import { authenticateToken } from './middleware/auth';
 import fetch from 'node-fetch';
 import { JwtPayload } from './custom.d';
 import os from 'os';
+import { convertToBaseUnit } from './services/unitConversionService';
 
 console.log('payments.ts file loaded');
 
@@ -315,12 +316,56 @@ router.get('/payment/toss/success', async (req, res) => {
       return res.status(404).send('Order not found');
     }
 
-    // 재고 차감
+    // 1. 상품 재고 차감 (기존 로직)
     for (const item of order.orderItems) {
       await prisma.product.update({
         where: { id: item.productId },
         data: { stock: { decrement: item.quantity } },
       });
+    }
+
+    // 2. 레시피 재료(Inventory) 재고 차감 (추가된 로직)
+    const productIds = order.orderItems.map(item => item.productId);
+    const productsWithRecipes = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      include: {
+        inventoryUsages: {
+          include: {
+            inventory: true,
+          },
+        },
+      },
+    });
+
+    const productMap = new Map(productsWithRecipes.map(p => [p.id, p]));
+
+    for (const item of order.orderItems) {
+      const product = productMap.get(item.productId);
+      if (product && product.inventoryUsages) {
+        for (const usage of product.inventoryUsages) {
+          const amountToDecrement = convertToBaseUnit(
+            usage.usageAmount,
+            usage.usageUnit,
+            usage.inventory.unit
+          ) * item.quantity;
+
+          console.log(`[Payment Success] Deducting Inventory: ${usage.inventory.name} (ID: ${usage.inventoryId}) - ${amountToDecrement} ${usage.inventory.unit}`);
+
+          await prisma.inventory.update({
+            where: { id: usage.inventoryId },
+            data: { quantity: { decrement: amountToDecrement } },
+          });
+
+          await prisma.inventoryLog.create({
+            data: {
+              inventoryId: usage.inventoryId,
+              change: -amountToDecrement,
+              reason: `Order #${orderIdNum} Sale (Toss Payment)`,
+              orderId: orderIdNum,
+            }
+          });
+        }
+      }
     }
 
     // 주문 상태 완료로 변경

@@ -34,7 +34,7 @@ interface InventoryAnalysisData {
 // --- Constants ---
 
 const ANALYSIS_DAYS = 28; // 4주 데이터 분석
-const SERVICE_LEVEL_Z_SCORE = {
+const SERVICE_LEVEL_Z_SCORE: { [key: string]: number } = {
   A: 2.33, // 99% (핵심 자재)
   B: 1.65, // 95% (일반 자재)
   C: 1.28, // 90% (비중 낮은 자재)
@@ -47,13 +47,19 @@ const SERVICE_LEVEL_Z_SCORE = {
  */
 async function getWeatherForecast(city: string, days: number): Promise<SimplifiedWeather[]> {
   const apiKey = process.env.OPENWEATHER_API_KEY;
-  if (!apiKey) return [];
+  if (!apiKey) {
+    console.warn('OPENWEATHER_API_KEY is missing');
+    return [];
+  }
 
   const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}`;
+  console.log(`Fetching weather for city: ${city}, URL: ${url.replace(apiKey, 'HIDDEN_KEY')}`);
+
   const forecasts: SimplifiedWeather[] = [];
 
   try {
     const response = await axios.get<{ list: WeatherInfo[] }>(url);
+    console.log(`Weather API Response Status: ${response.status}, Items: ${response.data.list?.length}`);
 
     for (let i = 1; i <= days; i++) {
       const targetDate = addDays(new Date(), i);
@@ -74,11 +80,17 @@ async function getWeatherForecast(city: string, days: number): Promise<Simplifie
         }
 
         forecasts.push({ date: targetDateString, temp_celsius, condition });
+      } else {
+        console.log(`No forecast found for date: ${targetDateString} 12:00:00`);
       }
     }
+    console.log('Parsed Forecasts:', forecasts);
     return forecasts;
-  } catch (error) {
-    console.error('Failed to fetch weather forecast:', error);
+  } catch (error: any) {
+    console.error('Failed to fetch weather forecast:', error.message);
+    if (error.response) {
+      console.error('Error Response Data:', error.response.data);
+    }
     return [];
   }
 }
@@ -165,21 +177,37 @@ function calculateWeatherFactor(itemName: string, weather: SimplifiedWeather): n
 // --- Main Logic ---
 
 export const generateRecommendations = async (storeId: string) => {
+  console.log(`[Recommendation] Generating recommendations for storeId: ${storeId}`);
   const city = await getCityForWeather(storeId);
+  console.log(`[Recommendation] City for weather: ${city}`);
 
-  // 1. 자동 발주 대상 품목 조회
+  // 1. 날씨 예보 조회 (기본 5일 조회)
+  // 재고가 없더라도 날씨 정보는 보여주기 위해 먼저 호출합니다.
+  const forecast = await getWeatherForecast(city, 5);
+  const forecastSummary = forecast.map(f =>
+    `[${format(new Date(f.date), 'MM/dd')} ${f.condition} ${f.temp_celsius}°C]`
+  ).join(', ');
+
+  // 2. 자동 발주 대상 품목 조회
   const inventories = await prisma.inventory.findMany({
     where: { storeId, autoOrderEnabled: true },
     include: { suppliedBy: { include: { supplier: true } } },
   });
 
-  if (inventories.length === 0) return { message: "자동 발주가 활성화된 재고 품목이 없습니다.", recommendations: [] };
+  console.log(`[Recommendation] Found ${inventories.length} auto-order enabled inventories.`);
 
-  // 2. 날씨 예보 조회 (최대 리드타임 고려)
+  if (inventories.length === 0) {
+    return {
+      message: `${city} 날씨 예보: ${forecastSummary}`,
+      recommendations: []
+    };
+  }
+
+  // 3. 최대 리드타임 계산 (필요 시 날씨 추가 조회 가능하지만, 일단 기본 5일치로 충분하다고 가정)
   const maxLeadTime = Math.max(...inventories.map(inv => inv.suppliedBy.reduce((max, s) => Math.max(max, s.leadTimeDays || 0), 0)), 1);
-  const forecast = await getWeatherForecast(city, Math.min(maxLeadTime + 2, 5)); // 여유있게 조회
+  console.log(`[Recommendation] Max lead time: ${maxLeadTime}`);
 
-  // 3. 과거 사용량 데이터 분석
+  // 4. 과거 사용량 데이터 분석
   const endDate = new Date();
   const startDate = subDays(endDate, ANALYSIS_DAYS);
 
@@ -188,7 +216,7 @@ export const generateRecommendations = async (storeId: string) => {
     include: { order: true, product: { include: { inventoryUsages: true } } },
   });
 
-  // 4. 품목별 데이터 집계 및 ABC 분류 준비
+  // 5. 품목별 데이터 집계 및 ABC 분류 준비
   const analysisData: InventoryAnalysisData[] = [];
 
   for (const inv of inventories) {
@@ -236,7 +264,7 @@ export const generateRecommendations = async (storeId: string) => {
     }
   }
 
-  // 5. ABC 분류 수행 (사용 금액 기준)
+  // 6. ABC 분류 수행 (사용 금액 기준)
   analysisData.sort((a, b) => {
     const usageValA = (a.dailyUsages.reduce((sum, val) => sum + val, 0) / ANALYSIS_DAYS) * a.price;
     const usageValB = (b.dailyUsages.reduce((sum, val) => sum + val, 0) / ANALYSIS_DAYS) * b.price;
@@ -262,7 +290,7 @@ export const generateRecommendations = async (storeId: string) => {
     else abcMap.set(item.id, 'C'); // 나머지 10% -> C
   });
 
-  // 6. 추천 수량 계산
+  // 7. 추천 수량 계산
   const recommendations = [];
 
   for (const item of analysisData) {
@@ -329,10 +357,6 @@ export const generateRecommendations = async (storeId: string) => {
       });
     }
   }
-
-  const forecastSummary = forecast.map(f =>
-    `[${format(new Date(f.date), 'MM/dd')} ${f.condition} ${f.temp_celsius}°C]`
-  ).join(', ');
 
   return {
     message: `${city} 날씨 예보: ${forecastSummary}`,
