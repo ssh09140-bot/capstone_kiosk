@@ -166,14 +166,20 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
             console.log('Order created:', order.id);
             for (const item of sanitizedItems) {
                 const product = productMap.get(item.productId);
-                if (product.inventoryUsages) {
+                console.log(`[Inventory Check] Product: ${product.name} (ID: ${product.id})`);
+                if (product.inventoryUsages && product.inventoryUsages.length > 0) {
                     for (const usage of product.inventoryUsages) {
                         const amountToDecrement = (0, unitConversionService_1.convertToBaseUnit)(usage.usageAmount, usage.usageUnit, usage.inventory.unit) * item.quantity;
+                        console.log(`[Inventory Deduct] Inventory: ${usage.inventory.name} (ID: ${usage.inventoryId})`);
+                        console.log(`  - Usage: ${usage.usageAmount}${usage.usageUnit}`);
+                        console.log(`  - Order Qty: ${item.quantity}`);
+                        console.log(`  - Total Decrement: ${amountToDecrement} ${usage.inventory.unit}`);
                         const updatedInventory = await tx.inventory.update({
                             where: { id: usage.inventoryId },
                             data: { quantity: { decrement: amountToDecrement } },
                         });
                         inventoryUpdates.push({ id: updatedInventory.id, newQuantity: updatedInventory.quantity });
+                        console.log(`  - Remaining Stock: ${updatedInventory.quantity} ${usage.inventory.unit}`);
                         await tx.inventoryLog.create({
                             data: {
                                 inventoryId: usage.inventoryId,
@@ -183,6 +189,9 @@ router.post('/', authenticateBoth_1.authenticateBoth, async (req, res) => {
                             }
                         });
                     }
+                }
+                else {
+                    console.log(`[Inventory Check] No inventory usages found for product ${product.name}`);
                 }
             }
             return order;
