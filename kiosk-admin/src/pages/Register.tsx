@@ -36,8 +36,11 @@ const Register: React.FC = () => {
         firebaseUid: user.uid,
       });
 
-      // 3. 인증 이메일 발송
-      await sendEmailVerification(user);
+      // 3. 인증 이메일 발송 (로그인 페이지로 리다이렉트 설정)
+      await sendEmailVerification(user, {
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: true
+      });
 
       message.success('회원가입 성공! 인증 메일을 확인해주세요.');
       message.info('이메일 인증 후 로그인할 수 있습니다.');
