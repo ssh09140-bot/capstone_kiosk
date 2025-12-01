@@ -1,232 +1,212 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Typography, message, Space } from 'antd';
-import { MailOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import api from '../api';
+import { Form, Input, Button, Typography, message, Space, Spin } from 'antd';
+import { MailOutlined, LockOutlined } from '@ant-design/icons';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { sendPasswordResetEmail, verifyPasswordResetCode, confirmPasswordReset } from 'firebase/auth';
+import { auth } from '../firebase';
 import './Auth.css';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const ResetPassword: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [form] = Form.useForm();
 
-    const [codeSent, setCodeSent] = useState(false);
-    const [verified, setVerified] = useState(false);
-    const [timer, setTimer] = useState(0);
+    // 상태 관리
     const [loading, setLoading] = useState(false);
-    const [verificationCode, setVerificationCode] = useState(''); // 인증 코드 저장
+    const [emailSent, setEmailSent] = useState(false);
 
-    // 타이머 카운트다운
+    // 비밀번호 재설정 모드 (링크 타고 들어왔을 때)
+    const [oobCode, setOobCode] = useState<string | null>(null);
+    const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+    const [verifying, setVerifying] = useState(false);
+
+    // URL 파라미터 확인 (oobCode)
     useEffect(() => {
-        if (timer > 0) {
-            const interval = setInterval(() => {
-                setTimer((prev) => prev - 1);
-            }, 1000);
-            return () => clearInterval(interval);
+        const queryParams = new URLSearchParams(location.search);
+        const code = queryParams.get('oobCode');
+
+        if (code) {
+            setOobCode(code);
+            setVerifying(true);
+            // 코드 유효성 검사
+            verifyPasswordResetCode(auth, code)
+                .then((email) => {
+                    setVerifiedEmail(email);
+                    setVerifying(false);
+                })
+                .catch((error) => {
+                    console.error('Invalid code:', error);
+                    message.error('유효하지 않거나 만료된 링크입니다.');
+                    setVerifying(false);
+                    // 실패 시 다시 이메일 입력 화면으로 (oobCode 제거)
+                    setOobCode(null);
+                });
         }
-    }, [timer]);
+    }, [location.search]);
 
-    // 인증 코드 발송
-    const handleSendCode = async () => {
-        const email = form.getFieldValue('email');
-
-        if (!email) {
-            message.warning('이메일을 먼저 입력해주세요!');
-            return;
-        }
-
-        // 이메일 형식 검증
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            message.error('올바른 이메일 형식을 입력해주세요!');
-            return;
-        }
-
+    // 1. 이메일 발송 핸들러
+    const handleSendEmail = async (values: any) => {
         setLoading(true);
         try {
-            await api.post('/auth/send-code', { email });
-            message.success('인증 코드가 이메일로 발송되었습니다!');
-            setCodeSent(true);
-            setTimer(300); // 5분 (300초)
-        } catch (error: any) {
-            const errorMessage = error.response?.data?.message || '인증 코드 발송에 실패했습니다.';
-            message.error(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // 인증 코드 검증
-    const handleVerifyCode = async () => {
-        const email = form.getFieldValue('email');
-        const code = form.getFieldValue('verificationCode');
-
-        if (!code) {
-            message.warning('인증 코드를 입력해주세요!');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            await api.post('/auth/verify-code', { email, code });
-            message.success('이메일 인증이 완료되었습니다! ✅');
-            setVerificationCode(code); // ✅ 인증 코드를 state에 저장
-            setVerified(true);
-        } catch (error: any) {
-            const errorMessage = error.response?.data?.message || '인증 코드가 일치하지 않습니다.';
-            message.error(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // 비밀번호 재설정
-    const onFinish = async (values: any) => {
-        if (!verified) {
-            message.error('이메일 인증을 먼저 완료해주세요!');
-            return;
-        }
-
-        try {
-            await api.post('/auth/reset-password', {
-                email: values.email,
-                verificationCode: verificationCode, // ✅ state에 저장된 인증 코드 사용
-                newPassword: values.newPassword,
+            await sendPasswordResetEmail(auth, values.email, {
+                url: `${window.location.origin}/reset-password`, // 현재 페이지로 리다이렉트
+                handleCodeInApp: true,
             });
+            setEmailSent(true);
+            message.success('비밀번호 재설정 이메일이 발송되었습니다!');
+        } catch (error: any) {
+            console.error('Email send error:', error);
+            let errorMessage = '이메일 발송에 실패했습니다.';
+            if (error.code === 'auth/user-not-found') {
+                errorMessage = '등록되지 않은 이메일입니다.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = '유효하지 않은 이메일 형식입니다.';
+            }
+            message.error(errorMessage);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    // 2. 비밀번호 변경 핸들러
+    const handleResetPassword = async (values: any) => {
+        if (!oobCode) return;
+
+        setLoading(true);
+        try {
+            await confirmPasswordReset(auth, oobCode, values.newPassword);
             message.success('비밀번호가 성공적으로 변경되었습니다! 로그인해주세요.');
             navigate('/login');
         } catch (error: any) {
-            const errorMessage = error.response?.data?.message || '비밀번호 변경 중 오류가 발생했습니다.';
-            message.error(errorMessage);
+            console.error('Password reset error:', error);
+            message.error('비밀번호 변경 중 오류가 발생했습니다. 다시 시도해주세요.');
+        } finally {
+            setLoading(false);
         }
     };
 
-    // 타이머 포맷팅 (mm:ss)
-    const formatTime = (seconds: number) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    };
+    // 렌더링: 검증 중일 때
+    if (verifying) {
+        return (
+            <div className="auth-container">
+                <div className="auth-card" style={{ textAlign: 'center', padding: '40px' }}>
+                    <Spin size="large" />
+                    <div style={{ marginTop: 20 }}>링크를 확인하는 중입니다...</div>
+                </div>
+            </div>
+        );
+    }
 
+    // 렌더링: 비밀번호 변경 모드 (링크 타고 들어왔고 검증 성공)
+    if (oobCode && verifiedEmail) {
+        return (
+            <div className="auth-container">
+                <div className="auth-card">
+                    <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔐</div>
+                        <Title level={2} className="auth-title">비밀번호 변경</Title>
+                        <p className="auth-subtitle">{verifiedEmail} 계정의<br />새로운 비밀번호를 설정해주세요.</p>
+                    </div>
+
+                    <Form form={form} onFinish={handleResetPassword} layout="vertical" size="large">
+                        <Form.Item
+                            name="newPassword"
+                            rules={[
+                                { required: true, message: '새 비밀번호를 입력해주세요!' },
+                                { min: 6, message: '비밀번호는 6자리 이상이어야 합니다.' }
+                            ]}
+                        >
+                            <Input.Password prefix={<LockOutlined />} placeholder="새 비밀번호 (6자리 이상)" />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="confirmPassword"
+                            dependencies={['newPassword']}
+                            rules={[
+                                { required: true, message: '비밀번호를 한번 더 입력해주세요!' },
+                                ({ getFieldValue }) => ({
+                                    validator(_, value) {
+                                        if (!value || getFieldValue('newPassword') === value) {
+                                            return Promise.resolve();
+                                        }
+                                        return Promise.reject(new Error('비밀번호가 일치하지 않습니다!'));
+                                    },
+                                }),
+                            ]}
+                        >
+                            <Input.Password prefix={<LockOutlined />} placeholder="새 비밀번호 확인" />
+                        </Form.Item>
+
+                        <Form.Item>
+                            <Button type="primary" htmlType="submit" className="auth-button" loading={loading}>
+                                비밀번호 변경하기
+                            </Button>
+                        </Form.Item>
+                    </Form>
+                </div>
+            </div>
+        );
+    }
+
+    // 렌더링: 이메일 입력 모드 (기본 화면)
     return (
         <div className="auth-container">
             <div className="auth-card">
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔑</div>
                     <Title level={2} className="auth-title">비밀번호 재설정</Title>
-                    <p className="auth-subtitle">등록된 이메일로 인증 후 비밀번호를 변경하세요</p>
+                    <p className="auth-subtitle">가입한 이메일 주소를 입력하시면<br />재설정 링크를 보내드립니다.</p>
                 </div>
 
-                <Form form={form} name="resetPassword" onFinish={onFinish} layout="vertical" size="large">
-                    {/* 이메일 입력 + 인증 코드 발송 */}
-                    <Form.Item
-                        name="email"
-                        rules={[{ required: true, message: '이메일을 입력해주세요!', type: 'email' }]}
-                    >
-                        <Space.Compact style={{ width: '100%' }}>
-                            <Input
-                                prefix={<MailOutlined />}
-                                placeholder="등록된 이메일"
-                                disabled={verified}
-                                style={{ flex: 1 }}
-                            />
-                            <Button
-                                type="primary"
-                                onClick={handleSendCode}
-                                loading={loading}
-                                disabled={verified || (timer > 0)}
-                                style={{ minWidth: '120px' }}
-                            >
-                                {timer > 0 ? formatTime(timer) : codeSent ? '재발송' : '인증코드 발송'}
-                            </Button>
-                        </Space.Compact>
-                    </Form.Item>
-
-                    {/* 인증 코드 입력 + 검증 */}
-                    {codeSent && !verified && (
+                {!emailSent ? (
+                    <Form onFinish={handleSendEmail} layout="vertical" size="large">
                         <Form.Item
-                            name="verificationCode"
-                            rules={[{ required: true, message: '인증 코드를 입력해주세요!' }]}
+                            name="email"
+                            rules={[{ required: true, message: '이메일을 입력해주세요!', type: 'email' }]}
                         >
-                            <Space.Compact style={{ width: '100%' }}>
-                                <Input
-                                    prefix={<SafetyOutlined />}
-                                    placeholder="인증 코드 6자리"
-                                    maxLength={6}
-                                    style={{ flex: 1 }}
-                                />
-                                <Button
-                                    type="default"
-                                    onClick={handleVerifyCode}
-                                    loading={loading}
-                                    style={{ minWidth: '100px' }}
-                                >
-                                    인증 확인
-                                </Button>
-                            </Space.Compact>
+                            <Input prefix={<MailOutlined />} placeholder="이메일 주소" />
                         </Form.Item>
-                    )}
 
-                    {verified && (
+                        <Form.Item>
+                            <Button type="primary" htmlType="submit" className="auth-button" loading={loading}>
+                                인증 메일 발송
+                            </Button>
+                        </Form.Item>
+
+                        <Form.Item style={{ textAlign: 'center', marginBottom: 0 }}>
+                            <Button type="link" onClick={() => navigate('/login')} className="auth-link-button">
+                                로그인 페이지로 돌아가기
+                            </Button>
+                        </Form.Item>
+                    </Form>
+                ) : (
+                    <div style={{ textAlign: 'center' }}>
                         <div style={{
-                            marginBottom: '16px',
-                            padding: '12px',
-                            background: '#f0f9ff',
+                            background: '#f6ffed',
+                            border: '1px solid #b7eb8f',
+                            padding: '20px',
                             borderRadius: '8px',
-                            color: '#0369a1',
-                            textAlign: 'center',
-                            fontWeight: 500
+                            marginBottom: '20px'
                         }}>
-                            ✅ 이메일 인증 완료!
+                            <Title level={4} style={{ color: '#52c41a', marginTop: 0 }}>메일 발송 완료!</Title>
+                            <Text>
+                                이메일함을 확인해주세요.<br />
+                                메일에 포함된 링크를 클릭하면<br />
+                                비밀번호를 변경할 수 있습니다.
+                            </Text>
                         </div>
-                    )}
-
-                    <Form.Item
-                        name="newPassword"
-                        rules={[
-                            { required: true, message: '새 비밀번호를 입력해주세요!' },
-                            { min: 7, message: '비밀번호는 최소 7자 이상이어야 합니다!' },
-                            {
-                                pattern: /^(?=(?:.*[0-9]){6})(?=.*[!@#$%^&*(),.?":{}|<>])/,
-                                message: '비밀번호는 숫자 최소 6개와 특수문자 최소 1개를 포함해야 합니다!',
-                            },
-                        ]}
-                    >
-                        <Input.Password prefix={<LockOutlined />} placeholder="새 비밀번호 (최소 7자, 숫자 6개 이상, 특수문자 포함)" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="confirmPassword"
-                        dependencies={['newPassword']}
-                        rules={[
-                            { required: true, message: '비밀번호를 한번 더 입력해주세요!' },
-                            ({ getFieldValue }) => ({
-                                validator(_, value) {
-                                    if (!value || getFieldValue('newPassword') === value) {
-                                        return Promise.resolve();
-                                    }
-                                    return Promise.reject(new Error('비밀번호가 일치하지 않습니다!'));
-                                },
-                            }),
-                        ]}
-                    >
-                        <Input.Password prefix={<LockOutlined />} placeholder="새 비밀번호 확인" />
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit" className="auth-button" disabled={!verified}>
-                            비밀번호 변경
+                        <Button type="default" onClick={() => setEmailSent(false)}>
+                            이메일 다시 입력하기
                         </Button>
-                    </Form.Item>
-
-                    <Form.Item style={{ textAlign: 'center', marginBottom: 0 }}>
-                        <Button type="link" onClick={() => navigate('/login')} className="auth-link-button">
-                            로그인 페이지로 돌아가기
-                        </Button>
-                    </Form.Item>
-                </Form>
+                        <div style={{ marginTop: '16px' }}>
+                            <Button type="link" onClick={() => navigate('/login')}>
+                                로그인 페이지로 돌아가기
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
