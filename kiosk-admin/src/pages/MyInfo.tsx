@@ -36,7 +36,6 @@ const MyInfo: React.FC = () => {
   const [storeAddress, setStoreAddress] = useState('');
 
   // 회원탈퇴용 state
-  const [showDeleteSection, setShowDeleteSection] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -162,36 +161,29 @@ const MyInfo: React.FC = () => {
   };
 
   // 회원탈퇴 처리 함수
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     if (confirmText.trim() !== '탈퇴') {
       message.error('탈퇴 확인 문구가 일치하지 않습니다.');
       return;
     }
-    setDeleteModalVisible(true);
-  };
 
-  const confirmDeleteAccount = async () => {
     setDeleteLoading(true);
     try {
-      // 백엔드 API 호출
       await api.delete('/auth/account', {
         data: { confirmText: confirmText.trim() }
       });
 
       message.success('회원탈퇴가 완료되었습니다.');
 
-      // Firebase 로그아웃 (실패해도 계속 진행)
       try {
         await auth.signOut();
       } catch (error) {
         console.log('Firebase already signed out');
       }
 
-      // localStorage 정리
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
 
-      // 로그인 페이지로 리다이렉트
       setTimeout(() => {
         navigate('/login');
       }, 1000);
@@ -203,6 +195,7 @@ const MyInfo: React.FC = () => {
     } finally {
       setDeleteLoading(false);
       setDeleteModalVisible(false);
+      setConfirmText('');
     }
   };
 
@@ -313,77 +306,16 @@ const MyInfo: React.FC = () => {
             <DeleteOutlined /> 회원탈퇴
           </Title>
 
-          {!showDeleteSection ? (
-            <Button
-              type="primary"
-              danger
-              size="large"
-              icon={<DeleteOutlined />}
-              onClick={() => setShowDeleteSection(true)}
-              className="show-delete-section-button"
-            >
-              회원탈퇴
-            </Button>
-          ) : (
-            <>
-              <div className="delete-warning-section">
-                <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                  <Paragraph>
-                    <WarningOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
-                    <Text strong>회원탈퇴 시 다음 데이터가 영구적으로 삭제됩니다:</Text>
-                  </Paragraph>
-                  <ul className="delete-warning-list">
-                    <li>계정 정보 (이메일, 비밀번호)</li>
-                    <li>상품, 카테고리, 옵션 정보</li>
-                    <li>주문 내역 및 매출 데이터</li>
-                    <li>재고 및 발주 관리 데이터</li>
-                    <li>공급업체 정보</li>
-                  </ul>
-                  <Paragraph type="danger" strong>
-                    ⚠️ 한번 삭제된 데이터는 복구할 수 없습니다.
-                  </Paragraph>
-                </Space>
-              </div>
-
-              <div className="delete-confirm-section">
-                <Text>
-                  탈퇴를 원하시면 아래 입력란에 <Text strong code>"탈퇴"</Text>를 정확히 입력해주세요.
-                </Text>
-                <Input
-                  placeholder="탈퇴"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  className="delete-confirm-input"
-                  size="large"
-                  style={{ marginTop: 12 }}
-                />
-              </div>
-
-              <Button
-                type="primary"
-                danger
-                size="large"
-                icon={<DeleteOutlined />}
-                onClick={handleDeleteAccount}
-                disabled={confirmText.trim() !== '탈퇴'}
-                loading={deleteLoading}
-                className="delete-account-button"
-              >
-                회원탈퇴 진행
-              </Button>
-
-              <Button
-                size="large"
-                onClick={() => {
-                  setShowDeleteSection(false);
-                  setConfirmText('');
-                }}
-                style={{ marginTop: 12, width: '100%' }}
-              >
-                취소
-              </Button>
-            </>
-          )}
+          <Button
+            type="primary"
+            danger
+            size="large"
+            icon={<DeleteOutlined />}
+            onClick={() => setDeleteModalVisible(true)}
+            className="show-delete-section-button"
+          >
+            회원탈퇴
+          </Button>
         </div>
 
         <Divider />
@@ -397,29 +329,84 @@ const MyInfo: React.FC = () => {
           로그아웃
         </Button>
 
-        {/* 최종 확인 모달 */}
+        {/* 회원탈퇴 모달 */}
         <Modal
           title={
-            <span>
-              <WarningOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
-              회원탈퇴 최종 확인
+            <span style={{ color: '#ff4d4f', fontSize: 18, fontWeight: 'bold' }}>
+              <WarningOutlined style={{ marginRight: 8 }} />
+              회원탈퇴
             </span>
           }
           open={deleteModalVisible}
-          onOk={confirmDeleteAccount}
-          onCancel={() => setDeleteModalVisible(false)}
-          okText="탈퇴하기"
-          cancelText="취소"
-          okButtonProps={{ danger: true, loading: deleteLoading }}
+          onCancel={() => {
+            setDeleteModalVisible(false);
+            setConfirmText('');
+          }}
+          footer={null}
+          width={500}
         >
-          <Space direction="vertical">
-            <Paragraph>
-              정말로 탈퇴하시겠습니까?
-            </Paragraph>
-            <Paragraph type="secondary">
-              이 작업은 되돌릴 수 없으며, 모든 데이터가 영구적으로 삭제됩니다.
-            </Paragraph>
-          </Space>
+          <div style={{ marginTop: 16 }}>
+            <div className="delete-warning-section">
+              <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                <Paragraph>
+                  <WarningOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
+                  <Text strong>회원탈퇴 시 다음 데이터가 영구적으로 삭제됩니다:</Text>
+                </Paragraph>
+                <ul className="delete-warning-list">
+                  <li>계정 정보 (이메일, 비밀번호)</li>
+                  <li>상품, 카테고리, 옵션 정보</li>
+                  <li>주문 내역 및 매출 데이터</li>
+                  <li>재고 및 발주 관리 데이터</li>
+                  <li>공급업체 정보</li>
+                </ul>
+                <Paragraph type="danger" strong>
+                  ⚠️ 한번 삭제된 데이터는 복구할 수 없습니다.
+                </Paragraph>
+              </Space>
+            </div>
+
+            <div className="delete-confirm-section">
+              <Text>
+                탈퇴를 원하시면 아래 입력란에 <Text strong code>"탈퇴"</Text>를 정확히 입력해주세요.
+              </Text>
+              <Input
+                placeholder="탈퇴"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                className="delete-confirm-input"
+                size="large"
+                style={{ marginTop: 12 }}
+                autoFocus
+              />
+            </div>
+
+            <Space style={{ width: '100%', marginTop: 24 }} direction="vertical" size={12}>
+              <Button
+                type="primary"
+                danger
+                size="large"
+                icon={<DeleteOutlined />}
+                onClick={handleDeleteAccount}
+                disabled={confirmText.trim() !== '탈퇴'}
+                loading={deleteLoading}
+                style={{ width: '100%' }}
+              >
+                회원탈퇴 진행
+              </Button>
+
+              <Button
+                size="large"
+                onClick={() => {
+                  setDeleteModalVisible(false);
+                  setConfirmText('');
+                }}
+                style={{ width: '100%' }}
+                disabled={deleteLoading}
+              >
+                취소
+              </Button>
+            </Space>
+          </div>
         </Modal>
       </Card>
     </div>
