@@ -1,213 +1,185 @@
+// Auth routes module
 import express from 'express';
+import { authenticateToken } from './middleware/auth';
+import prisma from './db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from './db';
-import { sendVerificationEmail, generateVerificationCode } from './utils/emailSender';
+import * as admin from 'firebase-admin';
 
 const router = express.Router();
 
-if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET is not set in the environment variables.');
+// Firebase Admin SDK 초기화
+if (!admin.apps.length) {
+  try {
+    const serviceAccount = require('../firebase-service-account.json');
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log('Firebase Admin SDK initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize Firebase Admin SDK:', error);
+  }
 }
 
-// [POST] /api/auth/send-code - 이메일 인증 코드 발송
-router.post('/send-code', async (req, res) => {
-  const { email } = req.body;
+// [POST] /api/auth/login - Firebase ID 토큰으로 로그인
+router.post('/login', async (req, res) => {
+  const { idToken } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ message: '이메일을 입력해주세요.' });
+  if (!idToken) {
+    return res.status(400).json({ message: 'Firebase ID 토큰이 필요합니다.' });
   }
 
   try {
-    // 6자리 인증 코드 생성
-    const code = generateVerificationCode();
+    // Firebase ID 토큰 검증
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const { uid, email } = decodedToken;
 
-    // 만료 시간 설정 (5분 후)
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    if (!email) {
+      return res.status(400).json({ message: '이메일 정보가 없습니다.' });
+    }
 
-    // DB에 저장 (이미 있으면 업데이트) 
-    await prisma.emailVerification.upsert({
-      where: { email },
-      update: { code, expiresAt },
-      create: { email, code, expiresAt },
+    // 데이터베이스에서 사용자 찾기 또는 생성
+    let user = await prisma.user.findUnique({
+      where: { email }
     });
 
-    // 이메일 발송
-    await sendVerificationEmail(email, code);
+    // 사용자가 없으면 생성
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          firebaseUid: uid,
+          storeName: email.split('@')[0] + '의 가게', // 기본 가게 이름
+        }
+      });
+    }
 
-    res.json({ message: '인증 코드가 이메일로 발송되었습니다.' });
+    // JWT 토큰 생성
+    const token = jwt.sign(
+      { id: user.id, email: user.email, storeId: user.storeId },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    res.status(200).json({
+      message: '로그인 성공',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        storeName: user.storeName,
+        storeId: user.storeId
+      }
+    });
   } catch (error) {
-    console.error('인증 코드 발송 실패:', error);
-    res.status(500).json({ message: '인증 코드 발송에 실패했습니다.' });
+    console.error('Login error:', error);
+    if ((error as any).code === 'auth/id-token-expired') {
+      return res.status(401).json({ message: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.' });
+    }
+    if ((error as any).code === 'auth/argument-error') {
+      return res.status(400).json({ message: '잘못된 토큰 형식입니다.' });
+    }
+    res.status(500).json({ message: '로그인 처리 중 오류 발생' });
   }
 });
 
-// [POST] /api/auth/verify-code - 인증 코드 검증
-router.post('/verify-code', async (req, res) => {
-  const { email, code } = req.body;
-
-  if (!email || !code) {
-    return res.status(400).json({ message: '이메일과 인증 코드를 입력해주세요.' });
-  }
-
-  try {
-    const verification = await prisma.emailVerification.findUnique({
-      where: { email },
-    });
-
-    if (!verification) {
-      return res.status(400).json({ message: '인증 요청을 찾을 수 없습니다.' });
-    }
-
-    // 만료 시간 확인
-    if (new Date() > verification.expiresAt) {
-      return res.status(400).json({ message: '인증 코드가 만료되었습니다.' });
-    }
-
-    // 코드 일치 확인
-    if (verification.code !== code) {
-      return res.status(400).json({ message: '인증 코드가 일치하지 않습니다.' });
-    }
-
-    res.json({ message: '인증이 완료되었습니다.', verified: true });
-  } catch (error) {
-    console.error('인증 코드 검증 실패:', error);
-    res.status(500).json({ message: '서버 오류가 발생했습니다.' });
-  }
-});
-
-// [POST] /api/auth/register - 회원가입 (인증 코드 검증 포함)
+// [POST] /api/auth/register - 회원가입
 router.post('/register', async (req, res) => {
-  const { email, password, storeName, verificationCode } = req.body;
+  const { email, storeName, firebaseUid } = req.body;
 
-  if (!email || !password || !storeName || !verificationCode) {
-    return res.status(400).json({ message: '모든 필드를 입력해주세요.' });
+  if (!email || !storeName || !firebaseUid) {
+    return res.status(400).json({ message: '필수 정보가 누락되었습니다.' });
   }
 
   try {
-    // 인증 코드 검증
-    const verification = await prisma.emailVerification.findUnique({
-      where: { email },
+    // 이미 존재하는 사용자 확인
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
     });
 
-    if (!verification) {
-      return res.status(400).json({ message: '이메일 인증이 필요합니다.' });
-    }
-
-    if (new Date() > verification.expiresAt) {
-      return res.status(400).json({ message: '인증 코드가 만료되었습니다.' });
-    }
-
-    if (verification.code !== verificationCode) {
-      return res.status(400).json({ message: '인증 코드가 일치하지 않습니다.' });
-    }
-
-    // 기존 사용자 확인
-    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ message: '이미 존재하는 이메일입니다.' });
+      return res.status(409).json({ message: '이미 등록된 이메일입니다.' });
     }
 
-    // 비밀번호 해싱 및 사용자 생성
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // 새 사용자 생성
     const user = await prisma.user.create({
       data: {
         email,
-        password: hashedPassword,
         storeName,
-      },
+        firebaseUid
+      }
     });
 
-    // 사용된 인증 코드 삭제
-    await prisma.emailVerification.delete({ where: { email } });
-
-    res.status(201).json({ message: '회원가입이 완료되었습니다.', userId: user.id });
+    res.status(201).json({
+      message: '회원가입 성공',
+      user: {
+        id: user.id,
+        email: user.email,
+        storeName: user.storeName
+      }
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+    console.error('Register error:', error);
+    res.status(500).json({ message: '회원가입 처리 중 오류 발생' });
   }
 });
 
-// [POST] /api/auth/reset-password - 비밀번호 재설정
-router.post('/reset-password', async (req, res) => {
-  const { email, verificationCode, newPassword } = req.body;
-
-  if (!email || !verificationCode || !newPassword) {
-    return res.status(400).json({ message: '모든 필드를 입력해주세요.' });
-  }
+// [DELETE] /api/auth/account - 회원탈퇴
+router.delete('/account', authenticateToken, async (req, res) => {
+  const userId = (req as any).user.id;
+  const { confirmText } = req.body;
 
   try {
-    // 사용자 존재 확인
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ message: '존재하지 않는 이메일입니다.' });
+    // 1. 확인 문구 검증
+    if (!confirmText || confirmText.trim() !== '탈퇴') {
+      return res.status(400).json({
+        message: '탈퇴 확인 문구가 일치하지 않습니다.'
+      });
     }
 
-    // 인증 코드 검증
-    const verification = await prisma.emailVerification.findUnique({
-      where: { email },
+    // 2. 사용자 정보 조회
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
     });
 
-    if (!verification) {
-      return res.status(400).json({ message: '인증 요청을 찾을 수 없습니다.' });
+    if (!user) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
     }
 
-    if (new Date() > verification.expiresAt) {
-      return res.status(400).json({ message: '인증 코드가 만료되었습니다.' });
+    // 3. Firebase에서 사용자 삭제
+    if (user.firebaseUid) {
+      try {
+        await admin.auth().deleteUser(user.firebaseUid);
+        console.log(`Firebase user deleted: ${user.firebaseUid}`);
+      } catch (firebaseError: any) {
+        // Firebase에 사용자가 없어도 계속 진행
+        if (firebaseError.code !== 'auth/user-not-found') {
+          console.error('Firebase deletion error:', firebaseError);
+          throw firebaseError;
+        }
+      }
     }
 
-    if (verification.code !== verificationCode) {
-      return res.status(400).json({ message: '인증 코드가 일치하지 않습니다.' });
-    }
-
-    // 비밀번호 변경
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({
-      where: { email },
-      data: { password: hashedPassword },
+    // 4. PostgreSQL에서 사용자 삭제
+    // Cascade 설정으로 다음 데이터가 자동 삭제됨:
+    // - PushSubscription, Category, Product, OptionGroup, Order, 
+    // - PurchaseOrder, Notification, Inventory, Supplier
+    await prisma.user.delete({
+      where: { id: userId }
     });
 
-    // 사용된 인증 코드 삭제
-    await prisma.emailVerification.delete({ where: { email } });
+    console.log(`User account deleted: ${user.email}`);
 
-    res.json({ message: '비밀번호가 성공적으로 변경되었습니다.' });
+    res.status(200).json({
+      message: '회원탈퇴가 완료되었습니다.'
+    });
+
   } catch (error) {
-    console.error('비밀번호 재설정 실패:', error);
-    res.status(500).json({ message: '서버 오류가 발생했습니다.' });
-  }
-});
-
-// [POST] /api/auth/login
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ message: '이메일과 비밀번호를 입력해주세요.' });
-  }
-
-  try {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(401).json({ message: '존재하지 않는 이메일입니다.' });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: '비밀번호가 일치하지 않습니다.' });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, storeId: user.storeId, role: 'ADMIN' }, // Corrected payload
-      process.env.JWT_SECRET!,
-      { expiresIn: '1d' }
-    );
-
-    res.json({ token, storeName: user.storeName });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+    console.error('Account deletion error:', error);
+    res.status(500).json({
+      message: '회원탈퇴 처리 중 오류가 발생했습니다.'
+    });
   }
 });
 
 export default router;
-

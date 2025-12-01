@@ -77,7 +77,26 @@ export default function ProductScreen() {
     return filtered;
   }, [selectedCategory, products, searchTerm]);
 
-  const renderProductItem = ({ item }: { item: Product }) => {
+  // 그리드 레이아웃 보정을 위한 데이터 포맷팅 함수
+  const formatData = (data: Product[], numColumns: number) => {
+    const numberOfFullRows = Math.floor(data.length / numColumns);
+    let numberOfElementsLastRow = data.length - (numberOfFullRows * numColumns);
+
+    // 원본 데이터를 수정하지 않기 위해 복사
+    const dataWithBlanks = [...data];
+
+    while (numberOfElementsLastRow !== numColumns && numberOfElementsLastRow !== 0) {
+      dataWithBlanks.push({ id: `blank-${numberOfElementsLastRow}`, empty: true } as any);
+      numberOfElementsLastRow++;
+    }
+    return dataWithBlanks;
+  };
+
+  const renderProductItem = ({ item }: { item: Product & { empty?: boolean } }) => {
+    if (item.empty) {
+      return <View style={[styles.productCard, { backgroundColor: 'transparent', borderWidth: 0, shadowOpacity: 0, elevation: 0 }]} />;
+    }
+
     // Use availableStock if present, otherwise fallback to stock. 
     // If availableStock is undefined, it might mean the backend didn't send it or it's not calculated.
     // Default to stock if availableStock is undefined.
@@ -164,7 +183,7 @@ export default function ProductScreen() {
         </ScrollView>
       </View>
       <FlatList
-        data={filteredProducts}
+        data={formatData(filteredProducts, 2)}
         renderItem={renderProductItem}
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}

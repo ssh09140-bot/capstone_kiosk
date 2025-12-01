@@ -1,2 +1,3 @@
 node_modules
 kiosk-backend/postgres_data/
+firebase-service-account.json

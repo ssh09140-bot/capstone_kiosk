@@ -11,74 +11,84 @@ datasource db {
 }
 
 model User {
-  id                         Int             @id @default(autoincrement())
-  email                      String          @unique
-  password                   String
-  storeName                  String
-  storeId                    String          @unique @default(uuid())
-  products                   Product[]
-  orders                     Order[]
-  categories                 Category[]
-  optionGroups               OptionGroup[]
-  purchaseOrders             PurchaseOrder[]
-  notifications              Notification[]
-  inventories                Inventory[]
-  suppliers                  Supplier[]
+  id                             Int     @id @default(autoincrement())
+  email                          String  @unique
+  password                       String? // 이메일/비밀번호 로그인용
+  firebaseUid                    String? @unique // Firebase 인증용
+  storeName                      String
+  storeId                        String  @unique @default(uuid())
+
+  // 관계형 필드들
+  products       Product[]
+  orders         Order[]
+  categories     Category[]
+  optionGroups   OptionGroup[]
+  purchaseOrders PurchaseOrder[]
+  notifications  Notification[]
+  inventories    Inventory[]
+  suppliers      Supplier[]
+
+  // 결제/사업자 정보
   billingKey                 String?
   customerKey                String?
   cardCompany                String?
   cardNumber                 String?
-  businessRegistrationNumber String?         @unique
+  businessRegistrationNumber String? @unique
   businessLicenseImageUrl    String?
-  storeAddress               String? 
+  storeAddress               String?
+  
   pushSubscriptions          PushSubscription[]
 }
 
 model PushSubscription {
-  id        Int      @id @default(autoincrement())
-  endpoint  String   @unique
-  keys      Json
-  user      User     @relation(fields: [storeId], references: [storeId])
-  storeId   String
-  createdAt DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  endpoint     String   @unique
+  keys         Json
+  user         User     @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  storeId      String
+  createdAt    DateTime @default(now())
 }
 
 model Category {
   id       Int       @id @default(autoincrement())
   name     String
-  store    User      @relation(fields: [storeId], references: [storeId])
+  store    User      @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
   storeId  String
   products Product[]
 }
 
 model Product {
-  id                    Int                   @id @default(autoincrement())
-  name                  String
-  description           String?
-  price                 Int
-  stock                 Int                   @default(0)
-  imageUrl              String?
-  createdAt             DateTime              @default(now())
-  owner                 User                  @relation(fields: [storeId], references: [storeId])
-  storeId               String
-  category              Category?             @relation(fields: [categoryId], references: [id])
-  categoryId            Int?
-  optionGroups          OptionGroup[]
-  orderItems            OrderItem[]
-  purchaseOrderItems    PurchaseOrderItem[]
-  inventoryUsages       ProductInventoryUsage[] 
-  isEventProduct        Boolean               @default(false)
-  eventPrice            Int?
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Int
+  stock       Int      @default(0)
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  owner   User   @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  storeId String
+
+  category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId Int?
+
+  optionGroups       OptionGroup[]
+  orderItems         OrderItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+  inventoryUsages    ProductInventoryUsage[]
+
+  isEventProduct Boolean @default(false)
+  eventPrice     Int?
 
   @@index([storeId, categoryId])
 }
 
 model OptionGroup {
-  id       Int      @id @default(autoincrement())
-  name     String
-  store    User     @relation(fields: [storeId], references: [storeId])
-  storeId  String
-  options  Option[]
+  id      Int      @id @default(autoincrement())
+  name    String
+  store   User     @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  storeId String
+  options Option[]
   products Product[]
 }
 
@@ -91,28 +101,30 @@ model Option {
 }
 
 model Order {
-  id            Int            @id @default(autoincrement())
-  totalAmount   Int
-  totalCost     Float?
-  createdAt     DateTime       @default(now())
-  store         User           @relation(fields: [storeId], references: [storeId])
-  storeId       String
+  id          Int      @id @default(autoincrement())
+  totalAmount Int
+  totalCost   Float?
+  createdAt   DateTime @default(now())
+
+  store   User   @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  storeId String
+
   orderItems    OrderItem[]
   inventoryLogs InventoryLog[]
+
   status        OrderStatus    @default(PENDING)
-  
-  // Fields for recommendation engine
-  weather       String?
-  temperature   Float?
+
+  weather     String?
+  temperature Float?
 
   @@index([storeId, createdAt])
 }
 
 model OrderItem {
-  id              Int      @id @default(autoincrement())
-  order           Order    @relation(fields: [orderId], references: [id])
+  id              Int     @id @default(autoincrement())
+  order           Order   @relation(fields: [orderId], references: [id])
   orderId         Int
-  product         Product  @relation(fields: [productId], references: [id])
+  product         Product @relation(fields: [productId], references: [id])
   productId       Int
   quantity        Int
   pricePerItem    Int
@@ -121,27 +133,33 @@ model OrderItem {
 }
 
 model PurchaseOrder {
-  id                   Int                 @id @default(autoincrement())
-  createdAt            DateTime            @default(now())
-  orderedAt            DateTime?
-  estimatedDeliveryAt  DateTime?
-  deliveredAt          DateTime?
-  status               PurchaseOrderStatus @default(PENDING_CONFIRMATION)
-  store                User                @relation(fields: [storeId], references: [storeId])
-  storeId              String
-  supplier             Supplier?           @relation(fields: [supplierId], references: [id])
-  supplierId           Int?
-  purchaseOrderItems   PurchaseOrderItem[]
+  id                  Int                 @id @default(autoincrement())
+  createdAt           DateTime            @default(now())
+  orderedAt           DateTime?
+  estimatedDeliveryAt DateTime?
+  deliveredAt         DateTime?
+  status              PurchaseOrderStatus @default(PENDING_CONFIRMATION)
+
+  store   User   @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  storeId String
+
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId Int?
+
+  purchaseOrderItems PurchaseOrderItem[]
 }
 
 model PurchaseOrderItem {
-  id                Int           @id @default(autoincrement())
-  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId   Int
-  product           Product?      @relation(fields: [productId], references: [id])
-  productId         Int?
-  inventory         Inventory?    @relation(fields: [inventoryId], references: [id])
-  inventoryId       Int?
+  id              Int           @id @default(autoincrement())
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  product   Product? @relation(fields: [productId], references: [id])
+  productId Int?
+
+  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
+  inventoryId Int?
+
   quantity          Float
   defectiveQuantity Float?
 }
@@ -152,44 +170,50 @@ model Notification {
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
   type      NotificationType
-  store     User             @relation(fields: [storeId], references: [storeId])
-  storeId   String
+
+  store   User   @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  storeId String
 }
 
 model Inventory {
-  id                       Int                   @id @default(autoincrement())
-  name                     String
-  quantity                 Float
-  unit                     String
-  itemType                 String?
-  threshold                Float?
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
-  store                    User                  @relation(fields: [storeId], references: [storeId])
-  storeId                  String
-  purchaseOrderItems       PurchaseOrderItem[]
-  inventoryUsages          ProductInventoryUsage[]
-  logs                     InventoryLog[]
-  autoOrderEnabled         Boolean               @default(false)
-  minStockThreshold        Float?
-  orderQuantity            Float?
-  estimatedDeliveryDays    Int?
-  lastLowStockNotifiedAt   DateTime?
-  packAmount               Float                 @default(1.0)
-  suppliedBy               SupplierInventory[]
+  id        Int      @id @default(autoincrement())
+  name      String
+  quantity  Float
+  unit      String
+  itemType  String?
+  threshold Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store   User   @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  storeId String
+
+  purchaseOrderItems PurchaseOrderItem[]
+  inventoryUsages    ProductInventoryUsage[]
+  logs               InventoryLog[]
+  suppliedBy         SupplierInventory[]
+
+  autoOrderEnabled       Boolean   @default(false)
+  minStockThreshold      Float?
+  orderQuantity          Float?
+  estimatedDeliveryDays  Int?
+  packAmount             Float     @default(1.0)
+  lastLowStockNotifiedAt DateTime?
 
   @@unique([name, storeId])
   @@index([storeId])
 }
 
 model Supplier {
-  id             Int                 @id @default(autoincrement())
-  name           String
-  contact        String?
-  email          String?
-  address        String?
-  store          User                @relation(fields: [storeId], references: [storeId])
-  storeId        String
+  id      Int     @id @default(autoincrement())
+  name    String
+  contact String?
+  email   String?
+  address String?
+
+  store   User   @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  storeId String
+
   purchaseOrders PurchaseOrder[]
   supplies       SupplierInventory[]
 
@@ -197,14 +221,14 @@ model Supplier {
 }
 
 model SupplierInventory {
-  id          Int       @id @default(autoincrement())
-  supplier    Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  supplierId  Int
-  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
-  inventoryId Int
-  price       Float?
+  id           Int       @id @default(autoincrement())
+  supplier     Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierId   Int
+  inventory    Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId  Int
+  price        Float?
   leadTimeDays Int?
-  packAmount  Float     @default(1.0)
+  packAmount   Float     @default(1.0)
 
   @@unique([supplierId, inventoryId])
 }
@@ -252,12 +276,4 @@ enum NotificationType {
   ORDER_CONFIRMATION
   DELIVERY_PROMPT
   DELIVERY_REMINDER
-}
-
-model EmailVerification {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  code      String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
 }

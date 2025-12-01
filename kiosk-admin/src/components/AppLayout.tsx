@@ -143,6 +143,12 @@ const AppLayout: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
   const handleMenuClick = (path: string) => {
     navigate(path);
     setDrawerVisible(false);
@@ -310,7 +316,7 @@ const AppLayout: React.FC = () => {
           <Button
             type="text"
             icon={<LogoutOutlined />}
-            onClick={() => navigate('/login')}
+            onClick={handleLogout}
             style={{ color: '#fff', width: '100%', justifyContent: 'flex-start' }}
           >
             로그아웃
@@ -359,7 +365,7 @@ const AppLayout: React.FC = () => {
             </Popover>
             <Space className="header-desktop-only-logout">
               <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
-              <Button type="text" icon={<LogoutOutlined />} onClick={() => navigate('/login')}>
+              <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
                 로그아웃
               </Button>
             </Space>
