@@ -25,7 +25,8 @@ async function getWeatherForecast(city, days) {
         console.warn('OPENWEATHER_API_KEY is missing');
         return [];
     }
-    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}`;
+    // lang=kr 추가
+    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&lang=kr`;
     console.log(`Fetching weather for city: ${city}, URL: ${url.replace(apiKey, 'HIDDEN_KEY')}`);
     const forecasts = [];
     try {
@@ -148,9 +149,26 @@ const generateRecommendations = async (storeId) => {
     const city = await getCityForWeather(storeId);
     console.log(`[Recommendation] City for weather: ${city}`);
     // 1. 날씨 예보 조회 (기본 5일 조회)
-    // 재고가 없더라도 날씨 정보는 보여주기 위해 먼저 호출합니다.
     const forecast = await getWeatherForecast(city, 5);
-    const forecastSummary = forecast.map(f => `[${(0, date_fns_1.format)(new Date(f.date), 'MM/dd')} ${f.condition} ${f.temp_celsius}°C]`).join(', ');
+    // 한글 매핑
+    const WEATHER_KO = {
+        'Clear': '맑음',
+        'Clouds': '구름',
+        'Rain': '비',
+        'Snow': '눈',
+        'Other': '흐림/기타'
+    };
+    const forecastSummary = forecast.map(f => `[${(0, date_fns_1.format)(new Date(f.date), 'MM/dd')} ${WEATHER_KO[f.condition] || f.condition} ${f.temp_celsius}°C]`).join(', ');
+    const CITY_KO = {
+        'Seoul': '서울',
+        'Busan': '부산',
+        'Daegu': '대구',
+        'Incheon': '인천',
+        'Gwangju': '광주',
+        'Daejeon': '대전',
+        'Ulsan': '울산',
+        'Jeju City': '제주',
+    };
     // 2. 자동 발주 대상 품목 조회
     const inventories = await db_1.default.inventory.findMany({
         where: { storeId, autoOrderEnabled: true },
@@ -159,11 +177,11 @@ const generateRecommendations = async (storeId) => {
     console.log(`[Recommendation] Found ${inventories.length} auto-order enabled inventories.`);
     if (inventories.length === 0) {
         return {
-            message: `${city} 날씨 예보: ${forecastSummary}`,
+            message: `${CITY_KO[city] || city} 날씨 예보: ${forecastSummary}`,
             recommendations: []
         };
     }
-    // 3. 최대 리드타임 계산 (필요 시 날씨 추가 조회 가능하지만, 일단 기본 5일치로 충분하다고 가정)
+    // 3. 최대 리드타임 계산
     const maxLeadTime = Math.max(...inventories.map(inv => inv.suppliedBy.reduce((max, s) => Math.max(max, s.leadTimeDays || 0), 0)), 1);
     console.log(`[Recommendation] Max lead time: ${maxLeadTime}`);
     // 4. 과거 사용량 데이터 분석
@@ -276,7 +294,7 @@ const generateRecommendations = async (storeId) => {
             const recommendedPackCount = Math.ceil(orderAmount / packAmount);
             const finalOrderAmount = recommendedPackCount * packAmount;
             // 추천 사유 생성
-            const weatherInfo = forecast[0] ? `${forecast[0].condition}, ${forecast[0].temp_celsius}°C` : '정보 없음';
+            const weatherInfo = forecast[0] ? `${WEATHER_KO[forecast[0].condition] || forecast[0].condition}, ${forecast[0].temp_celsius}°C` : '정보 없음';
             const reason = `[${abcClass}등급] 안전재고 ${safetyStock.toFixed(1)}${item.unit} 확보 필요. (내일 날씨: ${weatherInfo})`;
             recommendations.push({
                 inventoryId: item.id,
@@ -295,7 +313,7 @@ const generateRecommendations = async (storeId) => {
         }
     }
     return {
-        message: `${city} 날씨 예보: ${forecastSummary}`,
+        message: `${CITY_KO[city] || city} 날씨 예보: ${forecastSummary}`,
         recommendations,
     };
 };
