@@ -11,6 +11,12 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+console.log('Firebase Config Debug:', {
+    apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.slice(0, 5)}...` : 'MISSING',
+    authDomain: firebaseConfig.authDomain,
+    projectId: firebaseConfig.projectId,
+});
+
 // Firebase 초기화
 const app = initializeApp(firebaseConfig);
 
