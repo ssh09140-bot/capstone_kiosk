@@ -122,10 +122,10 @@ const Dashboard: React.FC = () => {
 
         {/* AI Insights Section */}
         <Row gutter={[24, 24]}>
-          <Col xs={24} md={12}>
+          <Col xs={24} md={13}>
             <RecommendationCard />
           </Col>
-          <Col xs={24} md={12}>
+          <Col xs={24} md={11}>
             <HygieneCheckCard />
           </Col>
         </Row>

@@ -68,7 +68,7 @@ const RecommendationCard: React.FC = () => {
       style={{ marginBottom: 24 }}
       extra={loading && <Spin size="small" />}
     >
-      <Paragraph>{data.message}</Paragraph>
+      <Paragraph style={{ fontSize: '18px', fontWeight: 'bold', color: '#000000' }}>{data.message}</Paragraph>
       {data.recommendations.length > 0 ? (
         <List
           itemLayout="vertical"
