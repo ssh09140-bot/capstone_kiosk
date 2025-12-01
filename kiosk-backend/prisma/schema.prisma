@@ -44,7 +44,7 @@ model PushSubscription {
   id           Int      @id @default(autoincrement())
   endpoint     String   @unique
   keys         Json
-  user         User     @relation(fields: [storeId], references: [storeId])
+  user         User     @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
   storeId      String
   createdAt    DateTime @default(now())
 }

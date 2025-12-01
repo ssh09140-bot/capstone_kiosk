@@ -1,6 +1,6 @@
 // Auth routes module
 import express from 'express';
-import { authenticateToken } from './middleware/authMiddleware';
+import { authenticateToken } from './middleware/auth';
 import prisma from './db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -121,6 +121,64 @@ router.post('/register', async (req, res) => {
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ message: '회원가입 처리 중 오류 발생' });
+  }
+});
+
+// [DELETE] /api/auth/account - 회원탈퇴
+router.delete('/account', authenticateToken, async (req, res) => {
+  const userId = (req as any).user.id;
+  const { confirmText } = req.body;
+
+  try {
+    // 1. 확인 문구 검증
+    if (!confirmText || confirmText.trim() !== '탈퇴') {
+      return res.status(400).json({
+        message: '탈퇴 확인 문구가 일치하지 않습니다.'
+      });
+    }
+
+    // 2. 사용자 정보 조회
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    // 3. Firebase에서 사용자 삭제
+    if (user.firebaseUid) {
+      try {
+        await admin.auth().deleteUser(user.firebaseUid);
+        console.log(`Firebase user deleted: ${user.firebaseUid}`);
+      } catch (firebaseError: any) {
+        // Firebase에 사용자가 없어도 계속 진행
+        if (firebaseError.code !== 'auth/user-not-found') {
+          console.error('Firebase deletion error:', firebaseError);
+          throw firebaseError;
+        }
+      }
+    }
+
+    // 4. PostgreSQL에서 사용자 삭제
+    // Cascade 설정으로 다음 데이터가 자동 삭제됨:
+    // - PushSubscription, Category, Product, OptionGroup, Order, 
+    // - PurchaseOrder, Notification, Inventory, Supplier
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+
+    console.log(`User account deleted: ${user.email}`);
+
+    res.status(200).json({
+      message: '회원탈퇴가 완료되었습니다.'
+    });
+
+  } catch (error) {
+    console.error('Account deletion error:', error);
+    res.status(500).json({
+      message: '회원탈퇴 처리 중 오류가 발생했습니다.'
+    });
   }
 });
 

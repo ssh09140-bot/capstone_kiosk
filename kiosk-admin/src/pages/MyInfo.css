@@ -57,7 +57,13 @@
     font-size: 15px;
     border-radius: 8px;
     font-weight: 500;
-    margin-top: 24px;
+    margin-top: 0;
+    background: #f5f5f5;
+}
+
+.logout-button:hover {
+    background: #e8e8e8;
+    border-color: #d9d9d9;
 }
 
 /* No Card Notice */
@@ -132,6 +138,17 @@
         font-size: 15px !important;
         margin-bottom: 12px !important;
     }
+
+    /* 회원탈퇴 모바일 대응 */
+    .delete-warning-section {
+        padding: 12px;
+    }
+
+    .delete-account-button,
+    .show-delete-section-button {
+        height: 44px;
+        font-size: 15px;
+    }
 }
 
 /* Desktop Enhancements */
@@ -188,4 +205,51 @@
 
 .ant-descriptions-bordered .ant-descriptions-item-content {
     background: #fff;
+}
+
+/* ========== 회원탈퇴 섹션 ========== */
+.show-delete-section-button {
+    width: 100%;
+    height: 48px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.delete-warning-section {
+    background: #fff2e8;
+    border: 1px solid #ffbb96;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.delete-warning-list {
+    margin: 8px 0 8px 20px;
+    padding: 0;
+    color: #595959;
+}
+
+.delete-warning-list li {
+    margin-bottom: 4px;
+}
+
+.delete-confirm-section {
+    margin: 16px 0 24px 0;
+}
+
+.delete-confirm-input {
+    border: 2px solid #ff7875 !important;
+}
+
+.delete-confirm-input:focus {
+    border-color: #ff4d4f !important;
+    box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2) !important;
+}
+
+.delete-account-button {
+    width: 100%;
+    height: 48px;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 0;
 }
