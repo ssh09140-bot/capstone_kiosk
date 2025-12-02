@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import api from '../src/api'; // Adjust path as necessary
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../src/firebaseConfig';
+import api from '../src/api';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -12,17 +14,40 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const response = await api.post('/auth/login', { email, password });
-      const { token, storeName } = response.data;
+      // 1. Firebase Login
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. Get ID Token
+      const idToken = await user.getIdToken();
+
+      // 3. Send ID Token to Backend
+      const response = await api.post('/auth/login', { idToken });
+      const { token, user: userData } = response.data;
 
       await AsyncStorage.setItem('userToken', token);
-      await AsyncStorage.setItem('storeId', storeName); // Assuming storeName is the storeId
+
+      // storeId가 있으면 저장, 없으면 저장하지 않음
+      if (userData?.storeId) {
+        await AsyncStorage.setItem('storeId', userData.storeId.toString());
+      } else {
+        // storeId가 없으면 키 자체를 삭제
+        await AsyncStorage.removeItem('storeId');
+      }
 
       Alert.alert('로그인 성공', '환영합니다!');
-      router.replace('/'); // Navigate to the main app screen
+      router.replace('/');
     } catch (error: any) {
       console.error('로그인 실패:', error);
-      Alert.alert('로그인 실패', error.response?.data?.message || '이메일 또는 비밀번호를 확인해주세요.');
+      let errorMessage = '이메일 또는 비밀번호를 확인해주세요.';
+
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      Alert.alert('로그인 실패', errorMessage);
     } finally {
       setLoading(false);
     }
