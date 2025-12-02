@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const db_1 = __importDefault(require("./db"));
 const auth_1 = require("./middleware/auth");
+const socket_1 = require("./socket");
 const inventoryRouter = (0, express_1.Router)();
 // Get all inventory items for the current store
 inventoryRouter.get('/', auth_1.authenticateToken, async (req, res) => {
@@ -131,6 +132,17 @@ inventoryRouter.put('/:id', auth_1.authenticateToken, async (req, res) => {
             return updatedItem;
         });
         res.json(updatedInventoryItem);
+        // Emit socket event
+        try {
+            const io = (0, socket_1.getIO)();
+            io.to(`store_${storeId}`).emit('inventory_update', {
+                type: 'UPDATE',
+                itemId: updatedInventoryItem.id,
+            });
+        }
+        catch (e) {
+            console.error('Socket emit failed:', e);
+        }
     }
     catch (error) {
         if (error.message === 'P2025' || error.code === 'P2025') {

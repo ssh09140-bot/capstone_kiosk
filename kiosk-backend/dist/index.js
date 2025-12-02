@@ -4,6 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = __importDefault(require("./app"));
+const http_1 = __importDefault(require("http"));
+const socket_1 = require("./socket");
 const node_cron_1 = __importDefault(require("node-cron"));
 const autoOrderService_1 = require("./services/autoOrderService");
 const logger_1 = require("./utils/logger");
@@ -22,8 +24,11 @@ if (!PORT) {
     logger_1.logger.error('PORT environment variable is not set');
     process.exit(1);
 }
-app_1.default.listen(PORT, () => {
+const httpServer = http_1.default.createServer(app_1.default);
+(0, socket_1.initSocket)(httpServer);
+httpServer.listen(PORT, () => {
     logger_1.logger.info(`🚀 Backend server is running on port ${PORT}.`);
+    logger_1.logger.info(`📡 Socket.io initialized.`);
 });
 // --- Scheduled Jobs ---
 // Run stock check every 6 hours (at minute 0 of every 6th hour)
