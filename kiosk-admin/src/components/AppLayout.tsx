@@ -239,7 +239,7 @@ const AppLayout: React.FC = () => {
 
   // Desktop Layout (original)
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ height: '100vh' }}>
       {/* 데스크톱용 사이드바 */}
       <Sider
         width={240}
@@ -248,7 +248,8 @@ const AppLayout: React.FC = () => {
         className="sider-desktop-only"
         style={{
           boxShadow: '2px 0 8px 0 rgba(29,35,41,.05)',
-          zIndex: 10
+          zIndex: 10,
+          overflowY: 'auto' // 사이드바 내용이 길어질 경우 스크롤 허용
         }}
       >
         <div style={{
@@ -257,7 +258,8 @@ const AppLayout: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           borderBottom: '1px solid rgba(255,255,255,0.1)',
-          marginBottom: 16
+          marginBottom: 16,
+          flexShrink: 0 // 로고 영역 고정
         }}>
           <Space>
             <ShopOutlined style={{ fontSize: 24, color: '#1677ff' }} />
@@ -371,7 +373,7 @@ const AppLayout: React.FC = () => {
             </Space>
           </Space>
         </Header>
-        <Content style={{ margin: '24px', minHeight: 280 }}>
+        <Content style={{ margin: '24px', overflowY: 'auto' }}>
           <Outlet />
         </Content>
       </Layout>
