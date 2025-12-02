@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api, { BACKEND_URL } from '../../src/api';
 import { Product, Category } from '@kiosk/shared-types';
 import { useCart } from '../../context/CartContext';
+import { initSocket } from '../../src/socket';
 
 export default function ProductScreen() {
   const router = useRouter();
@@ -27,7 +28,10 @@ export default function ProductScreen() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+
   const [storeName, setStoreName] = useState('');
+  const [currentStoreId, setCurrentStoreId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -37,6 +41,7 @@ export default function ProductScreen() {
         router.replace('/setup');
         return;
       }
+      setCurrentStoreId(storeId);
       const [productRes, categoryRes, storeRes] = await Promise.all([
         api.get(`/products`),
         api.get(`/categories`),
@@ -65,6 +70,26 @@ export default function ProductScreen() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (!currentStoreId) return;
+
+    const socket = initSocket();
+    if (socket) {
+      socket.emit('join_store', currentStoreId);
+
+      const handleUpdate = () => {
+        console.log('Inventory update received, refreshing data...');
+        fetchData();
+      };
+
+      socket.on('inventory_update', handleUpdate);
+
+      return () => {
+        socket.off('inventory_update', handleUpdate);
+      };
+    }
+  }, [currentStoreId, fetchData]);
 
   const filteredProducts = useMemo(() => {
     let filtered = products;

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from './db';
 import { authenticateToken } from './middleware/auth';
+import { getIO } from './socket';
 
 const inventoryRouter = Router();
 
@@ -146,6 +147,17 @@ inventoryRouter.put('/:id', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedInventoryItem);
+
+    // Emit socket event
+    try {
+      const io = getIO();
+      io.to(`store_${storeId}`).emit('inventory_update', {
+        type: 'UPDATE',
+        itemId: updatedInventoryItem.id,
+      });
+    } catch (e) {
+      console.error('Socket emit failed:', e);
+    }
 
   } catch (error: any) {
     if (error.message === 'P2025' || error.code === 'P2025') {

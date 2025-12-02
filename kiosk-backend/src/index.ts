@@ -1,4 +1,6 @@
 import app from './app';
+import http from 'http';
+import { initSocket } from './socket';
 import cron from 'node-cron';
 import {
   checkStockAndCreatePurchaseOrders,
@@ -24,8 +26,12 @@ if (!PORT) {
   process.exit(1);
 }
 
-app.listen(PORT, () => {
+const httpServer = http.createServer(app);
+initSocket(httpServer);
+
+httpServer.listen(PORT, () => {
   logger.info(`🚀 Backend server is running on port ${PORT}.`);
+  logger.info(`📡 Socket.io initialized.`);
 });
 
 // --- Scheduled Jobs ---
