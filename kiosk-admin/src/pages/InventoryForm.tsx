@@ -38,6 +38,7 @@ const InventoryForm: React.FC = () => {
                     const item = await getInventoryItem(numericId);
                     form.setFieldsValue({
                         ...item,
+                        itemType: item.itemType,
                         threshold: item.threshold ?? null,
                         minStockThreshold: item.minStockThreshold ?? undefined,
                         orderQuantity: item.orderQuantity ?? undefined,

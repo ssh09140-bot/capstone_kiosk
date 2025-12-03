@@ -130,12 +130,8 @@ const AppLayout: React.FC = () => {
         setUnreadCount(prev => prev - 1);
       }
 
-      if (notification.type === 'DELIVERY_PROMPT' || notification.type === 'LOW_STOCK_WARNING') {
-        console.log('Navigating to /purchase-orders');
-        navigate('/purchase-orders');
-      } else {
-        console.log('Condition not met. Type:', notification.type);
-      }
+      // 모든 알림 클릭 시 발주 관리 페이지로 이동
+      navigate('/purchase-orders');
     } catch (error) {
       console.error('알림 읽음 처리 실패', error);
     } finally {

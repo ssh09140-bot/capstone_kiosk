@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Space, Typography, Flex, message, Tag, Card, Progress } from 'antd';
+import { Button, Space, Typography, Flex, message, Tag, Card, Progress, Input } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { getInventory, deleteInventoryItem, type Inventory } from '../api';
-import { PlusOutlined, RedoOutlined, EditOutlined, DeleteOutlined, InboxOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { PlusOutlined, RedoOutlined, EditOutlined, DeleteOutlined, InboxOutlined, ThunderboltOutlined, SearchOutlined } from '@ant-design/icons';
 import './Inventory.css';
 
 const { Title, Text } = Typography;
@@ -12,6 +12,7 @@ const InventoryPage: React.FC = () => {
     const [inventory, setInventory] = useState<(Inventory & { key: string })[]>([]);
     const [loading, setLoading] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         const handleResize = () => {
@@ -59,10 +60,29 @@ const InventoryPage: React.FC = () => {
         return { color: 'green', text: '충분', percent: Math.min(percent, 100) };
     };
 
+    const filteredInventory = inventory
+        .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => {
+            // 1. 자동 발주 활성화 된 것 먼저
+            if (a.autoOrderEnabled && !b.autoOrderEnabled) return -1;
+            if (!a.autoOrderEnabled && b.autoOrderEnabled) return 1;
+
+            // 2. 재고 부족한 순서대로 (비율이 낮은 순서)
+            const getRatio = (item: Inventory) => {
+                if (!item.minStockThreshold) return 100; // 기준 없으면 충분한 것으로 간주
+                return item.quantity / item.minStockThreshold;
+            };
+
+            const ratioA = getRatio(a);
+            const ratioB = getRatio(b);
+
+            return ratioA - ratioB;
+        });
+
     // Desktop Card View
     const renderDesktopCards = () => (
         <div className="inventory-desktop-grid">
-            {inventory.map(item => {
+            {filteredInventory.map(item => {
                 const stockStatus = getStockStatus(item.quantity, item.minStockThreshold);
                 return (
                     <Card
@@ -160,7 +180,7 @@ const InventoryPage: React.FC = () => {
     // Mobile Card View
     const renderMobileCards = () => (
         <div className="inventory-cards-container">
-            {inventory.map(item => {
+            {filteredInventory.map(item => {
                 const stockStatus = getStockStatus(item.quantity, item.minStockThreshold);
                 return (
                     <Card
@@ -261,16 +281,29 @@ const InventoryPage: React.FC = () => {
                 )}
             </Flex>
 
+            <div style={{ marginBottom: 24 }}>
+                <Input
+                    placeholder="재고 품목 검색..."
+                    prefix={<SearchOutlined />}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    size="large"
+                    allowClear
+                />
+            </div>
+
             {isMobile ? (
                 <>
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: '40px' }}>
                             <Text>로딩 중...</Text>
                         </div>
-                    ) : inventory.length === 0 ? (
+                    ) : filteredInventory.length === 0 ? (
                         <Card style={{ textAlign: 'center', padding: '40px' }}>
                             <InboxOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
-                            <Text type="secondary">재고 품목이 없습니다.</Text>
+                            <Text type="secondary">
+                                {searchTerm ? '검색 결과가 없습니다.' : '재고 품목이 없습니다.'}
+                            </Text>
                         </Card>
                     ) : (
                         renderMobileCards()
@@ -291,10 +324,12 @@ const InventoryPage: React.FC = () => {
                         <div style={{ textAlign: 'center', padding: '40px' }}>
                             <Text>로딩 중...</Text>
                         </div>
-                    ) : inventory.length === 0 ? (
+                    ) : filteredInventory.length === 0 ? (
                         <Card style={{ textAlign: 'center', padding: '40px' }}>
                             <InboxOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
-                            <Text type="secondary">재고 품목이 없습니다.</Text>
+                            <Text type="secondary">
+                                {searchTerm ? '검색 결과가 없습니다.' : '재고 품목이 없습니다.'}
+                            </Text>
                         </Card>
                     ) : (
                         renderDesktopCards()

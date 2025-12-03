@@ -13,6 +13,7 @@ interface Product {
     name: string;
     price: number;
     availableStock: number;
+    imageUrl?: string;
 }
 
 const ProductList: React.FC = () => {
@@ -70,7 +71,15 @@ const ProductList: React.FC = () => {
                 >
                     <div className="mobile-card-header">
                         <div className="mobile-icon-wrapper">
-                            <ShoppingOutlined />
+                            {product.imageUrl ? (
+                                <img
+                                    src={product.imageUrl}
+                                    alt={product.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+                                />
+                            ) : (
+                                <ShoppingOutlined />
+                            )}
                         </div>
                         <div className="mobile-info">
                             <Text strong className="mobile-name">{product.name}</Text>
@@ -149,7 +158,15 @@ const ProductList: React.FC = () => {
                 >
                     <div className="product-card-body">
                         <div className="product-icon-wrapper">
-                            <ShoppingOutlined />
+                            {product.imageUrl ? (
+                                <img
+                                    src={product.imageUrl}
+                                    alt={product.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
+                                />
+                            ) : (
+                                <ShoppingOutlined />
+                            )}
                         </div>
                         <div className="product-info-wrapper">
                             <Text className="product-name">{product.name}</Text>

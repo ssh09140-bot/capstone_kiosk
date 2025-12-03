@@ -151,28 +151,42 @@ function calculateDayOfWeekFactors(dailyUsages: number[], startDate: Date): numb
 /**
  * 날씨/기온 가중치 계산
  */
-function calculateWeatherFactor(itemName: string, weather: SimplifiedWeather): number {
+function calculateWeatherFactor(itemName: string, weather: SimplifiedWeather): { factor: number; reason?: string } {
   let factor = 1.0;
+  let reasons: string[] = [];
 
   // 1. 기온 영향
   const isIceItem = /아이스|얼음|ICE|Cold/i.test(itemName);
   const isHotItem = /핫|따뜻|Hot|Warm/i.test(itemName);
 
   if (weather.temp_celsius >= 28) {
-    if (isIceItem) factor *= 1.3; // 폭염 시 아이스 30% 증가
-    if (isHotItem) factor *= 0.7;
+    if (isIceItem) {
+      factor *= 1.3; // 폭염 시 아이스 30% 증가
+      reasons.push('폭염으로 아이스 메뉴 수요 30% 증가 예상');
+    }
+    if (isHotItem) {
+      factor *= 0.7;
+      reasons.push('폭염으로 핫 메뉴 수요 30% 감소 예상');
+    }
   } else if (weather.temp_celsius <= 10) {
-    if (isIceItem) factor *= 0.7;
-    if (isHotItem) factor *= 1.2; // 추운 날 핫 20% 증가
+    if (isIceItem) {
+      factor *= 0.7;
+      reasons.push('한파로 아이스 메뉴 수요 30% 감소 예상');
+    }
+    if (isHotItem) {
+      factor *= 1.2; // 추운 날 핫 20% 증가
+      reasons.push('추운 날씨로 핫 메뉴 수요 20% 증가 예상');
+    }
   }
 
   // 2. 강수 영향
   if (weather.condition === 'Rain' || weather.condition === 'Snow') {
     // 일반적으로 내방객 감소 (배달 전문이 아니라고 가정)
     factor *= 0.9;
+    reasons.push(`${weather.condition === 'Rain' ? '비' : '눈'} 소식으로 내방객 10% 감소 예상`);
   }
 
-  return factor;
+  return { factor, reason: reasons.join(', ') };
 }
 
 // --- Main Logic ---
@@ -185,17 +199,17 @@ export const generateRecommendations = async (storeId: string) => {
   // 1. 날씨 예보 조회 (기본 5일 조회)
   const forecast = await getWeatherForecast(city, 5);
 
-  // 한글 매핑
+  // 한글 매핑 및 이모티콘
   const WEATHER_KO: Record<string, string> = {
-    'Clear': '맑음',
-    'Clouds': '구름',
-    'Rain': '비',
-    'Snow': '눈',
-    'Other': '흐림/기타'
+    'Clear': '☀️',
+    'Clouds': '☁️',
+    'Rain': '☔',
+    'Snow': '🌨️',
+    'Other': '🌫️'
   };
 
   const forecastSummary = forecast.map(f =>
-    `[${format(new Date(f.date), 'MM/dd')} ${WEATHER_KO[f.condition] || f.condition} ${f.temp_celsius}°C]`
+    `${format(new Date(f.date), 'M월 d일')} ${WEATHER_KO[f.condition] || f.condition} ${f.temp_celsius}°C`
   ).join(', ');
 
   const CITY_KO: Record<string, string> = {
@@ -219,7 +233,7 @@ export const generateRecommendations = async (storeId: string) => {
 
   if (inventories.length === 0) {
     return {
-      message: `${CITY_KO[city] || city} 날씨 예보: ${forecastSummary}`,
+      message: `${CITY_KO[city] || city}: ${forecastSummary}`,
       recommendations: []
     };
   }
@@ -332,6 +346,7 @@ export const generateRecommendations = async (storeId: string) => {
     // 향후 리드타임 동안의 예상 사용량 계산
     let predictedUsageDuringLeadTime = 0;
     const today = new Date();
+    let weatherReasons: string[] = [];
 
     for (let i = 1; i <= item.leadTime; i++) {
       const targetDate = addDays(today, i);
@@ -340,7 +355,13 @@ export const generateRecommendations = async (storeId: string) => {
 
       const targetDateStr = format(targetDate, 'yyyy-MM-dd');
       const weather = forecast.find(f => f.date === targetDateStr);
-      const weatherFactor = weather ? calculateWeatherFactor(item.name, weather) : 1.0;
+
+      let weatherFactor = 1.0;
+      if (weather) {
+        const result = calculateWeatherFactor(item.name, weather);
+        weatherFactor = result.factor;
+        if (result.reason) weatherReasons.push(result.reason);
+      }
 
       predictedUsageDuringLeadTime += avgDailyUsage * dayFactor * weatherFactor;
     }
@@ -359,8 +380,10 @@ export const generateRecommendations = async (storeId: string) => {
       const finalOrderAmount = recommendedPackCount * packAmount;
 
       // 추천 사유 생성
-      const weatherInfo = forecast[0] ? `${WEATHER_KO[forecast[0].condition] || forecast[0].condition}, ${forecast[0].temp_celsius}°C` : '정보 없음';
-      const reason = `[${abcClass}등급] 안전재고 ${safetyStock.toFixed(1)}${item.unit} 확보 필요. (내일 날씨: ${weatherInfo})`;
+      const uniqueWeatherReasons = Array.from(new Set(weatherReasons));
+      const weatherReasonStr = uniqueWeatherReasons.length > 0 ? ` (${uniqueWeatherReasons.join(', ')})` : '';
+
+      const reason = `${safetyStock.toFixed(1)}${item.unit} 확보 필요.${weatherReasonStr}`;
 
       recommendations.push({
         inventoryId: item.id,
@@ -380,7 +403,7 @@ export const generateRecommendations = async (storeId: string) => {
   }
 
   return {
-    message: `${CITY_KO[city] || city} 날씨 예보: ${forecastSummary}`,
+    message: `${CITY_KO[city] || city}: ${forecastSummary}`,
     recommendations,
   };
 };

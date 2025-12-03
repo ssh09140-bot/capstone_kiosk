@@ -145,9 +145,31 @@ router.get('/sales/summary', authenticateToken, async (req, res) => {
         const currentMonthStr = new Date().toISOString().slice(0, 7);
         const currentMonthData = monthlySalesResult.find(d => d.month === currentMonthStr);
 
+        // [추가] 오늘 매출 계산
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const todaySalesResult = await prisma.order.aggregate({
+            _sum: {
+                totalAmount: true,
+            },
+            where: {
+                storeId: req.user.storeId,
+                createdAt: {
+                    gte: todayStart,
+                    lte: todayEnd,
+                },
+                status: 'COMPLETED', // 완료된 주문만 집계
+            },
+        });
+
         res.json({
             monthlySalesData: monthlySalesResult,
             currentMonthSales: currentMonthData ? currentMonthData.sales : 0,
+            todaySales: todaySalesResult._sum.totalAmount || 0, // 오늘 매출 추가
         });
 
     } catch (error) {
@@ -370,15 +392,33 @@ router.get('/analytics/monthly-summary', authenticateToken, async (req, res) => 
 router.get('/analytics/hygiene-check', authenticateToken, async (req, res) => {
     if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
 
+    const userPayload = req.user as any; // Force cast to any to avoid type issues with union type
+
     try {
-        // 최근 3시간 주문 조회
+        // 1. Check last cleaned time
+        const user = await prisma.user.findUnique({
+            where: { id: userPayload.id },
+            select: { lastCleanedAt: true }
+        });
+
         const threeHoursAgo = new Date();
         threeHoursAgo.setHours(threeHoursAgo.getHours() - 3);
 
+        // If cleaned recently (within 3 hours), return 'Good'
+        if (user?.lastCleanedAt && user.lastCleanedAt > threeHoursAgo) {
+            return res.json({
+                status: '양호',
+                reason: '최근에 매장 청소가 완료되었습니다.',
+                message: '매장 상태가 매우 깨끗합니다.',
+                lastCleanedAt: user.lastCleanedAt
+            });
+        }
+
+        // 2. Recent orders check
         const recentOrders = await prisma.orderItem.findMany({
             where: {
                 order: {
-                    storeId: req.user.storeId,
+                    storeId: userPayload.storeId,
                     createdAt: { gte: threeHoursAgo },
                 },
             },
@@ -414,6 +454,25 @@ router.get('/analytics/hygiene-check', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error generating hygiene check:', error);
         res.status(500).json({ message: '위생 점검 분석에 실패했습니다.' });
+    }
+});
+
+// [POST] /api/analytics/hygiene-check/clean
+router.post('/analytics/hygiene-check/clean', authenticateToken, async (req, res) => {
+    if (!req.user) return res.status(401).json({ message: '인증 정보가 없습니다.' });
+
+    const userPayload = req.user as any;
+
+    try {
+        await prisma.user.update({
+            where: { id: userPayload.id },
+            data: { lastCleanedAt: new Date() }
+        });
+
+        res.json({ message: '청소 완료 상태가 기록되었습니다.' });
+    } catch (error) {
+        console.error('Error updating cleaning status:', error);
+        res.status(500).json({ message: '청소 상태 업데이트에 실패했습니다.' });
     }
 });
 

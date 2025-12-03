@@ -138,17 +138,75 @@ router.post('/payment/toss/prepare', async (req, res) => {
     const tossOrderId = `ORDER_${Date.now()}`;
     console.log('Generated tossOrderId:', tossOrderId);
 
+    // [추가] 원가 계산 로직
+    let totalOrderCost = 0;
+    const orderItemsData = [];
+
+    // 1. 장바구니에 담긴 모든 상품 정보 조회 (레시피 및 공급가 포함)
+    const productIds = items.map(item => item.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      include: {
+        inventoryUsages: {
+          include: {
+            inventory: {
+              include: {
+                suppliedBy: true // 공급가 정보 조회
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    // 2. 각 주문 항목별 원가 계산
+    for (const item of items) {
+      const product = productMap.get(item.productId);
+      let costPerItem = 0;
+
+      if (product && product.inventoryUsages) {
+        for (const usage of product.inventoryUsages) {
+          // 사용량을 재고 기본 단위로 변환
+          const usageAmount = convertToBaseUnit(
+            usage.usageAmount,
+            usage.usageUnit,
+            usage.inventory.unit
+          );
+
+          // 최저가 공급업체 찾기
+          const bestSupplier = usage.inventory.suppliedBy.reduce((prev, curr) => {
+            const prevPricePerUnit = (prev.price || 0) / (prev.packAmount || 1);
+            const currPricePerUnit = (curr.price || 0) / (curr.packAmount || 1);
+            return prevPricePerUnit < currPricePerUnit ? prev : curr;
+          }, usage.inventory.suppliedBy[0]);
+
+          if (bestSupplier && bestSupplier.price) {
+            const pricePerUnit = bestSupplier.price / (bestSupplier.packAmount || 1);
+            costPerItem += usageAmount * pricePerUnit;
+          }
+        }
+      }
+
+      totalOrderCost += costPerItem * item.quantity;
+
+      orderItemsData.push({
+        productId: item.productId,
+        quantity: item.quantity,
+        pricePerItem: item.pricePerItem,
+        costPerItem: costPerItem, // 원가 저장
+        selectedOptions: item.selectedOptions || null,
+      });
+    }
+
     const order = await prisma.order.create({
       data: {
         storeId: storeId,
         totalAmount: amount,
+        totalCost: totalOrderCost, // 총 원가 저장
         orderItems: {
-          create: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            pricePerItem: item.pricePerItem,
-            selectedOptions: item.selectedOptions || null,
-          })),
+          create: orderItemsData,
         },
       },
       include: {

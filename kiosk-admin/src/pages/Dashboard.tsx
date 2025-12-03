@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Typography, List, Button, Space, Tag } from 'antd';
+import { Row, Col, Card, Statistic, Typography, List, Button, Space, Tag, message } from 'antd';
 import { ArrowUpOutlined, RobotOutlined, ShopOutlined, DollarOutlined, CalendarOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/charts';
 import api from '../api';
@@ -11,6 +11,7 @@ const { Title, Text } = Typography;
 
 const Dashboard: React.FC = () => {
   const [currentMonthSales, setCurrentMonthSales] = useState(0);
+  const [todaySales, setTodaySales] = useState(0); // 오늘 매출 상태 추가
   const [monthlySales, setMonthlySales] = useState<{ month: string; sales: number }[]>([]);
   const [topProducts, setTopProducts] = useState<{ name: string; quantity: number }[]>([]);
   const [bottomProducts, setBottomProducts] = useState<{ name: string; quantity: number }[]>([]);
@@ -27,12 +28,14 @@ const Dashboard: React.FC = () => {
           api.get('/analytics/profit-summary'),
         ]);
         setCurrentMonthSales(salesRes.data.currentMonthSales);
+        setTodaySales(salesRes.data.todaySales || 0); // 오늘 매출 데이터 설정
         setMonthlySales(salesRes.data.monthlySalesData);
         setTopProducts(topProdRes.data);
         setBottomProducts(bottomProdRes.data);
         setProfitSummary(profitRes.data.overallSummary);
       } catch (error) {
         console.error("Failed to refresh dashboard data:", error);
+        message.error('데이터를 불러오는데 실패했습니다.');
       }
     };
 
@@ -98,8 +101,8 @@ const Dashboard: React.FC = () => {
             <Col xs={24} sm={12} lg={6}>
               <Card bordered={false} hoverable style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                 <Statistic
-                  title="이번 달 매출액"
-                  value={currentMonthSales}
+                  title="오늘 매출액" // 제목 변경
+                  value={todaySales} // 값 변경
                   suffix="원"
                   prefix={<CalendarOutlined style={{ color: '#722ed1', fontSize: 24, background: '#f9f0ff', padding: 8, borderRadius: '50%' }} />}
                   valueStyle={{ fontWeight: 700, fontSize: 24 }}
@@ -122,10 +125,10 @@ const Dashboard: React.FC = () => {
 
         {/* AI Insights Section */}
         <Row gutter={[24, 24]}>
-          <Col xs={24} md={13}>
+          <Col xs={24} md={12}>
             <RecommendationCard />
           </Col>
-          <Col xs={24} md={11}>
+          <Col xs={24} md={12}>
             <HygieneCheckCard />
           </Col>
         </Row>

@@ -204,7 +204,7 @@ const SupplierForm: React.FC = () => {
                                                     name={[name, 'leadTimeDays']}
                                                     style={{ flex: 1 }}
                                                 >
-                                                    <InputNumber placeholder="리드타임 (일)" min={0} style={{ width: '100%' }} />
+                                                    <InputNumber placeholder="배송 소요 기간 (일)" min={0} style={{ width: '100%' }} />
                                                 </Form.Item>
                                                 <MinusCircleOutlined
                                                     onClick={() => remove(name)}

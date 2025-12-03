@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Typography, Spin, Alert, Space, Button } from 'antd';
+import { Card, Typography, Spin, Alert, Space, Button, message } from 'antd';
 import { RobotOutlined, CheckCircleOutlined, WarningOutlined, ExclamationCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import api from '../api';
 
@@ -52,6 +52,16 @@ const HygieneCheckCard: React.FC = () => {
         }
     };
 
+    const handleClean = async () => {
+        try {
+            await api.post('/analytics/hygiene-check/clean');
+            message.success('청소 완료 상태가 기록되었습니다.');
+            fetchHygieneCheck();
+        } catch (error) {
+            message.error('청소 상태 업데이트에 실패했습니다.');
+        }
+    };
+
     return (
         <Card
             title={
@@ -61,12 +71,22 @@ const HygieneCheckCard: React.FC = () => {
                 </Space>
             }
             extra={
-                <Button
-                    type="text"
-                    icon={<ReloadOutlined />}
-                    onClick={fetchHygieneCheck}
-                    loading={loading}
-                />
+                <Space>
+                    <Button
+                        type="primary"
+                        size="small"
+                        onClick={handleClean}
+                        style={{ backgroundColor: '#52c41a' }}
+                    >
+                        청소 완료
+                    </Button>
+                    <Button
+                        type="text"
+                        icon={<ReloadOutlined />}
+                        onClick={fetchHygieneCheck}
+                        loading={loading}
+                    />
+                </Space>
             }
             bordered={false}
             style={{ height: '100%', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}

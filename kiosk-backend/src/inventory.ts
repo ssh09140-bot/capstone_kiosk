@@ -58,7 +58,7 @@ inventoryRouter.post('/', authenticateToken, async (req, res) => {
   }
   const storeId = req.user.storeId;
   const {
-    name, quantity, unit, threshold,
+    name, quantity, unit, threshold, itemType,
     autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, packAmount
   } = req.body;
 
@@ -73,6 +73,7 @@ inventoryRouter.post('/', authenticateToken, async (req, res) => {
         quantity,
         unit,
         threshold,
+        itemType,
         storeId,
         autoOrderEnabled,
         minStockThreshold,
@@ -99,7 +100,7 @@ inventoryRouter.put('/:id', authenticateToken, async (req, res) => {
   const storeId = req.user.storeId;
   const { id } = req.params;
   const {
-    name, quantity, unit, threshold,
+    name, quantity, unit, threshold, itemType,
     autoOrderEnabled, minStockThreshold, orderQuantity, estimatedDeliveryDays, packAmount
   } = req.body;
 
@@ -123,6 +124,7 @@ inventoryRouter.put('/:id', authenticateToken, async (req, res) => {
           quantity,
           unit,
           threshold,
+          itemType,
           autoOrderEnabled,
           minStockThreshold,
           orderQuantity,

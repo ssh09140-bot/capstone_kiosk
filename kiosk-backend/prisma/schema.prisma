@@ -37,6 +37,7 @@ model User {
   businessLicenseImageUrl    String?
   storeAddress               String?
   
+  lastCleanedAt              DateTime?
   pushSubscriptions          PushSubscription[]
 }
 
